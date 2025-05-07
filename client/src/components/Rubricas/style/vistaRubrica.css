@@ -1,0 +1,338 @@
+/* Estructura principal - PREFIJADO para aislar */
+.vista-rubrica .main-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.vista-rubrica .content-container {
+  flex: 1;
+  padding: 6px 25px;
+  margin-left: 250px; /* Espacio para el sidebar */
+}
+
+.vista-rubrica .main-title {
+  font-size: 26px;
+  color: #2c3e50;
+  font-weight: 600;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e6ed;
+  text-align: center;
+}
+
+/* Estilos para la escala de calificación */
+.vista-rubrica .escala-calificacion-container {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vista-rubrica .escala-titulo {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.vista-rubrica .escala-rows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.vista-rubrica .escala-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Estilo basado exactamente en el CSS anterior */
+.vista-rubrica .escala-item {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.vista-rubrica .escala-item:hover {
+  transform: scale(1.05);
+}
+
+.vista-rubrica .escala-item-num {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+/* Estilos de las pestañas */
+.vista-rubrica .tabs-container {
+  display: flex;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.vista-rubrica .tab-button {
+  padding: 10px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+  flex-grow: 1;
+  text-align: center;
+}
+
+.vista-rubrica .tab-button:hover {
+  background-color: #e0e0e0;
+}
+
+.vista-rubrica .tab-button.active {
+  background-color: #3c6e97;
+  color: white;
+  font-weight: bold;
+}
+
+/* Contenedor principal de la rúbrica - Estilo Excel */
+.vista-rubrica .rubrica-content {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  overflow-x: auto;
+  padding: 0;
+}
+
+/* Estilos de las secciones */
+.vista-rubrica .seccion-container {
+  margin-bottom: 0;
+}
+
+
+/* Estilos de los criterios */
+.vista-rubrica .criterio-container {
+  margin-bottom: 0;
+}
+
+.vista-rubrica .criterio-titulo {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  padding: 8px;
+  background-color: #3ba7ff; /* Azul */
+  color: black;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Estilos de los subcriterios */
+.vista-rubrica .subcriterio-container {
+  margin-bottom: 0;
+}
+
+.vista-rubrica .subcriterio-titulo {
+  font-size: 13px;
+  font-weight: bold;
+  padding: 6px;
+  margin-bottom: 0;
+  text-align: center;
+  background-color: #E3F2FD; /* Azul claro */
+  color: black;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Tabla para los niveles - Estilo Excel */
+.vista-rubrica .niveles-grid {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vista-rubrica .nivel-column {
+  display: table-cell;
+  width: 20%;
+  border-right: 1px solid #ccc;
+  vertical-align: top;
+}
+
+.vista-rubrica .nivel-column:last-child {
+  border-right: none;
+}
+
+/* Estilos de los niveles */
+.vista-rubrica .nivel-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.vista-rubrica .nivel-descripcion {
+  padding: 6px;
+  font-size: 12px;
+  border-bottom: 1px solid #ccc;
+  background-color: #f9f9f9;
+  height: 40px; /* Altura reducida */
+  display: flex;
+  align-items: center;
+}
+
+/* Estilos de las calificaciones */
+.vista-rubrica .calificaciones-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.vista-rubrica .calificacion-item {
+  text-align: center;
+  padding: 6px 2px;
+  font-size: 11px;
+  border-bottom: 1px solid #ccc;
+  height: 20px; /* Altura reducida */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+}
+
+.vista-rubrica .calificacion-item:last-child {
+  border-bottom: none;
+}
+
+/* Estilo basado exactamente en el CSS anterior */
+.vista-rubrica .calificacion-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-block;
+  text-align: center;
+  font-weight: 500;
+  transition: transform 0.15s ease;
+}
+
+.vista-rubrica .calificacion-badge:hover {
+  transform: scale(1.05);
+}
+
+/* Colores de fondo para las diferentes secciones */
+.vista-rubrica .bg-green {
+  background-color: #8BC34A; /* Verde */
+  color: black;
+}
+
+.vista-rubrica .bg-yellow {
+  background-color: #FFEB3B; /* Amarillo */
+  color: black;
+}
+
+.vista-rubrica .bg-blue-light {
+  background-color: #E3F2FD; /* Azul claro */
+  color: black;
+}
+
+/* Responsive para tablets y móviles */
+@media (max-width: 1024px) {
+  .vista-rubrica .content-container {
+    margin-left: 0;
+    padding: 15px;
+  }
+  
+  .vista-rubrica .main-title {
+    font-size: 22px;
+  }
+  
+  .vista-rubrica .tabs-container {
+    flex-wrap: wrap;
+  }
+  
+  .vista-rubrica .tab-button {
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .vista-rubrica .escala-rows {
+    gap: 8px;
+  }
+  
+  .vista-rubrica .escala-row {
+    gap: 6px;
+  }
+  
+  .vista-rubrica .escala-item {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+  
+  .vista-rubrica .calificacion-badge {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .vista-rubrica .content-container {
+    padding: 10px;
+  }
+  
+  .vista-rubrica .niveles-grid {
+    display: block;
+  }
+  
+  .vista-rubrica .nivel-column {
+    display: block;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .vista-rubrica .nivel-column:last-child {
+    border-bottom: none;
+  }
+  
+  .vista-rubrica .calificaciones-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .vista-rubrica .calificacion-item {
+    width: 33.33%;
+    height: 24px;
+    border-right: 1px solid #ccc;
+    border-bottom: none;
+  }
+  
+  .vista-rubrica .calificacion-item:nth-child(3n) {
+    border-right: none;
+  }
+  
+  .vista-rubrica .main-title {
+    font-size: 20px;
+  }
+  
+  .vista-rubrica .escala-rows {
+    gap: 6px;
+  }
+  
+  .vista-rubrica .escala-row {
+    gap: 4px;
+  }
+  
+  .vista-rubrica .escala-item {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  
+  /* Para pantallas muy pequeñas, permitir que cada fila se ajuste */
+  @media (max-width: 480px) {
+    .vista-rubrica .escala-row {
+      flex-wrap: wrap;
+    }
+    
+    .vista-rubrica .calificacion-badge {
+      padding: 1px 4px;
+      font-size: 9px;
+    }
+  }
+}

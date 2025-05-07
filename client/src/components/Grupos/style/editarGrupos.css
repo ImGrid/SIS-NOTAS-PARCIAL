@@ -1,0 +1,587 @@
+/* src/components/Grupos/style/editarGrupos.css */
+
+/* Namespace para aislar todos los estilos */
+.grupo-edit-styles {
+  /* Resetear algunos estilos que podrían estar siendo afectados */
+  box-sizing: border-box;
+}
+
+/* Estilo para el mensaje de peligro cuando hay evaluaciones */
+.grupo-edit-styles .danger-message {
+  background-color: #fdedec;
+  color: #c0392b;
+  border: 1px solid #f5b7b1;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 0 2rem 1.5rem;
+  font-weight: 500;
+  position: relative;
+  padding-left: 3rem;
+  animation: grupo-edit-fadeIn 0.4s ease-out forwards;
+}
+
+.grupo-edit-styles .danger-message::before {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23c0392b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2'%3E%3C/polygon%3E%3Cline x1='12' y1='8' x2='12' y2='12'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'%3E%3C/line%3E%3C/svg%3E");
+}
+
+.grupo-edit-styles .loading-indicator {
+  text-align: center;
+  padding: 2rem;
+  color: #555;
+  font-size: 1.1rem;
+}
+
+/* Estilos para el modal de confirmación */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(44, 62, 80, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: modal-fade-in 0.3s ease-out forwards;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  animation: modal-slide-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Variante para el modal de peligro */
+.modal-content.danger {
+  border-top: 5px solid #e74c3c;
+}
+
+@keyframes modal-slide-in {
+  from { opacity: 0; transform: translateY(50px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-content h2 {
+  color: #e74c3c;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.modal-content h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background-color: #e74c3c;
+  border-radius: 3px;
+}
+
+.modal-message {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+  color: #2c3e50;
+}
+
+.modal-content p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+/* Estilos para la lista en el modal */
+.modal-list {
+  margin: 0.5rem 0 1.5rem 1.5rem;
+  padding: 0;
+}
+
+.modal-list li {
+  margin-bottom: 0.5rem;
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn-confirmar {
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #e74c3c;
+  color: white;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 6px rgba(231, 76, 60, 0.15);
+}
+
+.btn-confirmar:hover {
+  background-color: #c0392b;
+  box-shadow: 0 6px 8px rgba(231, 76, 60, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-confirmar:active {
+  transform: translateY(0);
+}
+
+.btn-eliminar {
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #d63031;
+  color: white;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 6px rgba(214, 48, 49, 0.15);
+}
+
+.btn-eliminar:hover {
+  background-color: #b71c1c;
+  box-shadow: 0 6px 8px rgba(214, 48, 49, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-eliminar:active {
+  transform: translateY(0);
+}
+
+.btn-confirmar:disabled,
+.btn-eliminar:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  opacity: 0.7;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .grupo-edit-styles .editar-grupo-container {
+    padding: 0 0 1.5rem 0;
+    border-radius: 8px;
+  }
+  
+  .grupo-edit-styles .editar-grupo-form {
+    padding: 0 1.5rem;
+  }
+  
+  .grupo-edit-styles .form-actions {
+    flex-direction: column;
+  }
+  
+  .grupo-edit-styles .btn-cancelar, 
+  .grupo-edit-styles .btn-guardar {
+    width: 100%;
+  }
+  
+  .grupo-edit-styles .success-message,
+  .grupo-edit-styles .error-message,
+  .grupo-edit-styles .warning-message,
+  .grupo-edit-styles .danger-message {
+    margin: 0 1.5rem 1.5rem;
+  }
+  
+  .modal-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+/* Animación de transición para los campos - con namespace para evitar conflictos */
+@keyframes grupo-edit-fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.grupo-edit-styles .form-group {
+  animation: grupo-edit-fadeIn 0.4s ease-out forwards;
+}
+
+.grupo-edit-styles .form-group:nth-child(1) { animation-delay: 0.1s; }
+.grupo-edit-styles .form-group:nth-child(2) { animation-delay: 0.15s; }
+.grupo-edit-styles .form-group:nth-child(3) { animation-delay: 0.2s; }
+.grupo-edit-styles .form-group:nth-child(4) { animation-delay: 0.25s; }
+.grupo-edit-styles .form-actions { 
+  animation-delay: 0.4s; 
+  animation: grupo-edit-fadeIn 0.4s ease-out 0.4s forwards; 
+  opacity: 0; 
+}
+
+.grupo-edit-styles *,
+.grupo-edit-styles *::before,
+.grupo-edit-styles *::after {
+  box-sizing: border-box;
+}
+
+.grupo-edit-styles .editar-grupo-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 0 2rem 0; /* Eliminamos padding superior para el nuevo título */
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(44, 62, 80, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Estilo para el título con fondo azul oscuro */
+.grupo-edit-styles .editar-grupo-container h1 {
+  margin: 0 0 2rem 0;
+  color: #ffffff;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  position: relative;
+  padding: 1rem 0;
+  background-color: #2c3e50;
+  border-radius: 10px 10px 0 0;
+}
+
+/* Línea decorativa debajo del título */
+.grupo-edit-styles .editar-grupo-container h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px; /* Hacemos la línea un poco más ancha */
+  height: 3px;
+  background-color: #3498db;
+  border-radius: 3px;
+  bottom: -3px; /* Ajustamos para que se vea justo debajo del fondo azul */
+}
+
+.grupo-edit-styles .editar-grupo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 2rem; /* Añadimos padding lateral al formulario */
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.grupo-edit-styles .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  position: relative;
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+}
+
+.grupo-edit-styles .form-group:focus-within label {
+  color: #2c3e50;
+}
+
+.grupo-edit-styles label {
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 0.25rem;
+  transition: color 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.grupo-edit-styles input, 
+.grupo-edit-styles select {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background-color: #f9f9f9;
+  color: #2c3e50;
+  width: 100%;
+  max-width: 100%; /* Asegurar que no se salga del contenedor */
+  height: auto;
+}
+
+.grupo-edit-styles input:hover, 
+.grupo-edit-styles select:hover {
+  border-color: #bbb;
+}
+
+.grupo-edit-styles input:focus, 
+.grupo-edit-styles select:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+  background-color: #fff;
+}
+
+.grupo-edit-styles select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.grupo-edit-styles .help-text {
+  font-size: 0.75rem;
+  color: #777;
+  margin-top: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.grupo-edit-styles .form-group:focus-within .help-text {
+  color: #555;
+}
+
+/* Estilos para el texto de advertencia */
+.grupo-edit-styles .warning-text {
+  font-size: 0.75rem;
+  color: #e74c3c;
+  margin-top: 0.25rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  animation: grupo-edit-fadeIn 0.4s ease-out forwards;
+}
+
+.grupo-edit-styles .warning-text::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e74c3c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cline x1='12' y1='8' x2='12' y2='12'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+/* Estilos para el texto de peligro */
+.grupo-edit-styles .danger-text {
+  font-size: 0.75rem;
+  color: #d63031;
+  margin-top: 0.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  animation: grupo-edit-fadeIn 0.4s ease-out forwards;
+}
+
+.grupo-edit-styles .danger-text::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23d63031' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2'%3E%3C/polygon%3E%3Cline x1='12' y1='8' x2='12' y2='12'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.grupo-edit-styles .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.grupo-edit-styles .btn-cancelar, 
+.grupo-edit-styles .btn-guardar {
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+}
+
+.grupo-edit-styles .btn-cancelar {
+  background-color: #eef2f7;
+  color: #2c3e50;
+  border: 1px solid #e0e0e0;
+}
+
+.grupo-edit-styles .btn-guardar {
+  background-color: #2c3e50;
+  color: white;
+  box-shadow: 0 4px 6px rgba(44, 62, 80, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+}
+
+.grupo-edit-styles .btn-cancelar:hover {
+  background-color: #e4e9f0;
+  border-color: #ccc;
+}
+
+.grupo-edit-styles .btn-guardar:hover {
+  background-color: #34495e;
+  box-shadow: 0 6px 8px rgba(44, 62, 80, 0.15);
+  transform: translateY(-1px);
+}
+
+.grupo-edit-styles .btn-guardar:active {
+  transform: translateY(0);
+}
+
+.grupo-edit-styles .btn-guardar:disabled,
+.grupo-edit-styles .btn-cancelar:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  opacity: 0.7;
+}
+
+/* Estilo para animar el botón mientras se está guardando */
+.grupo-edit-styles .btn-guardar.loading {
+  position: relative;
+  padding-left: 3rem;
+}
+
+.grupo-edit-styles .btn-guardar.loading::before {
+  content: '';
+  position: absolute;
+  left: 1.25rem;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: grupo-edit-spin 0.8s linear infinite;
+}
+
+@keyframes grupo-edit-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Estilo para mensajes de estado */
+.grupo-edit-styles .success-message {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 0 2rem 1.5rem;
+  font-weight: 500;
+  position: relative;
+  padding-left: 3rem;
+}
+
+.grupo-edit-styles .success-message::before {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232e7d32' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.grupo-edit-styles .error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 0 2rem 1.5rem;
+  font-weight: 500;
+  position: relative;
+  padding-left: 3rem;
+}
+
+.grupo-edit-styles .error-message::before {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23c62828' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cline x1='12' y1='8' x2='12' y2='12'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'%3E%3C/line%3E%3C/svg%3E");
+}
+
+/* Estilo para el mensaje de advertencia cuando los estudiantes han sido desasignados */
+.grupo-edit-styles .warning-message {
+  background-color: #fff8e1;
+  color: #ff8f00;
+  border: 1px solid #ffe082;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 0 2rem 1.5rem;
+  font-weight: 500;
+  position: relative;
+  padding-left: 3rem;
+  animation: grupo-edit-fadeIn 0.4s ease-out forwards;
+}
+
+.grupo-edit-styles .warning-message::before {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ff8f00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'%3E%3C/path%3E%3Cline x1='12' y1='9' x2='12' y2='13'%3E%3C/line%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'%3E%3C/line%3E%3C/svg%3E");
+}

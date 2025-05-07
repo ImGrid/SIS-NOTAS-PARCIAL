@@ -1,0 +1,325 @@
+/* src/components/Supervisor/style/crearDocenteAdmin.css */
+
+/* Namespace para aislar todos los estilos */
+.docente-admin-form-styles {
+    /* Resetear algunos estilos que podrían estar siendo afectados */
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .docente-admin-form-styles *,
+  .docente-admin-form-styles *::before,
+  .docente-admin-form-styles *::after {
+    box-sizing: border-box;
+  }
+  
+  .docente-admin-form-styles .crear-docente-admin-container {
+    width: 100%;
+    max-width: 800px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Estilo para el título con fondo azul oscuro */
+  .docente-admin-form-styles .crear-docente-admin-container h1 {
+    margin: 0 0 2rem 0;
+    color: #ffffff;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    position: relative;
+    padding: 1rem 0;
+    background-color: #2c3e50;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  .docente-admin-form-styles .crear-docente-admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0 2rem 2rem; /* Añadimos padding lateral y en la parte inferior */
+  }
+  
+  .docente-admin-form-styles .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    position: relative;
+    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+  }
+  
+  .docente-admin-form-styles .form-group:focus-within label {
+    color: #2c3e50;
+  }
+  
+  .docente-admin-form-styles label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.25rem;
+    transition: color 0.3s ease;
+    font-size: 0.95rem;
+  }
+  
+  .docente-admin-form-styles input[type="text"], 
+  .docente-admin-form-styles input[type="email"], 
+  .docente-admin-form-styles select {
+    padding: 0.7rem 0.85rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background-color: #f9f9f9;
+    color: #2c3e50;
+    width: 100%;
+    max-width: 100%; /* Asegurar que no se salga del contenedor */
+  }
+  
+  .docente-admin-form-styles input[type="text"]:hover, 
+  .docente-admin-form-styles input[type="email"]:hover, 
+  .docente-admin-form-styles select:hover {
+    border-color: #bbb;
+  }
+  
+  .docente-admin-form-styles input[type="text"]:focus, 
+  .docente-admin-form-styles input[type="email"]:focus, 
+  .docente-admin-form-styles select:focus {
+    border-color: #d4af37; /* Color dorado para administradores */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    background-color: #fff;
+  }
+  
+  .docente-admin-form-styles select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+  
+  .docente-admin-form-styles .input-help {
+    font-size: 0.75rem;
+    color: #777;
+    margin-top: 0.25rem;
+    transition: all 0.3s ease;
+  }
+  
+  .docente-admin-form-styles .form-group:focus-within .input-help {
+    color: #555;
+  }
+  
+  /* Checkbox personalizado */
+  .docente-admin-form-styles .checkbox-group {
+    margin-top: 0.5rem;
+  }
+  
+  .docente-admin-form-styles .checkbox-container {
+    display: flex;
+    position: relative;
+    padding-left: 30px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    user-select: none;
+    align-items: center;
+    color: #2c3e50;
+  }
+  
+  .docente-admin-form-styles .checkbox-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+  }
+  
+  .docente-admin-form-styles .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20px;
+    width: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+  
+  .docente-admin-form-styles .checkbox-container:hover input ~ .checkmark {
+    background-color: #f1f1f1;
+    border-color: #ccc;
+  }
+  
+  .docente-admin-form-styles .checkbox-container input:checked ~ .checkmark {
+    background-color: #d4af37;
+    border-color: #d4af37;
+  }
+  
+  .docente-admin-form-styles .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+  }
+  
+  .docente-admin-form-styles .checkbox-container input:checked ~ .checkmark:after {
+    display: block;
+  }
+  
+  .docente-admin-form-styles .checkbox-container .checkmark:after {
+    left: 7px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  
+  .docente-admin-form-styles .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #f0f0f0;
+  }
+  
+  .docente-admin-form-styles .btn-cancelar, 
+  .docente-admin-form-styles .btn-guardar {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    letter-spacing: 0.3px;
+  }
+  
+  .docente-admin-form-styles .btn-cancelar {
+    background-color: #eef2f7;
+    color: #2c3e50;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .docente-admin-form-styles .btn-guardar {
+    background-color: #d4af37; /* Color dorado para administradores */
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 180px;
+  }
+  
+  .docente-admin-form-styles .btn-cancelar:hover {
+    background-color: #e4e9f0;
+    border-color: #ccc;
+  }
+  
+  .docente-admin-form-styles .btn-guardar:hover {
+    background-color: #c4a227; /* Dorado más oscuro al hover */
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  .docente-admin-form-styles .btn-guardar:active {
+    transform: translateY(0);
+  }
+  
+  .docente-admin-form-styles .btn-guardar:disabled {
+    background-color: #b1b1b1;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+  
+  /* Estilo para animar el botón mientras se está guardando */
+  .docente-admin-form-styles .btn-guardar.loading {
+    position: relative;
+    padding-left: 3rem;
+  }
+  
+  .docente-admin-form-styles .btn-guardar.loading::before {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: docente-admin-form-spin 0.8s linear infinite;
+  }
+  
+  @keyframes docente-admin-form-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Efectos de foco y validación */
+  .docente-admin-form-styles .form-group.valid input,
+  .docente-admin-form-styles .form-group.valid select {
+    border-color: #2ecc71;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232ecc71' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+  
+  .docente-admin-form-styles .toast-notification {
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    
+  
+    .docente-admin-form-styles .crear-docente-admin-container {
+      padding: 0 0 1.5rem 0;
+      border-radius: 8px;
+    }
+    
+    .docente-admin-form-styles .crear-docente-admin-form {
+      padding: 0 1.5rem 1.5rem;
+    }
+    
+    .docente-admin-form-styles .form-actions {
+      flex-direction: column;
+    }
+    
+    .docente-admin-form-styles .btn-cancelar, 
+    .docente-admin-form-styles .btn-guardar {
+      width: 100%;
+    }
+  }
+  
+  /* Animación de transición para los campos */
+  @keyframes docente-admin-form-fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .docente-admin-form-styles .form-group {
+    animation: docente-admin-form-fadeIn 0.4s ease-out forwards;
+  }
+  
+  .docente-admin-form-styles .form-group:nth-child(1) { animation-delay: 0.1s; }
+  .docente-admin-form-styles .form-group:nth-child(2) { animation-delay: 0.15s; }
+  .docente-admin-form-styles .form-group:nth-child(3) { animation-delay: 0.2s; }
+  .docente-admin-form-styles .form-group:nth-child(4) { animation-delay: 0.25s; }
+  .docente-admin-form-styles .form-actions { 
+    animation-delay: 0.3s; 
+    animation: docente-admin-form-fadeIn 0.4s ease-out 0.3s forwards; 
+    opacity: 0; 
+  }

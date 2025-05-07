@@ -1,0 +1,253 @@
+/* Estilos específicos para login de docentes */
+.login-docente-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+/* Panel izquierdo - Login */
+.login-docente-panel {
+  flex: 0.6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f3f4f6;
+  z-index: 2;
+}
+
+.login-docente-image {
+  flex: 1;
+  background-image: url('../../public/EMI-fondo.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Tarjeta de login */
+.login-docente-card {
+  background-color: #fff;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.login-docente-card h2 {
+  font-size: 1.75rem;
+  line-height: 2rem;
+  font-weight: 600;
+  text-align: center;
+  color: #1e3a8a;
+  margin-bottom: 1.5rem;
+}
+
+.login-docente-subtitle {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+/* Grupos de formulario */
+.login-docente-form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.login-docente-form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.login-docente-form-group input {
+  outline: none;
+  border: 1px solid #d1d5db;
+  background-color: #fff;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  width: 92%;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s;
+}
+
+.login-docente-form-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.login-docente-form-group small {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Mensajes */
+.login-docente-error-message {
+  color: #dc2626;
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.login-docente-success-message {
+  color: #065f46;
+  background-color: #d1fae5;
+  border: 1px solid #6ee7b7;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+/* Botones */
+.login-docente-button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.login-docente-submit-button {
+  display: block;
+  padding: 0.75rem 1.25rem;
+  background-color: #1e40af;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  width: 100%;
+  border-radius: 0.375rem;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-docente-submit-button:hover {
+  background-color: #1e3a8a;
+}
+
+.login-docente-submit-button:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.login-docente-back-button {
+  display: block;
+  padding: 0.75rem 1.25rem;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-docente-back-button:hover {
+  background-color: #e5e7eb;
+}
+
+.login-docente-back-button:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Opciones de código existente */
+.login-docente-codigo-opciones {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.login-docente-usar-codigo {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+  font-size: 0.875rem;
+}
+
+.login-docente-usar-codigo:hover {
+  background-color: #059669;
+}
+
+.login-docente-nuevo-codigo {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+  font-size: 0.875rem;
+}
+
+.login-docente-nuevo-codigo:hover {
+  background-color: #2563eb;
+}
+
+.login-docente-usar-codigo:disabled,
+.login-docente-nuevo-codigo:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Botón oculto para acceso administrativo */
+.login-docente-admin-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 30px;
+  height: 30px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .login-docente-container {
+    flex-direction: column;
+  }
+  
+  .login-docente-panel {
+    width: 100%;
+    min-height: 100vh;
+    background-color: rgba(243, 244, 246, 0.9);
+  }
+  
+  .login-docente-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.15;
+  }
+  
+  .login-docente-card {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+  }
+}

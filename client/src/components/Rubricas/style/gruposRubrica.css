@@ -1,0 +1,1137 @@
+/* src/components/Rubricas/style/gruposRubrica.css */
+/* Namespace para aislar todos los estilos */
+.rubrica-evaluacion {
+  box-sizing: border-box;
+}
+
+.rubrica-evaluacion *,
+.rubrica-evaluacion *::before,
+.rubrica-evaluacion *::after {
+  box-sizing: border-box;
+}
+
+/* Estilos base generales */
+.rubrica-evaluacion .content-with-sidebar {
+  padding: 0 !important;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 64px);
+}
+
+/* Contenedor principal */
+.rubrica-evaluacion .rubrica-container {
+  padding: 0 0rem 0rem;
+}
+
+/* Estilos para el encabezado de la página con fondo azul */
+.rubrica-evaluacion .rubrica-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2c3e50;
+  padding: 1.2rem 2rem;
+  position: relative;
+  color: white;
+}
+
+.rubrica-evaluacion .rubrica-header h1 {
+  font-size: 1.8rem;
+  color: #ffffff;
+  margin: 0;
+  font-weight: 700;
+}
+
+.rubrica-evaluacion .badge-container {
+  display: flex;
+  gap: 10px;
+}
+
+.rubrica-evaluacion .badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rubrica-evaluacion .badge-info {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.rubrica-evaluacion .badge-success {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.rubrica-evaluacion .badge-warning {
+  background-color: #fff8e1;
+  color: #ffa000;
+}
+
+.rubrica-evaluacion .proyecto-info {
+  padding: 1rem 2rem;
+}
+
+.rubrica-evaluacion .proyecto-titulo {
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.rubrica-evaluacion .info-row {
+  display: flex;
+  justify-content: space-between;
+  width: 50%;
+}
+
+.rubrica-evaluacion .info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rubrica-evaluacion .info-col span {
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .rubrica-evaluacion .info-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+
+.rubrica-evaluacion .proyecto-detalles {
+  display: flex;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.rubrica-evaluacion .proyecto-detalles span {
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.rubrica-evaluacion .evaluacion-fecha {
+  display: inline-block;
+  margin-left: 10px;
+  color: #2c3e50;
+}
+
+.rubrica-evaluacion .progreso-container {
+  padding: 0.5rem 2rem 1rem;
+  margin-top: -0.5rem;
+}
+
+.rubrica-evaluacion .progreso-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.rubrica-evaluacion .progreso-label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.rubrica-evaluacion .progreso-contador {
+  background-color: #3c6e97;
+  color: white;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.rubrica-evaluacion .barra-progreso {
+  height: 12px;
+  background-color: #e0e6ed;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.rubrica-evaluacion .progreso-valor {
+  height: 100%;
+  background: linear-gradient(to right, #3c6e97, #64b5f6);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.rubrica-evaluacion .progreso-texto {
+  margin-top: 0.8rem;
+  font-size: 14px;
+  color: #5c6b80;
+  text-align: right;
+}
+
+/* Tabs de navegación */
+.rubrica-evaluacion .tabs-container {
+  margin: 0 1.5rem 1.5rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e6ed;
+  animation: rubrica-fadeInUp 0.5s ease-out;
+}
+
+.rubrica-evaluacion .tabs {
+  display: flex;
+  border-bottom: 1px solid #e0e6ed;
+  background-color: #f2f6fa;
+  border-radius: 8px 8px 0 0;
+}
+
+.rubrica-evaluacion .tab {
+  padding: 1rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #5c6b80;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.rubrica-evaluacion .tab:hover {
+  color: #3c6e97;
+  background-color: #f0f4f8;
+}
+
+.rubrica-evaluacion .tab.active {
+  color: #3c6e97;
+  border-bottom: 3px solid #3c6e97;
+  background-color: #e6f2ff;
+}
+
+/* Contenido de pestañas */
+.rubrica-evaluacion .tab-content {
+  min-height: 300px;
+  animation: rubrica-fadeIn 0.3s ease-out;
+  padding-bottom: 0;
+}
+
+.rubrica-evaluacion .seccion-content {
+  animation: rubrica-fadeIn 0.3s ease-out;
+}
+
+.rubrica-evaluacion .tabla-evaluacion {
+  width: 100%;
+  min-width: 800px; /* Define un ancho mínimo para asegurar que la tabla no se comprima demasiado */
+  border-collapse: collapse;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rubrica-evaluacion .tabla-evaluacion th,
+.rubrica-evaluacion .tabla-evaluacion td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e6ebf5;
+}
+
+.rubrica-evaluacion .tabla-evaluacion th {
+  background-color: #2c3e50;
+  color: white;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.rubrica-evaluacion .peso-criterio {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-left: 5px;
+  font-weight: normal;
+  color: #e6c350;
+}
+
+.rubrica-evaluacion .estudiante-row:hover {
+  background-color: #f5f7fa;
+}
+
+.rubrica-evaluacion .estudiante-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.rubrica-evaluacion .estudiante-nombre {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.rubrica-evaluacion .estudiante-codigo {
+  color: #3c6e97;
+  font-size: 13px;
+  font-family: monospace;
+  font-weight: 500;
+}
+@media (max-width: 768px) {
+  .rubrica-evaluacion .tabla-evaluacion .columna-fija {
+    position: sticky;
+    left: 0;
+    background-color: #fff;
+    z-index: 2;
+  }
+  
+  .rubrica-evaluacion .tabla-evaluacion th.columna-fija {
+    background-color: #2c3e50;
+    z-index: 3;
+  }
+  
+  .rubrica-evaluacion .tabla-evaluacion tr:hover .columna-fija {
+    background-color: #f5f7fa;
+  }
+}
+/* Dropdown de calificación */
+.rubrica-evaluacion .dropdown-calificacion {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.rubrica-evaluacion .dropdown-calificacion:hover {
+  border-color: #64b5f6;
+}
+
+.rubrica-evaluacion .dropdown-calificacion:focus {
+  outline: none;
+  border-color: #3c6e97;
+  box-shadow: 0 0 0 3px rgba(60, 110, 151, 0.2);
+}
+
+.rubrica-evaluacion .calificacion-readonly {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Sección de resumen */
+.rubrica-evaluacion .tabla-resumen {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rubrica-evaluacion .tabla-resumen th,
+.rubrica-evaluacion .tabla-resumen td {
+  padding: 12px 15px;
+  text-align: center;
+  border-bottom: 1px solid #e6ebf5;
+}
+
+.rubrica-evaluacion .tabla-resumen th {
+  background-color: #2c3e50;
+  color: white;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.rubrica-evaluacion .tabla-resumen td:first-child {
+  text-align: left;
+}
+
+.rubrica-evaluacion .nota-final,
+.rubrica-evaluacion .resultado {
+  font-weight: 600;
+}
+
+.rubrica-evaluacion .aprobado {
+  color: #388e3c;
+  background-color: rgba(56, 142, 60, 0.1);
+}
+
+.rubrica-evaluacion .reprobado {
+  color: #d32f2f;
+  background-color: rgba(211, 47, 47, 0.1);
+}
+
+/* Errores y validación */
+.rubrica-evaluacion .errores-container {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffa000;
+  padding: 1.2rem;
+  margin-top: 1.5rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  animation: rubrica-fadeIn 0.3s ease-out;
+}
+
+.rubrica-evaluacion .errores-container h3 {
+  margin-top: 0;
+  color: #f57c00;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.rubrica-evaluacion .errores-container ul {
+  margin-bottom: 0;
+  padding-left: 1.5rem;
+}
+
+.rubrica-evaluacion .errores-container li {
+  margin-bottom: 0.5rem;
+}
+
+/* Observaciones */
+.rubrica-evaluacion .observaciones-container {
+  margin: 0 1.5rem 1.5rem;
+  background-color: #fff;
+  padding: 1.2rem;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e6ed;
+  animation: rubrica-fadeInUp 0.5s ease-out;
+}
+
+.rubrica-evaluacion .observaciones-container h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  font-size: 18px;
+  font-weight: 600;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e0e6ed;
+}
+
+.rubrica-evaluacion .observaciones-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+.rubrica-evaluacion .observaciones-input:focus {
+  outline: none;
+  border-color: #3c6e97;
+  box-shadow: 0 0 0 3px rgba(60, 110, 151, 0.2);
+}
+
+.rubrica-evaluacion .readonly-message {
+  font-size: 14px;
+  color: #5c6b80;
+  margin-top: 0.8rem;
+  font-style: italic;
+}
+
+.rubrica-evaluacion .acciones-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 1.5rem 2rem 0;
+  padding-right: 20px; /* Añadir padding derecho para separar del borde */
+}
+
+.rubrica-evaluacion .btn {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.rubrica-evaluacion .btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.rubrica-evaluacion .tabla-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  margin-bottom: 1rem;
+}
+.rubrica-evaluacion .btn-cancelar {
+  background-color: #f5f7fa;
+  border: 1px solid #e0e6ed;
+  color: #5c6b80;
+}
+
+.rubrica-evaluacion .btn-cancelar:hover:not(:disabled) {
+  background-color: #e6ebf5;
+  border-color: #ccd7e6;
+}
+
+.rubrica-evaluacion .btn-guardar {
+  background-color: #3c6e97;
+  color: white;
+}
+
+.rubrica-evaluacion .btn-guardar:hover:not(:disabled) {
+  background-color: #2a5478;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.rubrica-evaluacion .btn-finalizar {
+  background-color: #388e3c;
+  color: white;
+}
+
+.rubrica-evaluacion .btn-finalizar:hover:not(:disabled) {
+  background-color: #2e7d32;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.rubrica-evaluacion .info-guardar {
+  margin: 1rem 2rem 0;
+  padding: 1rem 0.5rem;
+  border-top: 1px solid #e0e6ed;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+.rubrica-evaluacion .info-texto {
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rubrica-evaluacion .warning-text {
+  color: #f57c00;
+  font-weight: 500;
+}
+
+/* Estilos para carga */
+.rubrica-evaluacion .loading-indicator {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #5c6b80;
+  font-size: 1rem;
+  position: relative;
+  animation: rubrica-pulse 1.5s infinite;
+}
+
+.rubrica-evaluacion .loading-indicator::after {
+  content: "";
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid #e0e6ed;
+  border-top-color: #3c6e97;
+  animation: rubrica-spin 1s linear infinite;
+  margin: 20px auto 0;
+}
+
+/* Overlay de Orientación para Móviles */
+.rubrica-evaluacion .orientation-overlay {
+  display: none; /* Por defecto oculto, se activa con JS */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(44, 62, 80, 0.9);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 2rem;
+  color: white;
+  animation: rubrica-fadeIn 0.3s ease-out;
+}
+
+.rubrica-evaluacion .orientation-content {
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.rubrica-evaluacion .orientation-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 1rem;
+}
+
+.rubrica-evaluacion .orientation-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.rubrica-evaluacion .orientation-description {
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+  opacity: 0.9;
+}
+
+.rubrica-evaluacion .orientation-animation {
+  width: 150px;
+  height: 150px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  position: relative;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* SVG del ícono de rotación */
+.rubrica-evaluacion .rotate-phone-animation {
+  width: 100px;
+  height: 100px;
+  animation: rubrica-rotateDevice 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Botón de continuar de todos modos */
+.rubrica-evaluacion .bypass-orientation-button {
+  background-color: transparent;
+  border: 2px solid white;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.rubrica-evaluacion .bypass-orientation-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Animaciones */
+@keyframes rubrica-fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes rubrica-fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rubrica-pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@keyframes rubrica-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes rubrica-rotateDevice {
+  0%, 20% {
+    transform: rotate(0deg);
+  }
+  30%, 70% {
+    transform: rotate(90deg);
+  }
+  80%, 100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Media Queries */
+
+/* Para escritorio y tablets en landscape */
+@media (min-width: 1025px) {
+  .rubrica-evaluacion .orientation-overlay {
+    display: none !important; /* Nunca mostrar en pantallas grandes */
+  }
+}
+
+/* Para tablets */
+@media (max-width: 1024px) {
+  
+  .rubrica-evaluacion .rubrica-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .rubrica-evaluacion .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 2px; /* Para evitar que la barra de scroll corte el borde inferior */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .rubrica-evaluacion .tab {
+    flex: 0 0 auto;
+    min-width: 150px;
+    white-space: nowrap;
+  }
+  
+  .rubrica-evaluacion .progreso-header {
+    align-items: flex-start;
+  }
+  
+  .rubrica-evaluacion .progreso-contador {
+    align-self: flex-end;
+    margin-top: 0.5rem;
+  }
+  
+  /* Cuando estamos en modo landscape en tablet, ocultar el overlay */
+  @media (orientation: landscape) {
+    .rubrica-evaluacion .orientation-overlay {
+      display: none !important;
+    }
+  }
+}
+
+/* Para móviles */
+@media (max-width: 768px) {
+  
+  .rubrica-evaluacion .rubrica-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .rubrica-evaluacion .rubrica-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .rubrica-evaluacion .proyecto-info {
+    padding: 1rem;
+  }
+  
+  .rubrica-evaluacion .proyecto-detalles {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .rubrica-evaluacion .proyecto-detalles span {
+    display: block;
+  }
+  
+  .rubrica-evaluacion .tab {
+    min-width: 120px;
+    padding: 0.8rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .rubrica-evaluacion .observaciones-container,
+  .rubrica-evaluacion .progreso-container {
+    padding: 1rem;
+  }
+  
+  .rubrica-evaluacion .acciones-container {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .rubrica-evaluacion .btn {
+    width: 100%;
+  }
+  
+  .rubrica-evaluacion .tabla-evaluacion th,
+  .rubrica-evaluacion .tabla-evaluacion td,
+  .rubrica-evaluacion .tabla-resumen th,
+  .rubrica-evaluacion .tabla-resumen td {
+    padding: 0.8rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Si estamos en Portrait en móvil, mostrar overlay */
+  @media (orientation: portrait) {
+    .rubrica-evaluacion .orientation-overlay.active {
+      display: flex;
+    }
+    
+    /* Ocultar el contenido principal cuando el overlay está activo */
+    .rubrica-evaluacion .orientation-overlay.active ~ .rubrica-container {
+      display: none;
+    }
+    
+    .rubrica-evaluacion .tabs-container {
+      position: relative;
+    }
+    
+    /* Cuando estamos en orientación portrait y viendo la tabla */
+    .rubrica-evaluacion .tabs-container.show-orientation-hint::after {
+      content: "→ Gire el dispositivo →";
+      display: block;
+      text-align: center;
+      padding: 0.8rem;
+      font-size: 0.9rem;
+      color: #fff;
+      background-color: rgba(44, 62, 80, 0.8);
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      animation: rubrica-pulse 2s ease-in-out infinite;
+    }
+  }
+  
+  /* Si estamos en Landscape en móvil, ocultar overlay y mostrar contenido */
+  @media (orientation: landscape) {
+    .rubrica-evaluacion .orientation-overlay {
+      display: none !important;
+    }
+  }
+}
+
+/* Para móviles pequeños */
+@media (max-width: 480px) {
+  .rubrica-evaluacion .rubrica-header h1 {
+    font-size: 1.3rem;
+  }
+  
+  .rubrica-evaluacion .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+  
+  .rubrica-evaluacion .proyecto-titulo {
+    font-size: 1rem;
+  }
+  
+  .rubrica-evaluacion .progreso-label,
+  .rubrica-evaluacion .observaciones-container h3 {
+    font-size: 1rem;
+  }
+  
+  .rubrica-evaluacion .tab {
+    min-width: 100px;
+    padding: 0.7rem 0.4rem;
+    font-size: 0.75rem;
+  }
+  
+  .rubrica-evaluacion .dropdown-calificacion,
+  .rubrica-evaluacion .calificacion-readonly {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .rubrica-evaluacion .orientation-title {
+    font-size: 1.3rem;
+  }
+  
+  .rubrica-evaluacion .orientation-description {
+    font-size: 0.9rem;
+  }
+}
+
+/* Componente de Overlay para Rotación de Dispositivo */
+.rotation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(44, 62, 80, 0.9);
+  z-index: 9999;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.rotation-overlay.active {
+  display: flex;
+  animation: rubrica-fadeIn 0.3s ease-out;
+}
+
+.rotation-container {
+  max-width: 300px;
+  padding: 2rem;
+}
+
+.rotation-icon-container {
+  margin-bottom: 1.5rem;
+}
+
+.rotation-icon {
+  width: 120px;
+  height: 120px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+}
+
+.rotation-svg {
+  width: 80px;
+  height: 80px;
+  animation: rubrica-rotateDevice 3s ease-in-out infinite;
+  fill: white;
+}
+
+.rotation-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.rotation-description {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+}
+
+.rotation-btn {
+  background-color: transparent;
+  border: 2px solid white;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.rotation-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Componente específico para detección de orientación */
+.orientation-detector {
+  display: none; /* Oculto por defecto */
+}
+
+/* Mostrar el componente solo en dispositivos móviles */
+@media (max-width: 768px) {
+  .orientation-detector {
+    display: block;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 8px;
+    background-color: rgba(44, 62, 80, 0.7);
+    color: white;
+    border-radius: 30px;
+    font-size: 12px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .orientation-detector.show {
+    opacity: 1;
+  }
+  
+  /* En orientación landscape, cambiar el mensaje */
+  @media (orientation: landscape) {
+    .orientation-detector.landscape {
+      background-color: rgba(56, 142, 60, 0.7);
+    }
+  }
+}
+
+/* Para imprimir, tenemos que ocultar el overlay y cualquier elemento innecesario */
+@media print {
+  .rubrica-evaluacion .orientation-overlay,
+  .rubrica-evaluacion .rotation-overlay,
+  .rubrica-evaluacion .orientation-detector,
+  .rubrica-evaluacion .acciones-container,
+  .rubrica-evaluacion .btn {
+    display: none !important;
+  }
+  
+  .rubrica-evaluacion .rubrica-header {
+    background-color: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .rubrica-evaluacion .rubrica-header h1 {
+    color: #000 !important;
+  }
+  
+  .rubrica-evaluacion .badge-container {
+    display: none !important;
+  }
+  
+  .rubrica-evaluacion .proyecto-info,
+  .rubrica-evaluacion .progreso-container,
+  .rubrica-evaluacion .tabs-container,
+  .rubrica-evaluacion .observaciones-container {
+    box-shadow: none !important;
+    border: 1px solid #000 !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .rubrica-evaluacion .tabs {
+    display: none !important;
+  }
+  
+  .rubrica-evaluacion .tab-content {
+    padding: 0 !important;
+  }
+  
+  .rubrica-evaluacion .tabla-evaluacion th,
+  .rubrica-evaluacion .tabla-resumen th {
+    background-color: #f0f0f0 !important;
+    color: #000 !important;
+  }
+  
+  .rubrica-evaluacion .aprobado,
+  .rubrica-evaluacion .reprobado {
+    background-color: transparent !important;
+    color: #000 !important;
+    font-weight: bold !important;
+  }
+}
+
+/* SVG Icons */
+.phone-rotate-icon {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.phone-container {
+  width: 40px;
+  height: 70px;
+  border: 3px solid white;
+  border-radius: 6px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.phone-button {
+  width: 10px;
+  height: 10px;
+  border: 2px solid white;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.rotate-arrows {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+}
+
+.arrow-right, .arrow-left {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.arrow-right {
+  border-width: 8px 0 8px 12px;
+  border-color: transparent transparent transparent white;
+  top: 0;
+  right: 15px;
+}
+
+.arrow-left {
+  border-width: 8px 12px 8px 0;
+  border-color: transparent white transparent transparent;
+  bottom: 0;
+  left: 15px;
+}
+
+/* Indicador de orientación flotante */
+.orientation-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: rgba(44, 62, 80, 0.8);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  z-index: 900;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.orientation-indicator.show {
+  display: flex;
+  animation: rubrica-fadeIn 0.3s ease-out;
+}
+
+.orientation-indicator svg {
+  width: 20px;
+  height: 20px;
+  animation: rubrica-rotateDevice 3s ease-in-out infinite;
+}
+
+/* Mostrar solo en dispositivos móviles en modo portrait cuando es necesario */
+@media (max-width: 768px) and (orientation: portrait) {
+  .rubrica-evaluacion .tabs-container .orientation-indicator.show {
+    display: flex;
+  }
+}
+
+/* Cuando ya estamos en landscape, ocultar siempre */
+@media (orientation: landscape) {
+  .orientation-indicator {
+    display: none !important;
+  }
+}

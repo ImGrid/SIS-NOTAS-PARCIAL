@@ -1,0 +1,476 @@
+/* src/components/Supervisor/style/listarDocente.css */
+
+/* Namespace para aislar estilos */
+.docente-admin-list-styles {
+    box-sizing: border-box;
+    width: 100%;
+  }
+  
+  .docente-admin-list-styles *,
+  .docente-admin-list-styles *::before,
+  .docente-admin-list-styles *::after {
+    box-sizing: border-box;
+  }
+  
+  /* Contenedor principal con padding adecuado */
+  .docente-admin-list-styles .docentes-admin-container {
+    width: 100%;
+    padding: 0;
+  }
+  
+  /* Estilo para el encabezado con fondo azul */
+  .docente-admin-list-styles .docentes-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background-color: #2c3e50;
+    padding: 1rem 2rem;
+    position: relative;
+    color: white;
+    margin-bottom: 1.5rem;
+  }
+  
+  .docente-admin-list-styles .docentes-admin-header h1 {
+    font-size: 1.8rem;
+    color: #ffffff;
+    margin: 0;
+    font-weight: 700;
+  }
+  
+  .docente-admin-list-styles .btn-crear-docente {
+    background-color: #d4af37; /* Color dorado para administradores */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.7rem 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  
+  .docente-admin-list-styles .btn-crear-docente:hover {
+    background-color: #c4a227; /* Dorado más oscuro al hover */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .docente-admin-list-styles .content-container {
+    width: 100%;
+    padding: 0 2rem;
+  }
+  
+  /* Filtros */
+  .docente-admin-list-styles .filtros-container {
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .docente-admin-list-styles .busqueda-container {
+    flex-grow: 1;
+    max-width: 500px; /* Más ancho para búsqueda */
+    width: 100%;
+  }
+  
+  .docente-admin-list-styles .busqueda-input {
+    width: 100%;
+    padding: 0.65rem 2.5rem 0.65rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    transition: all 0.3s ease;
+  }
+  
+  .docente-admin-list-styles .busqueda-input:focus {
+    border-color: #d4af37; /* Color dorado para administradores */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+  }
+  
+  .docente-admin-list-styles .btn-limpiar-filtro {
+    background-color: #f1f1f1;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    width: auto;
+  }
+  
+  .docente-admin-list-styles .btn-limpiar-filtro:hover {
+    background-color: #e5e5e5;
+    border-color: #ccc;
+  }
+  
+  /* Estilos para la tabla con encabezado */
+  .docente-admin-list-styles .tabla-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+    width: 100%;
+  }
+  
+  .docente-admin-list-styles .docentes-table-container {
+    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow-x: auto; /* Permite scroll horizontal en pantallas pequeñas */
+    margin-bottom: 1rem;
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .docente-admin-list-styles .docentes-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px; /* Ancho mínimo para evitar que se compriman demasiado las columnas */
+  }
+  
+  .docente-admin-list-styles .docentes-table th,
+  .docente-admin-list-styles .docentes-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .docente-admin-list-styles .docentes-table th {
+    background-color: #2c3e50;
+    color: white;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+  }
+  
+  .docente-admin-list-styles .docentes-table tr {
+    transition: background-color 0.3s ease;
+  }
+  
+  .docente-admin-list-styles .docentes-table tr:hover {
+    background-color: #f5f8fa;
+  }
+  
+  /* Ajustamos el ancho de las columnas para una mejor distribución */
+  .docente-admin-list-styles .col-num {
+    width: 30px; /* Reducido de 40px */
+    text-align: center;
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  
+  .docente-admin-list-styles .col-nombre {
+    width: 30%; /* Aumentado de 25% */
+  }
+  
+  .docente-admin-list-styles .col-correo {
+    width: 45%; /* Aumentado de 30% */
+  }
+  
+  .docente-admin-list-styles .col-cargo {
+    width: 25%; /* Aumentado de 15% */
+  }
+  
+  /* Estilos para paginación */
+  .docente-admin-list-styles .paginacion-container {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+  
+  .docente-admin-list-styles .paginacion-bottom {
+    justify-content: center;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    width: 100%;
+  }
+  
+  .docente-admin-list-styles .btn-pagina {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    color: #555;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .docente-admin-list-styles .btn-pagina:hover {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+  }
+  
+  .docente-admin-list-styles .btn-pagina.active {
+    background-color: #d4af37; /* Color dorado para administradores */
+    border-color: #d4af37;
+    color: white;
+    font-weight: 600;
+  }
+  
+  .docente-admin-list-styles .btn-pagina:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  /* Reposicionamiento del contador de resultados */
+  .docente-admin-list-styles .resultados-info {
+    color: #666;
+    font-size: 0.9rem;
+    margin-left: auto;
+  }
+  
+  .docente-admin-list-styles .empty-state {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background-color: white;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    animation: fadeInUp 0.5s ease-out;
+    width: 100%;
+  }
+  
+  .docente-admin-list-styles .empty-state p {
+    margin-bottom: 1.5rem;
+    color: #555;
+    font-size: 1.1rem;
+  }
+  
+  .docente-admin-list-styles .loading-indicator {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #5c6b80;
+    font-size: 1rem;
+    animation: pulse 1.5s infinite;
+    width: 100%;
+  }
+  
+  /* Modal de confirmación */
+  .docente-admin-list-styles .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  .docente-admin-list-styles .modal-container {
+    width: 100%;
+    max-width: 500px;
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    animation: zoomIn 0.3s ease-out;
+  }
+  
+  .docente-admin-list-styles .modal-header {
+    padding: 1.5rem;
+    background-color: #2c3e50;
+    color: white;
+  }
+  
+  .docente-admin-list-styles .modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  
+  .docente-admin-list-styles .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .docente-admin-list-styles .warning-text {
+    color: #e74c3c;
+    font-weight: 500;
+  }
+  
+  .docente-admin-list-styles .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.5rem;
+  }
+  
+  .docente-admin-list-styles .btn-cancelar {
+    padding: 0.7rem 1.5rem;
+    background-color: #f1f1f1;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .docente-admin-list-styles .btn-confirmar {
+    padding: 0.7rem 1.5rem;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .docente-admin-list-styles .btn-cancelar:hover {
+    background-color: #e5e5e5;
+  }
+  
+  .docente-admin-list-styles .btn-confirmar:hover {
+    background-color: #c0392b;
+  }
+  
+  /* Animaciones */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes fadeInUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes zoomIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+  
+  /* Responsive */
+  @media (max-width: 992px) {
+    .docente-admin-list-styles .docentes-admin-header {
+      padding: 1rem 1.5rem;
+    }
+    
+    .docente-admin-list-styles .content-container {
+      padding: 0 1.5rem;
+    }
+    
+    .docente-admin-list-styles .filtros-container {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .docente-admin-list-styles .busqueda-container {
+      max-width: 100%;
+    }
+    
+    .docente-admin-list-styles .docentes-table th, 
+    .docente-admin-list-styles .docentes-table td {
+      padding: 0.75rem;
+    }
+    
+    .docente-admin-list-styles .tabla-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    
+    .docente-admin-list-styles .resultados-info {
+      margin-left: 0;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .docente-admin-list-styles .docentes-admin-header {
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+    }
+    
+    .docente-admin-list-styles .content-container {
+      padding: 0 1rem;
+    }
+    
+    .docente-admin-list-styles .btn-crear-docente {
+      width: 65%;
+      justify-content: center;
+    }
+    
+    .docente-admin-list-styles .paginacion-container {
+      justify-content: center;
+    }
+    
+    .docente-admin-list-styles .docentes-table th, 
+    .docente-admin-list-styles .docentes-table td {
+      padding: 0.6rem;
+      font-size: 0.85rem;
+    }
+    
+    /* Reducir aún más la columna numérica en dispositivos móviles */
+    .docente-admin-list-styles .col-num {
+      width: 25px;
+      padding-left: 2px;
+      padding-right: 2px;
+      font-size: 0.8rem;
+    }
+    
+    .docente-admin-list-styles .modal-container {
+      width: 90%;
+      margin: 0 5%;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .docente-admin-list-styles .docentes-table th, 
+    .docente-admin-list-styles .docentes-table td {
+      padding: 0.5rem;
+      font-size: 0.8rem;
+    }
+    
+    .docente-admin-list-styles .btn-pagina {
+      min-width: 1.8rem;
+      height: 1.8rem;
+      padding: 0 0.4rem;
+      font-size: 0.85rem;
+    }
+  }

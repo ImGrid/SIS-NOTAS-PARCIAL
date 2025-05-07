@@ -1,0 +1,293 @@
+/* src/components/Docentes/style/sidebar.css */
+.sidebar {
+  width: 240px;
+  background-color: #1e3a5f; /* Azul oscuro */
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  color: white;
+  font-family: Arial, sans-serif;
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  /* Eliminar desbordamiento horizontal */
+  overflow-x: hidden;
+}
+
+/* Estilo para el header del sidebar */
+.sidebar-header {
+  padding: 15px;
+  background-color: #183050; /* Azul más oscuro para el encabezado */
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-header .logo-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: white;
+  margin-left: 10px;
+}
+
+/* Perfil del usuario */
+.user-profile {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  flex-shrink: 0; /* Evitar que el avatar se comprima */
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Evitar desbordamiento */
+}
+
+.user-name {
+  font-size: 0.9rem;
+  color: white;
+  white-space: nowrap; /* Evitar salto de línea */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Agregar puntos suspensivos si el texto es demasiado largo */
+}
+
+.user-location {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Navegación principal - contenedor con altura limitada y scroll vertical */
+.sidebar nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 200px; /* Altura mínima para asegurar espacio para el menú */
+}
+
+.sidebar nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.sidebar nav ul li {
+  margin: 0;
+  width: 100%;
+}
+
+.sidebar nav ul li button,
+.sidebar nav ul li .menu-item {
+  background: none;
+  border: none;
+  padding: 12px 15px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: #e6c350; /* Color dorado para los elementos destacados */
+  font-weight: 500;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s;
+  text-decoration: none;
+  box-sizing: border-box; /* Incluir padding en el ancho total */
+}
+
+.sidebar nav ul li button:hover,
+.sidebar nav ul li .menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar nav ul li .menu-text {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0; /* Permitir que se reduzca si es necesario */
+  overflow: hidden; /* Evitar desbordamiento */
+  white-space: nowrap;
+}
+
+.sidebar nav ul li .menu-icon {
+  width: 24px;
+  margin-right: 10px;
+  color: #e6c350; /* Color dorado para íconos */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* Evitar que el icono se comprima */
+}
+
+/* Submenús */
+.sidebar nav ul li ul {
+  background-color: rgba(0, 0, 0, 0.2);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  width: 100%;
+}
+
+.sidebar nav ul li ul.open {
+  max-height: 500px; /* altura suficiente para mostrar el contenido */
+}
+
+.sidebar nav ul li ul li {
+  margin: 0;
+  width: 100%;
+}
+
+.sidebar nav ul li ul li a {
+  text-decoration: none;
+  color: white;
+  display: block;
+  padding: 10px 15px 10px 45px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sidebar nav ul li ul li a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Indicador de flecha para menús desplegables */
+.arrow-indicator {
+  transition: transform 0.3s;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0; /* Evitar que la flecha se comprima */
+  margin-left: 5px;
+}
+
+.arrow-open {
+  transform: rotate(180deg);
+}
+
+/* Estilo para la sección activa */
+.active-menu-item {
+  background-color: rgba(230, 195, 80, 0.2);
+  border-left: 3px solid #e6c350;
+}
+
+/* Footer y botón de logout - ahora garantizado que siempre estará visible */
+.sidebar-footer {
+  margin-top: auto; /* Empuja el footer al fondo */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #183050; /* Azul más oscuro para el pie de página */
+  flex-shrink: 0; /* Evita que se comprima */
+  width: 100%;
+}
+
+.logout-button {
+  background: none;
+  border: none;
+  padding: 12px 15px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: #e6c350; /* Color dorado para los elementos destacados */
+  font-weight: 500;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s;
+  box-sizing: border-box;
+}
+
+.logout-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.logout-button .menu-text {
+  display: flex;
+  align-items: center;
+}
+
+.logout-button .menu-icon {
+  width: 24px;
+  margin-right: 10px;
+  color: #e6c350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Pestaña lateral para móviles - simplificada y en la esquina superior */
+.sidebar-tab {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  background-color: #1e3a5f;
+  color: white;
+  border-radius: 0 0 4px 0;
+  z-index: 999;
+  cursor: pointer;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s ease;
+}
+
+.sidebar-tab.tab-open {
+  left: 240px; /* Ancho del sidebar */
+}
+
+/* Estilos responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .sidebar-tab {
+    display: flex;
+  }
+
+  /* Ajustar contenido principal para móvil */
+  main.content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* Animaciones */
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
