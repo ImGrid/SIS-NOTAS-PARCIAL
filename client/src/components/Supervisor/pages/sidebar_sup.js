@@ -216,6 +216,19 @@ function SidebarSup() {
                 </li>
               </ul>
             </li>
+
+            <li>
+              <Link to="/supervisor/informes" className="menu-sup-item">
+                <div className="menu-sup-text">
+                  <span className="menu-sup-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#d4af37">
+                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 6h-4v2h4V9zm0 3h-4v2h4v-2zm0 3h-4v2h4v-2zM5 8h8V6H5v2zm0 3h8v-2H5v3zm0 3h8v-2H5v2zm0 3h8v-2H5v2z" />
+                    </svg>
+                  </span>
+                  Informes de Notas
+                </div>
+              </Link>
+            </li>
           </ul>
         </nav>
         
@@ -232,6 +245,8 @@ function SidebarSup() {
             </div>
           </button>
         </div>
+
+        
       </aside>
     </>
   );

@@ -39,11 +39,9 @@ export const ESTRUCTURA_RUBRICA = {
     criterios: [
       // Grupo: PRESENTACIÓN ORAL 20%
       { id: 'claridad_exposicion', nombre: 'CLARIDAD DE LA EXPOSICIÓN', peso: 0.10, grupo: 'presentacion_oral' },
-      { id: 'uso_herramientas_visuales', nombre: 'USO DE HERRAMIENTAS VISUALES', peso: 0.05, grupo: 'presentacion_oral' },
-      { id: 'distribucion_tiempo', nombre: 'DISTRIBUCIÓN DE TIEMPO', peso: 0.05, grupo: 'presentacion_oral' },
+      { id: 'uso_herramientas_visuales', nombre: 'USO DE HERRAMIENTAS VISUALES Y TECNOLÓGICAS', peso: 0.10, grupo: 'presentacion_oral' },      
       // Grupo: TRABAJO EN EQUIPO 10%
-      { id: 'equidad_participacion', nombre: 'EQUIDAD EN LA PARTICIPACIÓN', peso: 0.05, grupo: 'trabajo_equipo' },
-      { id: 'coordinacion_cohesion', nombre: 'COORDINACIÓN Y COHESIÓN GRUPAL', peso: 0.05, grupo: 'trabajo_equipo' }
+      { id: 'participacion_grupal', nombre: 'PARTICIPACIÓN GRUPAL', peso: 0.10, grupo: 'trabajo_equipo' },
     ],
     grupos: {
       presentacion_oral: { nombre: 'PRESENTACIÓN ORAL', peso_total: 0.20 },
@@ -57,11 +55,12 @@ export const ESTRUCTURA_RUBRICA = {
       // Grupo: DOMINIO DEL CONTENIDO 20%
       { id: 'conocimiento_profundo', nombre: 'CONOCIMIENTO PROFUNDO DEL TEMA', peso: 0.10, grupo: 'dominio_contenido' },
       { id: 'respuestas_preguntas', nombre: 'RESPUESTAS A PREGUNTAS DEL DOCENTE', peso: 0.10, grupo: 'dominio_contenido' },
-      { id: 'capacidad_analisis', nombre: 'CAPACIDAD DE ANÁLISIS', peso: 0.05 },
-      { id: 'desarrollo_soluciones', nombre: 'DESARROLLO DE SOLUCIONES', peso: 0.05 }
+      // Grupo: DESARROLLO DE SOLUCIONES 10%
+      { id: 'desarrollo_soluciones', nombre: 'DESARROLLO DE SOLUCIONES', peso: 0.10, grupo: 'desarrollo_soluciones' }
     ],
     grupos: {
-      dominio_contenido: { nombre: 'DOMINIO DEL CONTENIDO', peso_total: 0.20 }
+      dominio_contenido: { nombre: 'DOMINIO DEL CONTENIDO', peso_total: 0.20 },
+      desarrollo_soluciones: { nombre: 'DESARROLLO DE SOLUCIONES', peso_total: 0.10 }
     }
   },
   documentacion: {
@@ -69,27 +68,23 @@ export const ESTRUCTURA_RUBRICA = {
     ponderacion: 0.30, // 30%
     criterios: [
       // Grupo: CALIDAD DE INFORME 10%
-      { id: 'estructura_documento', nombre: 'ESTRUCTURA DEL DOCUMENTO', peso: 0.05, grupo: 'calidad_informe' },
-      { id: 'claridad_precision', nombre: 'CLARIDAD Y PRECISIÓN', peso: 0.05, grupo: 'calidad_informe' },
-      // Grupo: CONTENIDO TÉCNICO 20%
-      { id: 'complejidad_diseno', nombre: 'COMPLEJIDAD DE DISEÑO', peso: 0.05, grupo: 'contenido_tecnico' },
-      { id: 'justificacion_tecnica', nombre: 'JUSTIFICACIÓN TÉCNICA', peso: 0.05, grupo: 'contenido_tecnico' },
-      { id: 'resultados_claros', nombre: 'RESULTADOS CLAROS Y CONCISOS', peso: 0.05, grupo: 'contenido_tecnico' },
-      { id: 'interpretacion_resultados', nombre: 'INTERPRETACIÓN DE RESULTADOS', peso: 0.05, grupo: 'contenido_tecnico' }
+      { id: 'estructura_documento', nombre: 'ESTRUCTURA DEL DOCUMENTO Y CUMPLIMIENTO DE OBJETIVOS', peso: 0.05, grupo: 'calidad_informe' },
+      { id: 'formato_redaccion', nombre: 'FORMATO Y REDACCIÓN', peso: 0.05, grupo: 'calidad_informe' },
+      // Grupo: INGENIERÍA DEL PROYECTO 20%
+      { id: 'ingenieria_proyecto', nombre: 'INGENIERÍA DEL PROYECTO', peso: 0.20, grupo: 'ingenieria_proyecto' }
     ],
     grupos: {
       calidad_informe: { nombre: 'CALIDAD DE INFORME', peso_total: 0.10 },
-      contenido_tecnico: { nombre: 'CONTENIDO TÉCNICO', peso_total: 0.20 }
+      ingenieria_proyecto: { nombre: 'INGENIERÍA DEL PROYECTO', peso_total: 0.20 }
     }
   },
   innovacion: {
     nombre: 'INNOVACIÓN',
     ponderacion: 0.10, // 10%
     criterios: [
-      { id: 'nivel_creatividad', nombre: 'NIVEL DE CREATIVIDAD EN LA SOLUCIÓN', peso: 0.05 },
-      { id: 'aplicabilidad_practica', nombre: 'APLICABILIDAD PRÁCTICA', peso: 0.05 }
+      { id: 'nivel_creatividad', nombre: 'NIVEL DE CREATIVIDAD EN LA SOLUCIÓN', peso: 0.10 }
     ]
-  }
+  },
 };
 
 // Lista de criterios que requieren aplicar la división por 2

@@ -47,11 +47,6 @@ const icons = {
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
   ),
-  filter: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-    </svg>
-  ),
   clear: (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -72,7 +67,10 @@ function GestionGrupos() {
   const [semestroFilter, setSemestroFilter] = useState('');
   const [carreraFilter, setCarreraFilter] = useState('');
   const [materiaFilter, setMateriaFilter] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const gruposPorPagina = 5; // Puedes ajustar este valor según tus necesidades
 
   // Función para cargar los grupos
   const cargarGrupos = async () => {
@@ -131,6 +129,97 @@ function GestionGrupos() {
     
     return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria;
   });
+  
+  // Calcular grupos a mostrar en la página actual
+  const indexUltimoGrupo = paginaActual * gruposPorPagina;
+  const indexPrimerGrupo = indexUltimoGrupo - gruposPorPagina;
+  const gruposActuales = gruposFiltrados.slice(indexPrimerGrupo, indexUltimoGrupo);
+  
+  // Calcular número total de páginas
+  const totalPaginas = Math.ceil(gruposFiltrados.length / gruposPorPagina);
+
+  // Función para cambiar de página
+  const cambiarPagina = (numeroPagina) => {
+    setPaginaActual(numeroPagina);
+  };
+
+  // Función para ir a la página anterior
+  const irPaginaAnterior = () => {
+    if (paginaActual > 1) {
+      setPaginaActual(paginaActual - 1);
+    }
+  };
+
+  // Función para ir a la página siguiente
+  const irPaginaSiguiente = () => {
+    if (paginaActual < totalPaginas) {
+      setPaginaActual(paginaActual + 1);
+    }
+  };
+
+  // Renderizar controles de paginación
+  const renderPaginacion = () => {
+    // Solo mostrar paginación si hay más de una página
+    if (totalPaginas <= 1) return null;
+    
+    // Determinar cuántos números de página mostrar
+    const mostrarNumeros = [];
+    
+    // Siempre mostrar la primera página
+    if (paginaActual > 1) mostrarNumeros.push(1);
+    
+    // Mostrar elipsis antes si la página actual es mayor a 3
+    if (paginaActual > 3) mostrarNumeros.push('...');
+    
+    // Mostrar la página anterior si existe y no es la primera
+    if (paginaActual > 2) mostrarNumeros.push(paginaActual - 1);
+    
+    // Mostrar la página actual
+    mostrarNumeros.push(paginaActual);
+    
+    // Mostrar la página siguiente si existe y no es la última
+    if (paginaActual < totalPaginas - 1) mostrarNumeros.push(paginaActual + 1);
+    
+    // Mostrar elipsis después si la página actual es menor a la última página - 2
+    if (paginaActual < totalPaginas - 2) mostrarNumeros.push('...');
+    
+    // Siempre mostrar la última página si hay más de una página
+    if (paginaActual < totalPaginas) mostrarNumeros.push(totalPaginas);
+    
+    return (
+      <div className="paginacion-container">
+        <button 
+          className="btn-pagina" 
+          onClick={irPaginaAnterior}
+          disabled={paginaActual === 1}
+        >
+          &laquo;
+        </button>
+        
+        {mostrarNumeros.map((numero, index) => (
+          numero === '...' ? (
+            <span key={`ellipsis-${index}`} className="pagina-ellipsis">...</span>
+          ) : (
+            <button
+              key={`page-${numero}`}
+              className={`btn-pagina ${paginaActual === numero ? 'active' : ''}`}
+              onClick={() => cambiarPagina(numero)}
+            >
+              {numero}
+            </button>
+          )
+        ))}
+        
+        <button 
+          className="btn-pagina" 
+          onClick={irPaginaSiguiente}
+          disabled={paginaActual === totalPaginas}
+        >
+          &raquo;
+        </button>
+      </div>
+    );
+  };
 
   // Función para limpiar filtros
   const clearFilters = () => {
@@ -138,6 +227,8 @@ function GestionGrupos() {
     setSemestroFilter('');
     setCarreraFilter('');
     setMateriaFilter('');
+    // También reseteamos la paginación al cambiar los filtros
+    setPaginaActual(1);
   };
 
   // Función para redirigir a la página de creación de grupos
@@ -231,21 +322,28 @@ function GestionGrupos() {
         </div>
         
         <div className="grupos-container">
-          {/* Barra de búsqueda y filtros */}
+          {/* Barra de búsqueda y filtros en una sola línea */}
           <div className="search-filters-container">
-            <div className="search-bar">
+            <div className="search-filters-row">
+              {/* Barra de búsqueda */}
               <div className="search-input-container">
                 {icons.search}
                 <input
                   type="text"
                   placeholder="Buscar por nombre de proyecto, carrera o materia..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPaginaActual(1); // Resetear a primera página al buscar
+                  }}
                   className="search-input"
                 />
                 {searchTerm && (
                   <button 
-                    onClick={() => setSearchTerm('')} 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setPaginaActual(1); // Resetear a primera página al limpiar
+                    }} 
                     className="clear-search"
                     title="Limpiar búsqueda"
                   >
@@ -253,75 +351,78 @@ function GestionGrupos() {
                   </button>
                 )}
               </div>
-              <button 
-                className={`filter-toggle ${showFilters ? 'active' : ''}`}
-                onClick={() => setShowFilters(!showFilters)}
-                title="Mostrar/Ocultar filtros"
+              
+              {/* Filtro de semestres */}
+              <select 
+                value={semestroFilter} 
+                onChange={(e) => {
+                  setSemestroFilter(e.target.value);
+                  setPaginaActual(1); // Resetear a primera página al filtrar
+                }}
+                className="filter-select"
               >
-                {icons.filter}
-                <span>Filtros</span>
+                <option value="">Todos los semestres</option>
+                {getSemestrosUnicos().map(semestre => (
+                  <option key={semestre} value={semestre}>
+                    Semestre {semestre}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Filtro de carreras */}
+              <select 
+                value={carreraFilter} 
+                onChange={(e) => {
+                  setCarreraFilter(e.target.value);
+                  setPaginaActual(1); // Resetear a primera página al filtrar
+                }}
+                className="filter-select"
+              >
+                <option value="">Todas las carreras</option>
+                {getCarrerasUnicas().map(carrera => (
+                  <option key={carrera} value={carrera}>
+                    {carrera}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Filtro de materias */}
+              <select 
+                value={materiaFilter} 
+                onChange={(e) => {
+                  setMateriaFilter(e.target.value);
+                  setPaginaActual(1); // Resetear a primera página al filtrar
+                }}
+                className="filter-select"
+              >
+                <option value="">Todas las materias</option>
+                {getMateriasUnicas().map(materia => (
+                  <option key={materia} value={materia}>
+                    {materia}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Botón X para limpiar todos los filtros */}
+              <button 
+                onClick={clearFilters} 
+                className="clear-filters"
+                title="Limpiar todos los filtros"
+              >
+                X
               </button>
             </div>
-            
-            {showFilters && (
-              <div className="filters-row">
-                <select 
-                  value={semestroFilter} 
-                  onChange={(e) => setSemestroFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">Todos los semestres</option>
-                  {getSemestrosUnicos().map(semestre => (
-                    <option key={semestre} value={semestre}>
-                      Semestre {semestre}
-                    </option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={carreraFilter} 
-                  onChange={(e) => setCarreraFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">Todas las carreras</option>
-                  {getCarrerasUnicas().map(carrera => (
-                    <option key={carrera} value={carrera}>
-                      {carrera}
-                    </option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={materiaFilter} 
-                  onChange={(e) => setMateriaFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">Todas las materias</option>
-                  {getMateriasUnicas().map(materia => (
-                    <option key={materia} value={materia}>
-                      {materia}
-                    </option>
-                  ))}
-                </select>
-                
-                <button 
-                  onClick={clearFilters} 
-                  className="clear-filters"
-                  title="Limpiar todos los filtros"
-                >
-                  {icons.clear}
-                  <span>Limpiar filtros</span>
-                </button>
+          </div>
+
+          {/* Paginación superior y contador de resultados */}
+          <div className="tabla-header">
+            {renderPaginacion()}
+            {(searchTerm || semestroFilter || carreraFilter || materiaFilter) && (
+              <div className="resultados-info">
+                Mostrando {gruposActuales.length} de {gruposFiltrados.length} grupos
               </div>
             )}
           </div>
-
-          {/* Contador de resultados */}
-          {(searchTerm || semestroFilter || carreraFilter || materiaFilter) && (
-            <div className="results-count">
-              Mostrando {gruposFiltrados.length} de {grupos.length} grupos
-            </div>
-          )}
           
           {loading ? (
             <div className="loading-indicator">Cargando sus grupos...</div>
@@ -342,7 +443,7 @@ function GestionGrupos() {
             </div>
           ) : (
             <div className="grupos-table-container">
-              {gruposFiltrados.map((grupo) => (
+              {gruposActuales.map((grupo) => (
                 <div key={grupo.id} className="grupo-card-table">
                   <div className="grupo-header-row">
                     <div className="grupo-title">
@@ -415,6 +516,11 @@ function GestionGrupos() {
               ))}
             </div>
           )}
+          
+          {/* Paginación inferior */}
+          <div className="paginacion-container paginacion-bottom">
+            {renderPaginacion()}
+          </div>
         </div>
       </div>
     </Layout>

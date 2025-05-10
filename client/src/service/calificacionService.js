@@ -95,16 +95,23 @@ export const crearCalificacion = async (calificacionData) => {
   }
 };
 
-// Función para actualizar una calificación existente
+// Función MODIFICADA para actualizar correctamente una calificación existente
 export const actualizarCalificacion = async (id, calificacionData) => {
   try {
     validateId(id);
     validateCalificacionData(calificacionData);
     
+    // Asegurar que los datos se envíen correctamente
     const response = await api.put(`/api/calificaciones/update/${id}`, {
       ...calificacionData,
-      updatedAt: new Date().toISOString()
+      fecha: calificacionData.fecha || new Date().toISOString()
     });
+    
+    // Verificar si la actualización fue exitosa
+    if (!response.data) {
+      throw new Error(`Error al actualizar la calificación ${id}: No se recibió respuesta del servidor`);
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Error al actualizar calificación:', error);

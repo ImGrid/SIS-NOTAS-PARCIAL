@@ -3,21 +3,34 @@
   display: flex;
   min-height: 100vh;
   background-color: #f5f7fa;
+  max-width: 100%; /* Limitar el ancho máximo */
+  overflow-x: hidden; /* Ocultar desbordamiento horizontal */
 }
 
 .vista-rubrica .content-container {
   flex: 1;
-  padding: 6px 25px;
-  margin-left: 250px; /* Espacio para el sidebar */
+  padding: 0;
+  margin-left: 240px; /* Espacio para el sidebar */
+  max-width: calc(100% - 240px); /* Calcular ancho máximo */
+  overflow-x: hidden; /* Ocultar desbordamiento horizontal */
 }
 
+/* Estilo actualizado para el título principal */
 .vista-rubrica .main-title {
-  font-size: 26px;
-  color: #2c3e50;
-  font-weight: 600;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e0e6ed;
-  text-align: center;
+  margin: 0;
+  color: #ffffff;
+  text-align: left;
+  font-size: 1.8rem;
+  font-weight: 700;
+  padding: 1rem 2rem;
+  background-color: #2c3e50;
+  border-bottom: none;
+  width: 100%;
+}
+
+/* Contenido con padding adecuado */
+.vista-rubrica .rubrica-content-wrapper {
+  padding: 0 25px 25px;
 }
 
 /* Estilos para la escala de calificación */
@@ -51,7 +64,6 @@
   width: 100%;
 }
 
-/* Estilo basado exactamente en el CSS anterior */
 .vista-rubrica .escala-item {
   padding: 4px 12px;
   border-radius: 20px;
@@ -77,6 +89,7 @@
   display: flex;
   border-bottom: none;
   margin-bottom: 0;
+  padding: 0 33px;
 }
 
 .vista-rubrica .tab-button {
@@ -106,25 +119,29 @@
   border: 1px solid #ccc;
   border-top: none;
   overflow-x: auto;
-  padding: 0;
+  padding: 0 32px; /* Añadimos padding horizontal de 20px */
 }
+
 
 /* Estilos de las secciones */
 .vista-rubrica .seccion-container {
   margin-bottom: 0;
+  padding: 0; /* Quitamos el padding de las secciones */
 }
-
 
 /* Estilos de los criterios */
 .vista-rubrica .criterio-container {
-  margin-bottom: 0;
+  margin-bottom: 15px; /* Añadimos margen inferior */
+  border: 1px solid #ddd; /* Añadimos un borde sutil */
+  border-radius: 4px; /* Redondeamos las esquinas */
+  overflow: hidden; /* Para que el border-radius funcione con los fondos de color */
 }
 
 .vista-rubrica .criterio-titulo {
   font-size: 14px;
   font-weight: bold;
   text-align: center;
-  padding: 8px;
+  padding: 10px 20px; /* Padding vertical e horizontal */
   background-color: #3ba7ff; /* Azul */
   color: black;
   border-bottom: 1px solid #ccc;
@@ -132,13 +149,13 @@
 
 /* Estilos de los subcriterios */
 .vista-rubrica .subcriterio-container {
-  margin-bottom: 0;
+  margin-bottom: 10px; /* Añadimos margen inferior */
 }
 
 .vista-rubrica .subcriterio-titulo {
   font-size: 13px;
   font-weight: bold;
-  padding: 6px;
+  padding: 8px 20px; /* Mismo padding horizontal que el título */
   margin-bottom: 0;
   text-align: center;
   background-color: #E3F2FD; /* Azul claro */
@@ -169,13 +186,30 @@
   display: flex;
   flex-direction: column;
 }
+/* Ajustamos responsive para mantener el espacio */
+@media (max-width: 1024px) {
+  .vista-rubrica .rubrica-content {
+    padding: 0 15px; /* Reducimos un poco en pantallas medianas */
+  }
+}
 
+@media (max-width: 768px) {
+  .vista-rubrica .rubrica-content {
+    padding: 0 10px; /* Reducimos aún más en móviles */
+  }
+}
+
+@media (max-width: 480px) {
+  .vista-rubrica .rubrica-content {
+    padding: 0 5px; /* Mínimo espacio en pantallas muy pequeñas */
+  }
+}
 .vista-rubrica .nivel-descripcion {
-  padding: 6px;
+  padding: 6px 10px;  /* Aumentado el padding horizontal */
   font-size: 12px;
   border-bottom: 1px solid #ccc;
   background-color: #f9f9f9;
-  height: 40px; /* Altura reducida */
+  min-height: 40px; /* Altura mínima en lugar de fija */
   display: flex;
   align-items: center;
 }
@@ -202,7 +236,6 @@
   border-bottom: none;
 }
 
-/* Estilo basado exactamente en el CSS anterior */
 .vista-rubrica .calificacion-badge {
   padding: 2px 8px;
   border-radius: 20px;
@@ -236,7 +269,11 @@
 @media (max-width: 1024px) {
   .vista-rubrica .content-container {
     margin-left: 0;
-    padding: 15px;
+    max-width: 100%;
+  }
+  
+  .vista-rubrica .rubrica-content-wrapper {
+    padding: 0 15px 15px;
   }
   
   .vista-rubrica .main-title {
@@ -271,11 +308,13 @@
   }
 }
 
+/* Ajustes para vista móvil */
 @media (max-width: 768px) {
-  .vista-rubrica .content-container {
-    padding: 10px;
+  .vista-rubrica .rubrica-content-wrapper {
+    padding: 0 10px 10px;
   }
   
+  /* Reestructurar la tabla para vista móvil */
   .vista-rubrica .niveles-grid {
     display: block;
   }
@@ -291,19 +330,22 @@
     border-bottom: none;
   }
   
+  /* Corrección para la vista móvil de las calificaciones */
   .vista-rubrica .calificaciones-container {
-    flex-direction: row;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas en móvil en lugar de 3 */
+    grid-auto-flow: dense; /* Para llenar espacios vacíos */
   }
   
   .vista-rubrica .calificacion-item {
-    width: 33.33%;
+    width: auto;
     height: 24px;
     border-right: 1px solid #ccc;
     border-bottom: none;
+    justify-content: center;
   }
   
-  .vista-rubrica .calificacion-item:nth-child(3n) {
+  .vista-rubrica .calificacion-item:nth-child(2n) {
     border-right: none;
   }
   
@@ -323,16 +365,27 @@
     padding: 2px 6px;
     font-size: 10px;
   }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .vista-rubrica .escala-row {
+    flex-wrap: wrap;
+  }
   
-  /* Para pantallas muy pequeñas, permitir que cada fila se ajuste */
-  @media (max-width: 480px) {
-    .vista-rubrica .escala-row {
-      flex-wrap: wrap;
-    }
-    
-    .vista-rubrica .calificacion-badge {
-      padding: 1px 4px;
-      font-size: 9px;
-    }
+  .vista-rubrica .calificacion-badge {
+    padding: 1px 4px;
+    font-size: 9px;
+  }
+  
+  /* Ajustar el tamaño de fuente para pantallas pequeñas */
+  .vista-rubrica .nivel-descripcion {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  
+  /* Reducir aún más el padding lateral */
+  .vista-rubrica .rubrica-content-wrapper {
+    padding: 0 5px 10px;
   }
 }

@@ -1,5 +1,5 @@
 // src/components/Rubricas/pages/estadisticas.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -9,7 +9,7 @@ import Sidebar from '../../Docentes/sidebar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../style/estadisticas.css'; // Importamos el archivo CSS
-
+import { generarEstadisticasPDF } from '../../../util/pdf/estadisticasPdf';
 // Importar servicios necesarios
 import { getMisGrupos } from '../../../service/grupoService';
 import { getEstudiantes } from '../../../service/estudianteService';
@@ -28,6 +28,9 @@ function Estadisticas() {
   const [gruposPorCarreraYSemestre, setGruposPorCarreraYSemestre] = useState({});
   const [semestresPorCarrera, setSemestresPorCarrera] = useState({});
   const [estadisticasPorCarreraYSemestre, setEstadisticasPorCarreraYSemestre] = useState({});
+  const graficoCircularRef = useRef(null);
+  const graficoBarrasRef = useRef(null);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
   const [estadisticasGenerales, setEstadisticasGenerales] = useState({
     aprobados: 0,
     reprobados: 0,
@@ -40,11 +43,14 @@ function Estadisticas() {
       innovacion: 0
     }
   });
+  const [materiaSeleccionada, setMateriaSeleccionada] = useState('TODAS');
+  const [materiasUnicas, setMateriasUnicas] = useState(['TODAS']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [docenteActual, setDocenteActual] = useState(null);
   const [carreraSeleccionada, setCarreraSeleccionada] = useState('TODAS');
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('TODOS');
+  const [datosFiltrados, setDatosFiltrados] = useState([]);
   
   const navigate = useNavigate();
 
@@ -159,8 +165,19 @@ function Estadisticas() {
           semestresPorCarreraTemp
         );
         
+        setDatosFiltrados(datosEstadisticasTemp);
+        
         // 10. Calcular estadísticas
         calcularEstadisticas(datosEstadisticasTemp, gruposPorCS);
+        
+        // 11. Extraer materias únicas
+        const materiasSet = new Set();
+        for (const grupo of gruposData) {
+          if (grupo.materia) {
+            materiasSet.add(grupo.materia);
+          }
+        }
+        setMateriasUnicas(['TODAS', ...Array.from(materiasSet).sort()]);
         
         setLoading(false);
       } catch (error) {
@@ -173,6 +190,154 @@ function Estadisticas() {
 
     cargarDatos();
   }, []);
+
+  // Efecto para filtrar datos cuando cambian los filtros
+  useEffect(() => {
+    if (!loading && todosLosEstudiantes.length > 0) {
+      // Filtrar los datos según los filtros seleccionados
+      const filtrados = filtrarDatos(
+        grupos,
+        todosLosEstudiantes,
+        estudiantesPorGrupo,
+        informesPorGrupo,
+        rubricasPorInforme,
+        carreraSeleccionada,
+        semestreSeleccionado,
+        materiaSeleccionada
+      );
+      
+      setDatosFiltrados(filtrados);
+      
+      // Recalcular estadísticas con los datos filtrados
+      calcularEstadisticas(filtrados, gruposPorCarreraYSemestre);
+    }
+  }, [carreraSeleccionada, semestreSeleccionado, materiaSeleccionada]);
+
+  const generarPDF = async () => {
+    setGenerandoPDF(true);
+    toast.info('Generando PDF, por favor espere...');
+    
+    try {
+      // Añadir un pequeño retraso para asegurar que los gráficos están completamente renderizados
+      setTimeout(async () => {
+        try {
+          await generarEstadisticasPDF({
+            elementoDOM: document.getElementById('evaluacion-container'),
+            filtros: {
+              carrera: carreraSeleccionada,
+              semestre: semestreSeleccionado,
+              materia: materiaSeleccionada
+            },
+            docente: docenteActual,
+            graficos: {
+              graficoCircular: graficoCircularRef.current,
+              graficoBarras: graficoBarrasRef.current
+            },
+            datos: {
+              totalEstudiantes: datosCircular.totalEstudiantes,
+              aprobados: estadisticasGenerales.aprobados,
+              reprobados: estadisticasGenerales.reprobados,
+              pendientes: estadisticasGenerales.pendientes,
+              promedioGeneral: promedioGeneralBarras,
+              datosBarras: datosBarras
+            },
+            totalGrupos: materiaSeleccionada === 'TODAS' 
+              ? grupos.length 
+              : grupos.filter(grupo => grupo.materia === materiaSeleccionada).length
+          });
+          
+          toast.success('PDF generado correctamente');
+        } catch (error) {
+          console.error('Error al generar PDF:', error);
+          toast.error('Error al generar el PDF: ' + error.message);
+        } finally {
+          setGenerandoPDF(false);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('Error inicial al generar PDF:', error);
+      toast.error('Error al preparar el PDF');
+      setGenerandoPDF(false);
+    }
+  };
+
+  // Función para limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setCarreraSeleccionada('TODAS');
+    setSemestreSeleccionado('TODOS');
+    setMateriaSeleccionada('TODAS');
+  };
+
+  const filtrarDatos = (
+    grupos,
+    todosLosEstudiantes,
+    estudiantesPorGrupo,
+    informesPorGrupo,
+    rubricasPorInforme,
+    carrera,
+    semestre,
+    materia
+  ) => {
+    const datosEstadisticas = [];
+
+    // Filtrar estudiantes según los criterios
+    for (const estudiante of todosLosEstudiantes) {
+      // Filtrar por carrera si está seleccionada
+      if (carrera !== 'TODAS' && estudiante.carrera !== carrera) {
+        continue;
+      }
+      
+      // Filtrar por semestre si está seleccionado
+      if (semestre !== 'TODOS' && estudiante.semestre.toString() !== semestre) {
+        continue;
+      }
+      
+      // Buscar si el estudiante pertenece a algún grupo
+      let grupoDelEstudiante = null;
+      let informeDelEstudiante = null;
+      let rubricaDelEstudiante = null;
+      
+      // Buscar en todos los grupos
+      for (const grupo of grupos) {
+        // Filtrar por materia si está seleccionada
+        if (materia !== 'TODAS' && grupo.materia !== materia) {
+          continue;
+        }
+        
+        // Verificar si la carrera y semestre coinciden con los del estudiante
+        if (grupo.carrera === estudiante.carrera && grupo.semestre === estudiante.semestre) {
+          const estudiantesDelGrupo = estudiantesPorGrupo[grupo.id] || [];
+          
+          if (estudiantesDelGrupo.some(est => est.id === estudiante.id)) {
+            grupoDelEstudiante = grupo;
+            
+            // Buscar si tiene informe en este grupo
+            const informesDelGrupo = informesPorGrupo[grupo.id] || [];
+            informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
+            
+            // Si tiene informe, buscar su rúbrica
+            if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
+              rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
+            }
+            
+            break; // Si encontramos el grupo, no necesitamos seguir buscando
+          }
+        }
+      }
+      
+      // Solo agregar estudiante si pertenece a un grupo que coincide con los filtros
+      if (grupoDelEstudiante) {
+        datosEstadisticas.push({
+          estudiante,
+          grupo: grupoDelEstudiante,
+          informe: informeDelEstudiante,
+          rubrica: rubricaDelEstudiante
+        });
+      }
+    }
+
+    return datosEstadisticas;
+  };
 
   // Función para preparar los datos para las estadísticas
   const prepararDatosEstadisticas = (
@@ -238,7 +403,7 @@ function Estadisticas() {
 
     return datosEstadisticas;
   };
-
+  
   // Función para organizar grupos por carrera y semestre
   const organizarGruposPorCarreraYSemestre = (grupos) => {
     const organizado = {};
@@ -437,56 +602,18 @@ function Estadisticas() {
         let totalEstudiantes = 0;
         let dataArray = [];
         
-        if (carreraSeleccionada === 'TODAS' && semestreSeleccionado === 'TODOS') {
-          // Mostrar estadísticas generales
-          totalEstudiantes = estadisticasGenerales.total;
-          dataArray = [
-            { name: 'Aprobados', value: estadisticasGenerales.aprobados, color: COLORS.aprobados },
-            { name: 'Reprobados', value: estadisticasGenerales.reprobados, color: COLORS.reprobados },
-            { name: 'Pendientes', value: estadisticasGenerales.pendientes, color: COLORS.pendientes }
-          ].filter(item => item.value > 0); // Solo mostrar categorías con valores
-        } else if (carreraSeleccionada !== 'TODAS' && semestreSeleccionado === 'TODOS') {
-          // Mostrar estadísticas de una carrera (todos los semestres)
-          let aprobados = 0;
-          let reprobados = 0;
-          let pendientes = 0;
-          
-          // Sumar totales de todos los semestres de esta carrera
-          Object.values(estadisticasPorCarreraYSemestre[carreraSeleccionada] || {}).forEach(stats => {
-            aprobados += stats.aprobados;
-            reprobados += stats.reprobados;
-            pendientes += stats.pendientes;
-            totalEstudiantes += stats.total;
-          });
-          
-          dataArray = [
-            { name: 'Aprobados', value: aprobados, color: COLORS.aprobados },
-            { name: 'Reprobados', value: reprobados, color: COLORS.reprobados },
-            { name: 'Pendientes', value: pendientes, color: COLORS.pendientes }
-          ].filter(item => item.value > 0); // Solo mostrar categorías con valores
-        } else if (carreraSeleccionada !== 'TODAS' && semestreSeleccionado !== 'TODOS') {
-          // Mostrar estadísticas de una carrera y semestre específico
-          const stats = estadisticasPorCarreraYSemestre[carreraSeleccionada]?.[semestreSeleccionado];
-          
-          if (!stats) return [
-            { name: 'Sin datos', value: 1, color: '#ccc' }
-          ];
-          
-          totalEstudiantes = stats.total;
-          dataArray = [
-            { name: 'Aprobados', value: stats.aprobados, color: COLORS.aprobados },
-            { name: 'Reprobados', value: stats.reprobados, color: COLORS.reprobados },
-            { name: 'Pendientes', value: stats.pendientes, color: COLORS.pendientes }
-          ].filter(item => item.value > 0); // Solo mostrar categorías con valores
-        } else {
-          // Por defecto, mostrar estadísticas generales
-          totalEstudiantes = estadisticasGenerales.total;
-          dataArray = [
-            { name: 'Aprobados', value: estadisticasGenerales.aprobados, color: COLORS.aprobados },
-            { name: 'Reprobados', value: estadisticasGenerales.reprobados, color: COLORS.reprobados },
-            { name: 'Pendientes', value: estadisticasGenerales.pendientes, color: COLORS.pendientes }
-          ].filter(item => item.value > 0); // Solo mostrar categorías con valores
-        }
+        // Usar datos filtrados para generar el gráfico
+        const aprobados = datosFiltrados.filter(dato => dato.rubrica?.observaciones === 'APROBADO').length;
+        const reprobados = datosFiltrados.filter(dato => dato.rubrica?.observaciones === 'REPROBADO').length;
+        const pendientes = datosFiltrados.length - aprobados - reprobados;
+        
+        totalEstudiantes = datosFiltrados.length;
+        
+        dataArray = [
+          { name: 'Aprobados', value: aprobados, color: COLORS.aprobados },
+          { name: 'Reprobados', value: reprobados, color: COLORS.reprobados },
+          { name: 'Pendientes', value: pendientes, color: COLORS.pendientes }
+        ].filter(item => item.value > 0); // Solo mostrar categorías con valores
         
         // Añadir el total a los datos para usarlo en la interfaz
         return {
@@ -497,65 +624,46 @@ function Estadisticas() {
     
     // Función para obtener datos del gráfico de barras según selección
     const obtenerDatosGraficoBarras = () => {
-        // Determinar los valores de promedio a mostrar según la selección
-        let promedioSecciones;
-        let promedioGeneral = 0;
+        // Calcular promedios de las secciones usando los datos filtrados
+        let sumaPresentacion = 0;
+        let sumaSustentacion = 0;
+        let sumaDocumentacion = 0;
+        let sumaInnovacion = 0;
+        let sumaNotaFinal = 0;
+        let cantidadConNota = 0;
         
-        if (carreraSeleccionada === 'TODAS' && semestreSeleccionado === 'TODOS') {
-          promedioSecciones = estadisticasGenerales.promedioSecciones;
-          promedioGeneral = estadisticasGenerales.promedioGeneral;
-        } else if (carreraSeleccionada !== 'TODAS' && semestreSeleccionado === 'TODOS') {
-          // Calcular promedios para todos los semestres de esta carrera
-          let sumaPresentacion = 0;
-          let sumaSustentacion = 0;
-          let sumaDocumentacion = 0;
-          let sumaInnovacion = 0;
-          let sumaPromedioGeneral = 0;
-          let cantidadSemestresConNotas = 0;
-          
-          Object.values(estadisticasPorCarreraYSemestre[carreraSeleccionada] || {}).forEach(stats => {
-            if (stats.cantidadConNota > 0) {
-              sumaPresentacion += stats.promedioSecciones.presentacion;
-              sumaSustentacion += stats.promedioSecciones.sustentacion;
-              sumaDocumentacion += stats.promedioSecciones.documentacion;
-              sumaInnovacion += stats.promedioSecciones.innovacion;
-              sumaPromedioGeneral += stats.promedioGeneral;
-              cantidadSemestresConNotas++;
+        datosFiltrados.forEach(dato => {
+          if (dato.rubrica) {
+            if (dato.rubrica.presentacion !== null && dato.rubrica.presentacion !== undefined) {
+              sumaPresentacion += parseFloat(dato.rubrica.presentacion);
             }
-          });
-          
-          const divisor = cantidadSemestresConNotas || 1; // Evitar división por cero
-          
-          promedioSecciones = {
-            presentacion: sumaPresentacion / divisor,
-            sustentacion: sumaSustentacion / divisor,
-            documentacion: sumaDocumentacion / divisor,
-            innovacion: sumaInnovacion / divisor
-          };
-          
-          promedioGeneral = sumaPromedioGeneral / divisor;
-        } else if (carreraSeleccionada !== 'TODAS' && semestreSeleccionado !== 'TODOS') {
-          // Promedios para esta carrera y semestre específico
-          const stats = estadisticasPorCarreraYSemestre[carreraSeleccionada]?.[semestreSeleccionado];
-          
-          if (!stats || stats.cantidadConNota === 0) {
-            // Si no hay datos, usar valores cero
-            promedioSecciones = {
-              presentacion: 0,
-              sustentacion: 0,
-              documentacion: 0,
-              innovacion: 0
-            };
-            promedioGeneral = 0;
-          } else {
-            promedioSecciones = stats.promedioSecciones;
-            promedioGeneral = stats.promedioGeneral;
+            
+            if (dato.rubrica.sustentacion !== null && dato.rubrica.sustentacion !== undefined) {
+              sumaSustentacion += parseFloat(dato.rubrica.sustentacion);
+            }
+            
+            if (dato.rubrica.documentacion !== null && dato.rubrica.documentacion !== undefined) {
+              sumaDocumentacion += parseFloat(dato.rubrica.documentacion);
+            }
+            
+            if (dato.rubrica.innovacion !== null && dato.rubrica.innovacion !== undefined) {
+              sumaInnovacion += parseFloat(dato.rubrica.innovacion);
+            }
+            
+            if (dato.rubrica.nota_final !== null && dato.rubrica.nota_final !== undefined) {
+              sumaNotaFinal += parseFloat(dato.rubrica.nota_final);
+              cantidadConNota++;
+            }
           }
-        } else {
-          // Por defecto, usar promedios generales
-          promedioSecciones = estadisticasGenerales.promedioSecciones;
-          promedioGeneral = estadisticasGenerales.promedioGeneral;
-        }
+        });
+        
+        const promedioGeneral = cantidadConNota > 0 ? sumaNotaFinal / cantidadConNota : 0;
+        const promedioSecciones = {
+          presentacion: cantidadConNota > 0 ? sumaPresentacion / cantidadConNota : 0,
+          sustentacion: cantidadConNota > 0 ? sumaSustentacion / cantidadConNota : 0,
+          documentacion: cantidadConNota > 0 ? sumaDocumentacion / cantidadConNota : 0,
+          innovacion: cantidadConNota > 0 ? sumaInnovacion / cantidadConNota : 0
+        };
         
         // Crear datos para el gráfico
         return {
@@ -608,10 +716,11 @@ function Estadisticas() {
             {/* Añadimos el namespace para aislar los estilos */}
             <div className="estadisticas-styles">
               <div className="evaluacion-header">
-                <h1>ESTADÍSTICAS DE EVALUACIÓN</h1>
-                <h2>Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+                <div className="header-content">
+                  <h1>ESTADÍSTICAS DE EVALUACIÓN</h1>
+                </div>
               </div>
-              <div className="evaluacion-container">
+              <div className="evaluacion-container" id="evaluacion-container">
                 <div className="loading-indicator">Cargando datos estadísticos...</div>
               </div>
             </div>
@@ -630,19 +739,20 @@ function Estadisticas() {
             {/* Añadimos el namespace para aislar los estilos */}
             <div className="estadisticas-styles">
               <div className="evaluacion-header">
-                <h1>ESTADÍSTICAS DE EVALUACIÓN</h1>
-                <h2>Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
-              </div>
-              <div className="evaluacion-container">
-                <div className="error-message">{error}</div>
-                <div className="acciones-container">
+                <div className="header-content">
+                  <h1>ESTADÍSTICAS DE EVALUACIÓN</h1>
+                </div>
+                <div className="header-actions">
                   <button 
                     className="btn-volver"
                     onClick={() => navigate('/docentes')}
                   >
-                    Volver al Dashboard
+                    Volver
                   </button>
                 </div>
+              </div>
+              <div className="evaluacion-container">
+                <div className="error-message">{error}</div>
               </div>
             </div>
           </main>
@@ -656,6 +766,7 @@ function Estadisticas() {
     const datosBarrasObj = obtenerDatosGraficoBarras();
     const datosBarras = datosBarrasObj.chartData;
     const promedioGeneralBarras = datosBarrasObj.promedioGeneral;
+    
     // Calcular promedio general a partir de los datos de barras
     const calcularPromedioGeneral = () => {
       const valoresTotales = datosBarras.reduce((sum, item) => {
@@ -678,6 +789,9 @@ function Estadisticas() {
       semestres.push(...Object.keys(gruposPorCarreraYSemestre[carreraSeleccionada]));
     }
     
+    // Verificar si hay filtros activos
+    const hayFiltrosActivos = carreraSeleccionada !== 'TODAS' || semestreSeleccionado !== 'TODOS' || materiaSeleccionada !== 'TODAS';
+    
     return (
       <div className="docentes-container">
         <ToastContainer position="top-right" autoClose={3000} />
@@ -686,33 +800,33 @@ function Estadisticas() {
           {/* Añadimos el namespace para aislar los estilos */}
           <div className="estadisticas-styles">
             <div className="evaluacion-header">
-              <h1>ESTADÍSTICAS DE EVALUACIÓN</h1>
-              <h2>Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+              <div className="header-content">
+                <h1>ESTADÍSTICAS DE EVALUACIÓN</h1>
+              </div>
+              <div className="header-actions">
+                <button 
+                  className="btn-volver"
+                  onClick={() => navigate('/docentes')}
+                  disabled={generandoPDF}
+                >
+                  Volver
+                </button>
+                
+                <button 
+                  className="btn-pdf"
+                  onClick={generarPDF}
+                  disabled={generandoPDF}
+                >
+                  {generandoPDF ? 'Generando PDF...' : 'Descargar PDF'}
+                </button>
+              </div>
             </div>
   
-            <div className="evaluacion-container">
-              {/* Información general */}
-              <div className="proyecto-info-container">
-                <div className="proyecto-info">
-                  <div className="proyecto-info-item">
-                    <div className="proyecto-info-label">Fecha del informe:</div>
-                    <div className="proyecto-info-value">{obtenerFechaActual()}</div>
-                  </div>
-                  <div className="proyecto-info-item">
-                    <div className="proyecto-info-label">Docente:</div>
-                    <div className="proyecto-info-value">{docenteActual ? docenteActual.nombre_completo : 'No especificado'}</div>
-                  </div>
-                  <div className="proyecto-info-item">
-                    <div className="proyecto-info-label">Total de grupos:</div>
-                    <div className="proyecto-info-value">{grupos.length}</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Filtros */}
-              <div className="filtros-container">
+            <div className="evaluacion-container" id="evaluacion-container">
+              {/* Filtros en una sola línea */}
+              <div className="filters-search-row">
+                {/* Filtro de carrera */}
                 <div className="filtro">
-                  <label htmlFor="carrera-select">Carrera:</label>
                   <select 
                     id="carrera-select" 
                     value={carreraSeleccionada}
@@ -721,25 +835,69 @@ function Estadisticas() {
                       setSemestreSeleccionado('TODOS');
                     }}
                   >
-                    {carreras.map(carrera => (
+                    <option value="TODAS">Todas las carreras</option>
+                    {carreras.filter(c => c !== 'TODAS').map(carrera => (
                       <option key={carrera} value={carrera}>{carrera}</option>
                     ))}
                   </select>
                 </div>
                 
+                {/* Filtro de semestre */}
                 <div className="filtro">
-                  <label htmlFor="semestre-select">Semestre:</label>
                   <select 
                     id="semestre-select" 
                     value={semestreSeleccionado}
                     onChange={(e) => setSemestreSeleccionado(e.target.value)}
                     disabled={carreraSeleccionada === 'TODAS'}
                   >
-                    {semestres.map(semestre => (
-                      <option key={semestre} value={semestre}>{semestre === 'TODOS' ? 'TODOS' : `${semestre}° Semestre`}</option>
+                    <option value="TODOS">Todos los semestres</option>
+                    {carreraSeleccionada !== 'TODAS' && gruposPorCarreraYSemestre[carreraSeleccionada] 
+                      ? Object.keys(gruposPorCarreraYSemestre[carreraSeleccionada]).sort((a, b) => a - b).map(semestre => (
+                          <option key={semestre} value={semestre}>{`${semestre}° Semestre`}</option>
+                        ))
+                      : null
+                    }
+                  </select>
+                </div>
+
+                {/* Filtro de materia */}
+                <div className="filtro">
+                  <select 
+                    id="materia-select" 
+                    value={materiaSeleccionada}
+                    onChange={(e) => setMateriaSeleccionada(e.target.value)}
+                  >
+                    <option value="TODAS">Todas las materias</option>
+                    {materiasUnicas.filter(m => m !== 'TODAS').map(materia => (
+                      <option key={materia} value={materia}>{materia}</option>
                     ))}
                   </select>
                 </div>
+                
+                {/* Botón X para limpiar todos los filtros */}
+                <button 
+                  onClick={limpiarFiltros} 
+                  className="btn-limpiar-filtros"
+                  title="Limpiar todos los filtros"
+                  disabled={!hayFiltrosActivos}
+                >
+                  X
+                </button>
+              </div>
+
+              {/* Información general con estilo mejorado */}
+              <div className="pdf-info">
+                <div><strong>Fecha del informe:</strong> {obtenerFechaActual()}</div>
+                <div><strong>Docente:</strong> {docenteActual ? docenteActual.nombre_completo : 'No especificado'}</div>
+                <div><strong>Total de grupos:</strong> {
+                  materiaSeleccionada === 'TODAS' 
+                  ? grupos.length 
+                  : grupos.filter(grupo => grupo.materia === materiaSeleccionada).length
+                }</div>
+                {carreraSeleccionada !== 'TODAS' && <div><strong>Carrera:</strong> {carreraSeleccionada}</div>}
+                {semestreSeleccionado !== 'TODOS' && <div><strong>Semestre:</strong> {semestreSeleccionado}° Semestre</div>}
+                {materiaSeleccionada !== 'TODAS' && <div><strong>Asignatura:</strong> {materiaSeleccionada}</div>}
+                <div><strong>Total de estudiantes:</strong> {datosCircular.totalEstudiantes}</div>
               </div>
               
               {/* Resumen estadístico */}
@@ -748,7 +906,7 @@ function Estadisticas() {
                 
                 <div className="estadisticas-grid">
                   {/* Gráfico circular */}
-                  <div className="grafico-container">
+                  <div className="grafico-container" ref={graficoCircularRef}>
                     <h4>Distribución de Resultados</h4>
                     <div className="total-estudiantes">
                         <span className="total-label">Total de estudiantes:</span> 
@@ -795,7 +953,7 @@ function Estadisticas() {
                     </div>
                   
                   {/* Gráfico de barras */}
-                  <div className="grafico-container">
+                  <div className="grafico-container" ref={graficoBarrasRef}>
                     <h4>Calificación Promedio por Sección</h4>
                     <div className="promedio-general">
                         <span className="promedio-label">Promedio General:</span> 
@@ -874,23 +1032,6 @@ function Estadisticas() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-              
-              {/* Botones de acción */}
-              <div className="acciones-container">
-                <button 
-                  className="btn-volver"
-                  onClick={() => navigate('/docentes')}
-                >
-                  Volver
-                </button>
-                
-                <button 
-                  className="btn-imprimir"
-                  onClick={() => window.print()}
-                >
-                  Imprimir Informe
-                </button>
               </div>
             </div>
           </div>

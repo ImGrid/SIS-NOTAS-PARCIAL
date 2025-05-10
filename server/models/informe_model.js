@@ -32,7 +32,18 @@ async function eliminarInforme(id) {
 }
 
 async function obtenerInformesPorGrupoId(grupoId) {
-  const result = await pool.query('SELECT * FROM informes WHERE grupo_id = $1', [grupoId]);
+  // Consulta para obtener solo el informe más reciente para cada estudiante en un grupo
+  const query = `
+    SELECT i.* FROM informes i
+    INNER JOIN (
+      SELECT estudiante_id, MAX(id) as max_id
+      FROM informes
+      WHERE grupo_id = $1
+      GROUP BY estudiante_id
+    ) as recent ON i.id = recent.max_id
+    ORDER BY i.estudiante_id
+  `;
+  const result = await pool.query(query, [grupoId]);
   return result.rows;
 }
 

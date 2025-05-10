@@ -7,16 +7,16 @@ const VistaRubrica = () => {
 
   // Escala de calificación con sus colores
   const escalaCalificacion = [
-    { valor: 'SOBRESALIENTE', numero: '10', color: '#30eb30' },
-    { valor: 'EXCELENTE', numero: '9', color: '#92d050' },
-    { valor: 'MUY BUENO', numero: '8', color: '#ffda9e' },
-    { valor: 'BUENO', numero: '7', color: '#b5dcfd' },
-    { valor: 'SATISFACTORIO', numero: '6', color: '#00bfff' },
-    { valor: 'ACEPTABLE', numero: '5', color: '#ffcc00' },
-    { valor: 'BÁSICAMENTE ACEPTABLE', numero: '4', color: '#ffee00' },
-    { valor: 'INSUFICIENTE', numero: '3', color: '#cd853f' },
-    { valor: 'DEFICIENTE', numero: '2', color: '#ff4444' },
-    { valor: 'MUY DEFICIENTE', numero: '1', color: '#ff0000' },
+    { valor: 'SOBRESALIENTE', numero: '10 pts', color: '#30eb30' },
+    { valor: 'EXCELENTE', numero: '9 pts', color: '#92d050' },
+    { valor: 'MUY BUENO', numero: '8 pts', color: '#ffda9e' },
+    { valor: 'BUENO', numero: '7 pts', color: '#b5dcfd' },
+    { valor: 'SATISFACTORIO', numero: '6 pts', color: '#00bfff' },
+    { valor: 'ACEPTABLE', numero: '5 pts', color: '#ffcc00' },
+    { valor: 'BÁSICAMENTE ACEPTABLE', numero: '4 pts', color: '#ffee00' },
+    { valor: 'INSUFICIENTE', numero: '3 pts', color: '#cd853f' },
+    { valor: 'DEFICIENTE', numero: '2 pts', color: '#ff4444' },
+    { valor: 'MUY DEFICIENTE', numero: '1 pts', color: '#ff0000' },
   ];
 
   // Mapa para obtener el color correspondiente a cada calificación
@@ -43,11 +43,11 @@ const VistaRubrica = () => {
               niveles: [
                 {
                   descripcion: 'Presentación muy confusa y poco clara',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
                   descripcion: 'Exposición desorganizada y difícil de seguir',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
                   descripcion: 'Algunas partes son confusas o desorganizadas',
@@ -64,16 +64,16 @@ const VistaRubrica = () => {
               ]
             },
             {
-              nombre: 'USO DE DE HERRAMIENTAS VISUALES 5%',
+              nombre: 'USO DE HERRAMIENTAS VISUALES Y TECNOLÓGICAS 10%',
               color: 'bg-blue-light',
               niveles: [
                 {
                   descripcion: 'No se usan recursos visuales o son irrelevantes.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
                   descripcion: 'Recursos visuales ineficaces o mal utilizados',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
                   descripcion: 'Recursos visuales básicos y poco impactantes',
@@ -88,32 +88,6 @@ const VistaRubrica = () => {
                   calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
                 }
               ]
-            },
-            {
-              nombre: 'DISTRIBUCIÓN DE TIEMPO 5%',
-              color: 'bg-blue-light',
-              niveles: [
-                {
-                  descripcion: 'Desajuste severo del tiempo, impacta la comprensión.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-                },
-                {
-                  descripcion: 'Tiempo descontrolado, afectando la comprensión.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
-                },
-                {
-                  descripcion: 'Exceso o falta notable de tiempo.',
-                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-                },
-                {
-                  descripcion: 'Ligeros problemas en el ajuste del tiempo.',
-                  calificaciones: ['BUENO', 'MUY BUENO']
-                },
-                {
-                  descripcion: 'Tiempo perfectamente ajustado.',
-                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-                }
-              ]
             }
           ]
         },
@@ -121,16 +95,16 @@ const VistaRubrica = () => {
           nombre: 'TRABAJO EN EQUIPO 10%',
           subcriterios: [
             {
-              nombre: 'EQUIDAD EN LA PARTICIPACIÓN 5%',
+              nombre: 'PARTICIPACIÓN GRUPAL 10%',
               color: 'bg-blue-light',
               niveles: [
                 {
                   descripcion: 'Participación insuficiente de la mayoría.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
                   descripcion: 'Participación muy desigual, algunos no contribuyen.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
                   descripcion: 'Participación desequilibrada.',
@@ -142,32 +116,6 @@ const VistaRubrica = () => {
                 },
                 {
                   descripcion: 'Todos participan de manera equitativa y colaborativa.',
-                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-                }
-              ]
-            },
-            {
-              nombre: 'COORDINACIÓN 5%',
-              color: 'bg-blue-light',
-              niveles: [
-                {
-                  descripcion: 'Sin coordinación, trabajo fragmentado.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-                },
-                {
-                  descripcion: 'Poca coordinación, afectando la calidad del trabajo.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
-                },
-                {
-                  descripcion: 'Falta de cohesión, algunas partes desorganizadas.',
-                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-                },
-                {
-                  descripcion: 'Buena coordinación, pero con pequeños fallos.',
-                  calificaciones: ['BUENO', 'MUY BUENO']
-                },
-                {
-                  descripcion: 'Coordinación excelente, trabajo conjunto evidente.',
                   calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
                 }
               ]
@@ -187,11 +135,11 @@ const VistaRubrica = () => {
               niveles: [
                 {
                   descripcion: 'Conocimiento insuficiente, muy limitado.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
                   descripcion: 'Falta de comprensión en la mayoría de los aspectos.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
                   descripcion: 'Conocimiento básico con varias inseguridades.',
@@ -213,11 +161,11 @@ const VistaRubrica = () => {
               niveles: [
                 {
                   descripcion: 'Incapacidad para responder preguntas.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
                   descripcion: 'Respuestas incorrectas o imprecisas.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
                   descripcion: 'Respuestas confusas o parciales.',
@@ -236,45 +184,19 @@ const VistaRubrica = () => {
           ]
         },
         {
-          nombre: 'ANÁLISIS CRÍTICO 10%',
+          nombre: 'DESARROLLO DE SOLUCIONES 10%',
           subcriterios: [
             {
-              nombre: 'CAPACIDAD DE ANÁLISIS 5%',
-              color: 'bg-blue-light',
-              niveles: [
-                {
-                  descripcion: 'Análisis sin profundidad o superficial.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-                },
-                {
-                  descripcion: 'Análisis limitado o simple.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
-                },
-                {
-                  descripcion: 'Análisis básico con pocas conexiones.',
-                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-                },
-                {
-                  descripcion: 'Análisis adecuado pero mejorable.',
-                  calificaciones: ['BUENO', 'MUY BUENO']
-                },
-                {
-                  descripcion: 'Análisis profundo y completo.',
-                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-                }
-              ]
-            },
-            {
-              nombre: 'DESARROLLO DE SOLUCIONES 5%',
+              nombre: 'DESARROLLO DE SOLUCIONES 10%',
               color: 'bg-blue-light',
               niveles: [
                 {
                   descripcion: 'Soluciones inadecuadas o inexistentes.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
                   descripcion: 'Limitadas y poco creativas.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
                   descripcion: 'Funcionales, pero básicas.',
@@ -300,53 +222,53 @@ const VistaRubrica = () => {
           nombre: 'CALIDAD DE INFORME 10%',
           subcriterios: [
             {
-              nombre: 'ESTRUCTURA DEL DOCUMENTO 5%',
+              nombre: 'ESTRUCTURA DEL DOCUMENTO Y CUMPLIMIENTO DE OBJETIVOS 5%',
               color: 'bg-blue-light',
               niveles: [
                 {
-                  descripcion: 'Informe muy desorganizado.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  descripcion: 'Informe muy desorganizado e incompleto.',
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
-                  descripcion: 'Informe desorganizado y difícil de seguir.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  descripcion: 'Informe desorganizado y parcialmente incompleto.',
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
-                  descripcion: 'Informe básico con partes poco claras.',
+                  descripcion: 'Informe básico con partes incompletas.',
                   calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
                 },
                 {
-                  descripcion: 'Informe bien organizado pero mejorable.',
+                  descripcion: 'Informe bien organizado con algunas secciones mejorables.',
                   calificaciones: ['BUENO', 'MUY BUENO']
                 },
                 {
-                  descripcion: 'Informe muy claro, bien estructurado.',
+                  descripcion: 'Informe muy claro, bien organizado y completo.',
                   calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
                 }
               ]
             },
             {
-              nombre: 'CLARIDAD Y PRECISIÓN 5%',
+              nombre: 'FORMATO Y REDACCIÓN 5%',
               color: 'bg-blue-light',
               niveles: [
                 {
                   descripcion: 'Redacción muy deficiente y confusa.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
-                  descripcion: 'Redacción muy confusa y poco precisa.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  descripcion: 'Redacción muy confusa y con numerosos errores.',
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
-                  descripcion: 'Redacción confusa con partes imprecisas.',
+                  descripcion: 'Redacción confusa con varios errores.',
                   calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
                 },
                 {
-                  descripcion: 'Redacción clara con mínimas imprecisiones.',
+                  descripcion: 'Redacción clara con algunos errores menores.',
                   calificaciones: ['BUENO', 'MUY BUENO']
                 },
                 {
-                  descripcion: 'Redacción clara y precisa en todo momento.',
+                  descripcion: 'Redacción clara y precisa sin errores.',
                   calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
                 }
               ]
@@ -354,108 +276,30 @@ const VistaRubrica = () => {
           ]
         },
         {
-          nombre: 'CONTENIDO TÉCNICO 20%',
+          nombre: 'INGENIERÍA DEL PROYECTO 20%',
           subcriterios: [
             {
-              nombre: 'COMPLEJIDAD DE DISEÑO 5%',
+              nombre: 'METODOLOGÍA DE DESARROLLO 20%',
               color: 'bg-blue-light',
               niveles: [
                 {
-                  descripcion: 'Diseño muy simplificado y básico.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
+                  descripcion: 'Diseño muy simplificado y sin justificación.',
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
                 },
                 {
-                  descripcion: 'Diseño simple y mal ejecutado.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
+                  descripcion: 'Diseño simple y mal justificado.',
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
                 },
                 {
-                  descripcion: 'Diseño básico con elementos simples.',
+                  descripcion: 'Diseño básico con justificación limitada.',
                   calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
                 },
                 {
-                  descripcion: 'Diseño adecuado pero mejorable.',
+                  descripcion: 'Diseño adecuado pero menos complejo.',
                   calificaciones: ['BUENO', 'MUY BUENO']
                 },
                 {
-                  descripcion: 'Diseño técnico complejo y bien elaborado.',
-                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-                }
-              ]
-            },
-            {
-              nombre: 'JUSTIFICACIÓN TÉCNICA 5%',
-              color: 'bg-blue-light',
-              niveles: [
-                {
-                  descripcion: 'Justificación inadecuada o inexistente.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-                },
-                {
-                  descripcion: 'Justificación deficiente o poco relevante.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
-                },
-                {
-                  descripcion: 'Justificación parcial o básica.',
-                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-                },
-                {
-                  descripcion: 'Justificación adecuada con puntos mejorables.',
-                  calificaciones: ['BUENO', 'MUY BUENO']
-                },
-                {
-                  descripcion: 'Justificación completa y bien fundamentada.',
-                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-                }
-              ]
-            },
-            {
-              nombre: 'RESULTADOS CLAROS Y CONCISOS 5%',
-              color: 'bg-blue-light',
-              niveles: [
-                {
-                  descripcion: 'Resultados confusos o incorrectos.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-                },
-                {
-                  descripcion: 'Resultados poco claros y desorganizados.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
-                },
-                {
-                  descripcion: 'Resultados vagos o mal presentados.',
-                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-                },
-                {
-                  descripcion: 'Resultados claros pero mejorables.',
-                  calificaciones: ['BUENO', 'MUY BUENO']
-                },
-                {
-                  descripcion: 'Resultados presentados con claridad y precisión.',
-                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-                }
-              ]
-            },
-            {
-              nombre: 'INTERPRETACIÓN DE RESULTADOS 5%',
-              color: 'bg-blue-light',
-              niveles: [
-                {
-                  descripcion: 'Interpretación errónea o inexistente.',
-                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-                },
-                {
-                  descripcion: 'Interpretación incorrecta o muy superficial.',
-                  calificaciones: ['BÁSICAMENTE ACEPTABLE']
-                },
-                {
-                  descripcion: 'Interpretación limitada con imprecisiones.',
-                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-                },
-                {
-                  descripcion: 'Interpretación correcta pero mejorable.',
-                  calificaciones: ['BUENO', 'MUY BUENO']
-                },
-                {
-                  descripcion: 'Interpretación precisa y completa.',
+                  descripcion: 'Diseño técnico complejo y bien fundamentado.',
                   calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
                 }
               ]
@@ -467,52 +311,33 @@ const VistaRubrica = () => {
     innovacion: {
       criterios: [
         {
-          nombre: 'NIVEL DE CREATIVIDAD EN LA SOLUCIÓN 5%',
-          niveles: [
+          nombre: 'NIVEL DE CREATIVIDAD EN LA SOLUCIÓN 10%',
+          subcriterios: [
             {
-              descripcion: 'Sin elementos creativos o innovadores.',
-              calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-            },
-            {
-              descripcion: 'Solución básica sin elementos distintivos.',
-              calificaciones: ['BÁSICAMENTE ACEPTABLE']
-            },
-            {
-              descripcion: 'Solución convencional con pocos elementos creativos.',
-              calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-            },
-            {
-              descripcion: 'Solución funcional con algunos elementos creativos.',
-              calificaciones: ['BUENO', 'MUY BUENO']
-            },
-            {
-              descripcion: 'Solución altamente creativa e innovadora.',
-              calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
-            }
-          ]
-        },
-        {
-          nombre: 'APLICABILIDAD PRÁCTICA 5%',
-          niveles: [
-            {
-              descripcion: 'No tiene aplicabilidad práctica.',
-              calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE', 'INSUFICIENTE']
-            },
-            {
-              descripcion: 'Aplicabilidad dudosa o mal planteada.',
-              calificaciones: ['BÁSICAMENTE ACEPTABLE']
-            },
-            {
-              descripcion: 'Aplicabilidad limitada o poco viable.',
-              calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
-            },
-            {
-              descripcion: 'Solución aplicable con ajustes menores.',
-              calificaciones: ['BUENO', 'MUY BUENO']
-            },
-            {
-              descripcion: 'Solución aplicable a múltiples contextos.',
-              calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
+              nombre: 'NIVEL DE CREATIVIDAD EN LA SOLUCIÓN 10%',
+              color: 'bg-blue-light',
+              niveles: [
+                {
+                  descripcion: 'Sin elementos creativos o innovadores.',
+                  calificaciones: ['MUY DEFICIENTE', 'DEFICIENTE']
+                },
+                {
+                  descripcion: 'Solución básica sin innovación.',
+                  calificaciones: ['BÁSICAMENTE ACEPTABLE', 'INSUFICIENTE']
+                },
+                {
+                  descripcion: 'Solución convencional con poca creatividad.',
+                  calificaciones: ['ACEPTABLE', 'SATISFACTORIO']
+                },
+                {
+                  descripcion: 'Solución funcional con algunos elementos innovadores.',
+                  calificaciones: ['BUENO', 'MUY BUENO']
+                },
+                {
+                  descripcion: 'Solución altamente creativa e innovadora.',
+                  calificaciones: ['EXCELENTE', 'SOBRESALIENTE']
+                }
+              ]
             }
           ]
         }
@@ -583,76 +408,76 @@ const VistaRubrica = () => {
         <Sidebar />
         <div className="content-container">
           <h1 className="main-title">Rúbrica de Evaluación</h1>
-          
-          {/* Escala de Calificación */}
-          <div className="escala-calificacion-container">
-            <div className="escala-titulo">Escala de Calificación</div>
-            <div className="escala-rows">
-              {/* Primera fila: calificaciones superiores (6-10) */}
-              <div className="escala-row">
-                {escalaCalificacion.slice(0, 5).map((item) => (
-                  <div 
-                    key={item.valor}
-                    className="escala-item"
-                    style={{ 
-                      backgroundColor: item.color,
-                      color: esColorClaro(item.color) ? '#333' : '#fff',
-                    }}
-                  >
-                    <span className="escala-item-num">{item.numero}:</span> {item.valor}
-                  </div>
-                ))}
-              </div>
-              {/* Segunda fila: calificaciones inferiores (1-5) */}
-              <div className="escala-row">
-                {escalaCalificacion.slice(5).map((item) => (
-                  <div 
-                    key={item.valor}
-                    className="escala-item"
-                    style={{ 
-                      backgroundColor: item.color,
-                      color: esColorClaro(item.color) ? '#333' : '#fff',
-                    }}
-                  >
-                    <span className="escala-item-num">{item.numero}:</span> {item.valor}
-                  </div>
-                ))}
+          <div className="escala-calificacion-container"></div>
+            {/* Escala de Calificación */}
+            <div className="escala-calificacion-container">
+              <div className="escala-titulo">Escala de Calificación</div>
+              <div className="escala-rows">
+                {/* Primera fila: calificaciones superiores (6-10) */}
+                <div className="escala-row">
+                  {escalaCalificacion.slice(0, 5).map((item) => (
+                    <div 
+                      key={item.valor}
+                      className="escala-item"
+                      style={{ 
+                        backgroundColor: item.color,
+                        color: esColorClaro(item.color) ? '#333' : '#fff',
+                      }}
+                    >
+                      <span className="escala-item-num">{item.numero}:</span> {item.valor}
+                    </div>
+                  ))}
+                </div>
+                {/* Segunda fila: calificaciones inferiores (1-5) */}
+                <div className="escala-row">
+                  {escalaCalificacion.slice(5).map((item) => (
+                    <div 
+                      key={item.valor}
+                      className="escala-item"
+                      style={{ 
+                        backgroundColor: item.color,
+                        color: esColorClaro(item.color) ? '#333' : '#fff',
+                      }}
+                    >
+                      <span className="escala-item-num">{item.numero}:</span> {item.valor}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Tabs para navegar entre secciones */}
-          <div className="tabs-container">
-            <button 
-              onClick={() => setActiveTab('presentacion')}
-              className={`tab-button ${activeTab === 'presentacion' ? 'active' : ''}`}
-            >
-              Presentación 30%
-            </button>
-            <button 
-              onClick={() => setActiveTab('sustentacion')}
-              className={`tab-button ${activeTab === 'sustentacion' ? 'active' : ''}`}
-            >
-              Sustentación 30%
-            </button>
-            <button 
-              onClick={() => setActiveTab('documentacion')}
-              className={`tab-button ${activeTab === 'documentacion' ? 'active' : ''}`}
-            >
-              Documentación 30%
-            </button>
-            <button 
-              onClick={() => setActiveTab('innovacion')}
-              className={`tab-button ${activeTab === 'innovacion' ? 'active' : ''}`}
-            >
-              Innovación 10%
-            </button>
-          </div>
-          
-          {/* Contenido de la sección activa */}
-          <div className="rubrica-content">
-            {rubrica[activeTab] && renderSeccion(rubrica[activeTab])}
-          </div>
+            
+            {/* Tabs para navegar entre secciones */}
+            <div className="tabs-container">
+              <button 
+                onClick={() => setActiveTab('presentacion')}
+                className={`tab-button ${activeTab === 'presentacion' ? 'active' : ''}`}
+              >
+                Presentación 30%
+              </button>
+              <button 
+                onClick={() => setActiveTab('sustentacion')}
+                className={`tab-button ${activeTab === 'sustentacion' ? 'active' : ''}`}
+              >
+                Sustentación 30%
+              </button>
+              <button 
+                onClick={() => setActiveTab('documentacion')}
+                className={`tab-button ${activeTab === 'documentacion' ? 'active' : ''}`}
+              >
+                Documentación 30%
+              </button>
+              <button 
+                onClick={() => setActiveTab('innovacion')}
+                className={`tab-button ${activeTab === 'innovacion' ? 'active' : ''}`}
+              >
+                Innovación 10%
+              </button>
+            </div>
+            
+            {/* Contenido de la sección activa */}
+            <div className="rubrica-content">
+              {rubrica[activeTab] && renderSeccion(rubrica[activeTab])}
+            </div>
         </div>
       </div>
     </div>

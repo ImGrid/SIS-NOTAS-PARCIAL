@@ -430,7 +430,145 @@
   border-color: #7dd3fc;
   transform: scale(1.05);
 }
+/* Estilos adicionales para la paginación en gestionRubricas.css */
 
+/* Estilos para el encabezado de la tabla con paginación */
+.evaluaciones-styles .tabla-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0 0.5rem;
+  width: 100%;
+}
+
+/* Estilos para la información de resultados */
+.evaluaciones-styles .resultados-info {
+  color: #666;
+  font-size: 0.9rem;
+  margin-left: auto;
+}
+
+/* Estilos para la paginación */
+.evaluaciones-styles .paginacion-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.evaluaciones-styles .paginacion-bottom {
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.evaluaciones-styles .btn-pagina {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #555;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.evaluaciones-styles .btn-pagina:hover {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+}
+
+.evaluaciones-styles .btn-pagina.active {
+  background-color: #3498db;
+  border-color: #3498db;
+  color: white;
+  font-weight: 600;
+}
+
+.evaluaciones-styles .btn-pagina:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.evaluaciones-styles .pagina-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+/* Nuevo estilo para el botón de descargar (reemplazando el antiguo imprimir) */
+.evaluaciones-styles .ev-btn-descargar {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.7rem 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.evaluaciones-styles .ev-btn-descargar:hover {
+  background-color: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.evaluaciones-styles .ev-btn-descargar:active {
+  transform: translateY(0);
+}
+
+/* Ajustes responsivos */
+@media (max-width: 992px) {
+  .evaluaciones-styles .tabla-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .evaluaciones-styles .resultados-info {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .evaluaciones-styles .paginacion-container {
+    justify-content: center;
+  }
+  
+  .evaluaciones-styles .ev-btn-descargar span {
+    display: none;
+  }
+  
+  .evaluaciones-styles .ev-btn-descargar {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .evaluaciones-styles .btn-pagina {
+    min-width: 1.8rem;
+    height: 1.8rem;
+    padding: 0 0.4rem;
+    font-size: 0.85rem;
+  }
+}
 /* Mensaje cuando no hay estudiantes */
 .evaluaciones-styles .no-estudiantes {
   padding: 30px;
@@ -462,24 +600,35 @@
 .evaluaciones-styles .btn-asignar-empty:active {
   transform: translateY(0);
 }
-/* Añadir estos estilos a src/components/Evaluaciones/style/gestionRubricas.css */
 
-/* Estilos para búsqueda y filtros */
+.evaluaciones-styles .filter-select:hover {
+  border-color: #3498db;
+}
+
+.evaluaciones-styles .filter-select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+/* Estilos para búsqueda y filtros en una sola línea */
 .evaluaciones-styles .search-filters-container {
-  background-color: white;
-  border-radius: 8px;
   margin-bottom: 1.5rem;
-
 }
 
-.evaluaciones-styles .search-bar {
+/* Contenedor de todos los elementos en una sola línea */
+.evaluaciones-styles .search-filters-row {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  width: 100%;
 }
 
+/* Barra de búsqueda con ancho reducido */
 .evaluaciones-styles .search-input-container {
   flex: 1;
+  min-width: 200px;
+  max-width: 300px;
   display: flex;
   align-items: center;
   background-color: #f8f9fa;
@@ -512,54 +661,11 @@
   color: #8e9cae;
 }
 
-.evaluaciones-styles .clear-search {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #8e9cae;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.3s ease;
-}
-
-.evaluaciones-styles .clear-search:hover {
-  color: #e74c3c;
-}
-
-.evaluaciones-styles .filter-toggle {
-  background-color: #f8f9fa;
-  border: 1px solid #e0e6ed;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: #2c3e50;
-  font-size: 0.9rem;
-}
-
-.evaluaciones-styles .filter-toggle:hover {
-  background-color: #e9ecef;
-}
-
-.evaluaciones-styles .filter-toggle.active {
-  background-color: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-.evaluaciones-styles .filters-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
+/* Estilos para los filtros en línea */
 .evaluaciones-styles .filter-select {
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
   padding: 0.5rem 1rem;
   border: 1px solid #e0e6ed;
   border-radius: 6px;
@@ -567,7 +673,6 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 200px;
 }
 
 .evaluaciones-styles .filter-select:hover {
@@ -580,6 +685,28 @@
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
+/* Botón X para limpiar filtros */
+.evaluaciones-styles .clear-filters {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.evaluaciones-styles .clear-filters:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
 .evaluaciones-styles .clear-filters {
   background-color: #e74c3c;
   color: white;
@@ -609,26 +736,34 @@
   border-radius: 0 6px 6px 0;
 }
 
-/* Responsive para filtros */
-@media (max-width: 992px) {
-  .evaluaciones-styles .search-bar {
-    flex-direction: column;
+@media (max-width: 1200px) {
+  .evaluaciones-styles .search-filters-row {
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
   }
   
-  .evaluaciones-styles .filters-row {
-    flex-direction: column;
-  }
-  
+  .evaluaciones-styles .search-input-container,
   .evaluaciones-styles .filter-select {
-    width: 100%;
+    flex: 1 1 200px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 992px) {
+  .evaluaciones-styles .grupos-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .evaluaciones-styles .grupos-container {
+    padding: 0 1.5rem 1.5rem;
+  }
+  
+  .evaluaciones-styles .search-filters-container {
+    padding: 1rem;
   }
 }
 
 @media (max-width: 768px) {
-  .evaluaciones-styles .search-filters-container {
-    padding: 1rem;
-  }
-  
   .evaluaciones-styles .search-input::placeholder {
     font-size: 0.85rem;
   }
@@ -636,11 +771,7 @@
 
 @media (max-width: 576px) {
   .evaluaciones-styles .search-filters-container {
-    padding: 0.75rem;
-  }
-  
-  .evaluaciones-styles .filter-toggle span {
-    display: none;
+    padding: 0.8rem;
   }
 }
 .evaluaciones-styles .btn-eliminar-rubricas {

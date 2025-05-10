@@ -13,6 +13,8 @@ import supRubricaService from '../../../service/supRubricaService';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// SVG Icons
 const icons = {
   search: (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,11 +32,29 @@ const icons = {
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
+  ),
+  download: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+  ),
+  evaluar: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
+  ),
+  ver: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
   )
 };
 
 function GestionarEvaluaciones() {
-
   const [grupos, setGrupos] = useState([]);
   const [gruposConEstudiantes, setGruposConEstudiantes] = useState({});
   const [gruposConRubricas, setGruposConRubricas] = useState({});
@@ -43,11 +63,16 @@ function GestionarEvaluaciones() {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [eliminando, setEliminando] = useState(false);
+  
+  // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [semestroFilter, setSemestroFilter] = useState('');
   const [carreraFilter, setCarreraFilter] = useState('');
   const [materiaFilter, setMateriaFilter] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const gruposPorPagina = 5; // Puedes ajustar este valor según tus necesidades
 
   const navigate = useNavigate();
 
@@ -69,7 +94,21 @@ function GestionarEvaluaciones() {
           
           const informes = await getInformesPorGrupoId(grupo.id);
           
+          // Crear un mapa para almacenar solo el informe más reciente por estudiante
+          // (Este paso será innecesario cuando el backend ya filtre los informes más recientes)
+          const informesPorEstudiante = {};
           for (const informe of informes) {
+            // Almacenar solo el informe con el ID más alto (presumiblemente el más reciente)
+            if (!informesPorEstudiante[informe.estudiante_id] || 
+                informesPorEstudiante[informe.estudiante_id].id < informe.id) {
+              informesPorEstudiante[informe.estudiante_id] = informe;
+            }
+          }
+          
+          // Convertir el mapa de vuelta a un array
+          const informesFiltrados = Object.values(informesPorEstudiante);
+          
+          for (const informe of informesFiltrados) {
             if (informe.rubrica_id) {
               try {
                 const rubrica = await getRubricaPorId(informe.rubrica_id);
@@ -102,7 +141,8 @@ function GestionarEvaluaciones() {
             }
           }
           
-          if (informes.length === 0) {
+          // Usar los informes filtrados en lugar de los originales
+          if (informesFiltrados.length === 0) {
             if (tieneBorrador) {
               rubricasPorGrupo[grupo.id] = {
                 estado: 'pendiente', 
@@ -116,34 +156,35 @@ function GestionarEvaluaciones() {
                 informes: []
               };
             }
-          } else if (informes.length < estudiantes.length) {
+          } else if (informesFiltrados.length < estudiantes.length) {
             rubricasPorGrupo[grupo.id] = {
               estado: 'pendiente', 
               texto: 'Pendiente',
-              informes: informes
+              informes: informesFiltrados  // Usar informes filtrados
             };
           } else {
             rubricasPorGrupo[grupo.id] = {
               estado: 'finalizado', 
               texto: 'Finalizado',
-              informes: informes
+              informes: informesFiltrados  // Usar informes filtrados
             };
           }
-          try {
-          const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupo.id);
           
-          // Si hay habilitación activa, cambiar el estado visual
-          if (detallesGrupo.grupo.habilitacion_activa) {
-            rubricasPorGrupo[grupo.id] = {
-              ...rubricasPorGrupo[grupo.id],
-              estado: 'pendiente_habilitado',  // Estado especial para grupos habilitados
-              texto: 'Habilitado para edición', // Texto más descriptivo
-              habilitacion_activa: true  // Flag para indicar que está habilitado
-            };
+          try {
+            const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupo.id);
+            
+            // Si hay habilitación activa, cambiar el estado visual
+            if (detallesGrupo.grupo.habilitacion_activa) {
+              rubricasPorGrupo[grupo.id] = {
+                ...rubricasPorGrupo[grupo.id],
+                estado: 'pendiente_habilitado',  // Estado especial para grupos habilitados
+                texto: 'Habilitado para edición', // Texto más descriptivo
+                habilitacion_activa: true  // Flag para indicar que está habilitado
+              };
+            }
+          } catch (error) {
+            console.log('Error al verificar habilitación:', error);
           }
-        } catch (error) {
-          console.log('Error al verificar habilitación:', error);
-        }
         }
         
         setGruposConEstudiantes(estudiantesPorGrupo);
@@ -188,6 +229,97 @@ function GestionarEvaluaciones() {
     
     return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria;
   });
+  
+  // Calcular grupos a mostrar en la página actual
+  const indexUltimoGrupo = paginaActual * gruposPorPagina;
+  const indexPrimerGrupo = indexUltimoGrupo - gruposPorPagina;
+  const gruposActuales = gruposFiltrados.slice(indexPrimerGrupo, indexUltimoGrupo);
+  
+  // Calcular número total de páginas
+  const totalPaginas = Math.ceil(gruposFiltrados.length / gruposPorPagina);
+
+  // Función para cambiar de página
+  const cambiarPagina = (numeroPagina) => {
+    setPaginaActual(numeroPagina);
+  };
+
+  // Función para ir a la página anterior
+  const irPaginaAnterior = () => {
+    if (paginaActual > 1) {
+      setPaginaActual(paginaActual - 1);
+    }
+  };
+
+  // Función para ir a la página siguiente
+  const irPaginaSiguiente = () => {
+    if (paginaActual < totalPaginas) {
+      setPaginaActual(paginaActual + 1);
+    }
+  };
+
+  // Renderizar controles de paginación
+  const renderPaginacion = () => {
+    // Solo mostrar paginación si hay más de una página
+    if (totalPaginas <= 1) return null;
+    
+    // Determinar cuántos números de página mostrar
+    const mostrarNumeros = [];
+    
+    // Siempre mostrar la primera página
+    if (paginaActual > 1) mostrarNumeros.push(1);
+    
+    // Mostrar elipsis antes si la página actual es mayor a 3
+    if (paginaActual > 3) mostrarNumeros.push('...');
+    
+    // Mostrar la página anterior si existe y no es la primera
+    if (paginaActual > 2) mostrarNumeros.push(paginaActual - 1);
+    
+    // Mostrar la página actual
+    mostrarNumeros.push(paginaActual);
+    
+    // Mostrar la página siguiente si existe y no es la última
+    if (paginaActual < totalPaginas - 1) mostrarNumeros.push(paginaActual + 1);
+    
+    // Mostrar elipsis después si la página actual es menor a la última página - 2
+    if (paginaActual < totalPaginas - 2) mostrarNumeros.push('...');
+    
+    // Siempre mostrar la última página si hay más de una página
+    if (paginaActual < totalPaginas) mostrarNumeros.push(totalPaginas);
+    
+    return (
+      <div className="paginacion-container">
+        <button 
+          className="btn-pagina" 
+          onClick={irPaginaAnterior}
+          disabled={paginaActual === 1}
+        >
+          &laquo;
+        </button>
+        
+        {mostrarNumeros.map((numero, index) => (
+          numero === '...' ? (
+            <span key={`ellipsis-${index}`} className="pagina-ellipsis">...</span>
+          ) : (
+            <button
+              key={`page-${numero}`}
+              className={`btn-pagina ${paginaActual === numero ? 'active' : ''}`}
+              onClick={() => cambiarPagina(numero)}
+            >
+              {numero}
+            </button>
+          )
+        ))}
+        
+        <button 
+          className="btn-pagina" 
+          onClick={irPaginaSiguiente}
+          disabled={paginaActual === totalPaginas}
+        >
+          &raquo;
+        </button>
+      </div>
+    );
+  };
 
   // Función para limpiar filtros
   const clearFilters = () => {
@@ -195,6 +327,8 @@ function GestionarEvaluaciones() {
     setSemestroFilter('');
     setCarreraFilter('');
     setMateriaFilter('');
+    // También reseteamos la paginación al cambiar los filtros
+    setPaginaActual(1);
   };
 
 
@@ -237,18 +371,19 @@ function GestionarEvaluaciones() {
         return '';
     }
   };
-  const handleImprimir = async () => {
+  
+  // Función para exportar (antes llamada imprimir)
+  const handleExportar = async () => {
     try {
+      toast.info('Preparando la exportación de evaluaciones...');
       await exportarTodasLasEvaluaciones(true);
-      console.log('Exportación completada');
+      toast.success('Exportación completada. El archivo se ha descargado.');
     } catch (error) {
-      console.error('Error al imprimir evaluaciones:', error);
-      setMessage({
-        text: `Error al exportar evaluaciones: ${error.message || 'Error desconocido'}`,
-        type: 'error'
-      });
+      console.error('Error al exportar evaluaciones:', error);
+      toast.error(`Error al exportar evaluaciones: ${error.message || 'Error desconocido'}`);
     }
   };
+  
   if (loading) {
     return (
       <div className="docentes-container">
@@ -259,10 +394,11 @@ function GestionarEvaluaciones() {
             <div className="ev-titulo-botones-container">
               <h1>Gestionar Evaluaciones</h1>
               <button 
-                className="ev-btn-imprimir"
-                onClick={handleImprimir}
+                className="ev-btn-descargar"
+                onClick={handleExportar}
               >
-                IMPRIMIR
+                {icons.download}
+                <span>Descargar</span>
               </button>
             </div>
           </div>
@@ -283,10 +419,11 @@ function GestionarEvaluaciones() {
             <div className="ev-titulo-botones-container">
               <h1>Gestionar Evaluaciones</h1>
               <button 
-                className="ev-btn-imprimir"
-                onClick={handleImprimir}
+                className="ev-btn-descargar"
+                onClick={handleExportar}
               >
-                IMPRIMIR
+                {icons.download}
+                <span>Descargar</span>
               </button>
             </div>
           </div>
@@ -302,38 +439,48 @@ function GestionarEvaluaciones() {
     <div className="docentes-container">
       <Sidebar />
       <main className="content content-with-sidebar evaluaciones-styles">
-      <div className="grupos-header">
-        <div className="ev-titulo-botones-container">
-          <h1>Gestionar Evaluaciones</h1>
-          <button 
-            className="ev-btn-imprimir"
-            onClick={handleImprimir}
-          >
-            IMPRIMIR
-          </button>
-        </div>
-      </div>
-        
-      <div className="grupos-container">
-        {message && (
-          <div className={`message-container ${message.type}-message`}>
-            {message}
+        <ToastContainer position="top-right" autoClose={3000} />
+        <div className="grupos-header">
+          <div className="ev-titulo-botones-container">
+            <h1>Gestionar Evaluaciones</h1>
+            <button 
+              className="ev-btn-descargar"
+              onClick={handleExportar}
+              title="Descargar todas las evaluaciones"
+            >
+              {icons.download}
+              <span>Descargar</span>
+            </button>
           </div>
-        )}
-        <div className="search-filters-container">
-            <div className="search-bar">
+        </div>
+        
+        <div className="grupos-container">
+          {message && (
+            <div className={`message-container ${message.type}-message`}>
+              {message}
+            </div>
+          )}
+          <div className="search-filters-container">
+            <div className="search-filters-row">
+              {/* Barra de búsqueda */}
               <div className="search-input-container">
                 {icons.search}
                 <input
                   type="text"
                   placeholder="Buscar por nombre de proyecto, carrera o materia..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPaginaActual(1); // Resetear a primera página al buscar
+                  }}
                   className="search-input"
                 />
                 {searchTerm && (
                   <button 
-                    onClick={() => setSearchTerm('')} 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setPaginaActual(1); // Resetear a primera página al limpiar
+                    }} 
                     className="clear-search"
                     title="Limpiar búsqueda"
                   >
@@ -341,120 +488,127 @@ function GestionarEvaluaciones() {
                   </button>
                 )}
               </div>
-              <button 
-                className={`filter-toggle ${showFilters ? 'active' : ''}`}
-                onClick={() => setShowFilters(!showFilters)}
-                title="Mostrar/Ocultar filtros"
+              
+              {/* Filtro de semestres */}
+              <select 
+                value={semestroFilter} 
+                onChange={(e) => {
+                  setSemestroFilter(e.target.value);
+                  setPaginaActual(1); // Resetear a primera página al filtrar
+                }}
+                className="filter-select"
               >
-                {icons.filter}
-                <span>Filtros</span>
+                <option value="">Todos los semestres</option>
+                {getSemestrosUnicos().map(semestre => (
+                  <option key={semestre} value={semestre}>
+                    Semestre {semestre}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Filtro de carreras */}
+              <select 
+                value={carreraFilter} 
+                onChange={(e) => {
+                  setCarreraFilter(e.target.value);
+                  setPaginaActual(1); // Resetear a primera página al filtrar
+                }}
+                className="filter-select"
+              >
+                <option value="">Todas las carreras</option>
+                {getCarrerasUnicas().map(carrera => (
+                  <option key={carrera} value={carrera}>
+                    {carrera}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Filtro de materias */}
+              <select 
+                value={materiaFilter} 
+                onChange={(e) => {
+                  setMateriaFilter(e.target.value);
+                  setPaginaActual(1); // Resetear a primera página al filtrar
+                }}
+                className="filter-select"
+              >
+                <option value="">Todas las materias</option>
+                {getMateriasUnicas().map(materia => (
+                  <option key={materia} value={materia}>
+                    {materia}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Botón X para limpiar todos los filtros */}
+              <button 
+                onClick={clearFilters} 
+                className="clear-filters"
+                title="Limpiar todos los filtros"
+              >
+                X
               </button>
             </div>
-            
-            {showFilters && (
-              <div className="filters-row">
-                <select 
-                  value={semestroFilter} 
-                  onChange={(e) => setSemestroFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">Todos los semestres</option>
-                  {getSemestrosUnicos().map(semestre => (
-                    <option key={semestre} value={semestre}>
-                      Semestre {semestre}
-                    </option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={carreraFilter} 
-                  onChange={(e) => setCarreraFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">Todas las carreras</option>
-                  {getCarrerasUnicas().map(carrera => (
-                    <option key={carrera} value={carrera}>
-                      {carrera}
-                    </option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={materiaFilter} 
-                  onChange={(e) => setMateriaFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">Todas las materias</option>
-                  {getMateriasUnicas().map(materia => (
-                    <option key={materia} value={materia}>
-                      {materia}
-                    </option>
-                  ))}
-                </select>
-                
-                <button 
-                  onClick={clearFilters} 
-                  className="clear-filters"
-                  title="Limpiar todos los filtros"
-                >
-                  {icons.clear}
-                  <span>Limpiar filtros</span>
-                </button>
+          </div>
+          
+          {/* Paginación superior y contador de resultados */}
+          <div className="tabla-header">
+            {renderPaginacion()}
+            {(searchTerm || semestroFilter || carreraFilter || materiaFilter) && (
+              <div className="resultados-info">
+                Mostrando {gruposActuales.length} de {gruposFiltrados.length} grupos
               </div>
             )}
           </div>
-          {(searchTerm || semestroFilter || carreraFilter || materiaFilter) && (
-            <div className="results-count">
-              Mostrando {gruposFiltrados.length} de {grupos.length} grupos
+          
+          {grupos.length === 0 ? (
+            <div className="empty-state">
+              <p>No tiene grupos asignados para evaluar.</p>
+              <p>Primero debe crear grupos en la sección de "Gestión de Grupos".</p>
+              <button 
+                className="btn-crear-grupo-empty"
+                onClick={() => navigate('/grupos/gestion')}
+              >
+                Ir a Gestión de Grupos
+              </button>
             </div>
-          )}
-        {grupos.length === 0 ? (
-          <div className="empty-state">
-            <p>No tiene grupos asignados para evaluar.</p>
-            <p>Primero debe crear grupos en la sección de "Gestión de Grupos".</p>
-            <button 
-              className="btn-crear-grupo-empty"
-              onClick={() => navigate('/grupos/gestion')}
-            >
-              Ir a Gestión de Grupos
-            </button>
-          </div>
-        ) : (
-          <div className="grupos-table-container">
-            {gruposFiltrados.map((grupo) => {
-              const rubricaInfo = gruposConRubricas[grupo.id] || {
-                estado: 'sin_rubrica',
-                texto: 'Sin Rúbrica',
-                informes: []
-              };
-              
-              return (
-                <div key={grupo.id} className={`grupo-card-table ${getEstadoColor(rubricaInfo.estado)}`}>
-                  <div className="grupo-header-row">
-                    <div className="grupo-title">
-                      <h3>{grupo.nombre_proyecto}</h3>
-                      <span className="grupo-details">
-                        {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
-                      </span>
-                    </div>
-                    
-                    <div className="grupo-estado-container">
-                      <span className={`grupo-estado ${getEstadoColor(rubricaInfo.estado)}`}>
-                        {rubricaInfo.texto}
-                      </span>
+          ) : (
+            <div className="grupos-table-container">
+              {gruposActuales.map((grupo) => {
+                const rubricaInfo = gruposConRubricas[grupo.id] || {
+                  estado: 'sin_rubrica',
+                  texto: 'Sin Rúbrica',
+                  informes: []
+                };
+                
+                return (
+                  <div key={grupo.id} className={`grupo-card-table ${getEstadoColor(rubricaInfo.estado)}`}>
+                    <div className="grupo-header-row">
+                      <div className="grupo-title">
+                        <h3>{grupo.nombre_proyecto}</h3>
+                        <span className="grupo-details">
+                          {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
+                        </span>
+                      </div>
                       
-                      <div className="grupo-actions">
-                      <button 
-                        className="btn-evaluar" 
-                        onClick={() => handleEvaluarGrupo(grupo.id, rubricaInfo.estado)}
-                        title={rubricaInfo.estado === 'finalizado' ? 
-                          "Este grupo ya ha sido evaluado y finalizado" : 
-                          "Evaluar grupo"}
-                        disabled={eliminando || (rubricaInfo.estado === 'finalizado' && !rubricaInfo.habilitacion_activa)}
-                      >
-                        📝 Evaluar
-                      </button>
+                      <div className="grupo-estado-container">
+                        <span className={`grupo-estado ${getEstadoColor(rubricaInfo.estado)}`}>
+                          {rubricaInfo.texto}
+                        </span>
                         
+                        <div className="grupo-actions">
+                        <button 
+                          className="btn-evaluar" 
+                          onClick={() => handleEvaluarGrupo(grupo.id, rubricaInfo.estado)}
+                          title={rubricaInfo.estado === 'finalizado' ? 
+                            "Este grupo ya ha sido evaluado y finalizado" : 
+                            "Evaluar grupo"}
+                          disabled={eliminando || (rubricaInfo.estado === 'finalizado' && !rubricaInfo.habilitacion_activa)}
+                        >
+                          {icons.evaluar}
+                          <span>Evaluar</span>
+                        </button>
+                          
                         {rubricaInfo.estado !== 'sin_rubrica' && (
                           <button 
                             className="btn-ver-evaluaciones" 
@@ -462,111 +616,117 @@ function GestionarEvaluaciones() {
                             title="Ver evaluaciones"
                             disabled={eliminando}
                           >
-                            👁️ Ver
+                            {icons.ver}
+                            <span>Ver</span>
                           </button>
                         )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="estudiantes-table">
-                    <div className="table-header-rubricas">
-                      <div className="th-numero-rubrica">#</div>
-                      <div className="th-codigo-rubrica">Código</div>
-                      <div className="th-nombre-rubrica">Nombre Completo</div>
-                      <div className="th-estado-rubrica">Estado</div>
-                      <div className="th-nota-rubrica">Presentación</div>
-                      <div className="th-nota-rubrica">Sustentación</div>
-                      <div className="th-nota-rubrica">Documentación</div>
-                      <div className="th-nota-rubrica">Innovación</div>
-                      <div className="th-nota-rubrica">Nota Final</div>
                     </div>
                     
-                    {gruposConEstudiantes[grupo.id] && gruposConEstudiantes[grupo.id].length > 0 ? (
-                      <div className="table-body">
-                        {gruposConEstudiantes[grupo.id].map((estudiante, index) => {
-                          // Buscar si este estudiante tiene un informe
-                          const informe = rubricaInfo.informes.find(
-                            inf => inf.estudiante_id === estudiante.id
-                          );
-                          
-                          const estadoEstudiante = informe ? 
-                            'Evaluado' : 'Sin evaluar';
-                            
-                          const claseEstado = informe ? 
-                            'estado-evaluado' : 'estado-sin-evaluar';
-                          
-                          // Obtener la rúbrica si existe
-                          const rubricaEstudiante = informe && informe.rubrica_id ? rubricas[informe.rubrica_id] : null;
-                          
-                          // Obtener las notas por área
-                          const notaPresentacion = rubricaEstudiante ? rubricaEstudiante.presentacion : null;
-                          const notaSustentacion = rubricaEstudiante ? rubricaEstudiante.sustentacion : null;
-                          const notaDocumentacion = rubricaEstudiante ? rubricaEstudiante.documentacion : null;
-                          const notaInnovacion = rubricaEstudiante ? rubricaEstudiante.innovacion : null;
-                          const notaFinal = rubricaEstudiante ? rubricaEstudiante.nota_final : null;
-                          
-                          // Función para formatear notas
-                          const formatearNota = (nota) => {
-                            if (nota === null || nota === undefined) return '-';
-                            if (typeof nota === 'number') return nota.toFixed(1);
-                            if (typeof nota === 'string' && !isNaN(parseFloat(nota))) return parseFloat(nota).toFixed(1);
-                            return nota || '-';
-                          };
-                            
-                          return (
-                            <div key={estudiante.id} className="table-row-rubricas">
-                              <div className="td-numero-rubrica">{index + 1}</div>
-                              <div className="td-codigo-rubrica">{estudiante.codigo}</div>
-                              <div className="td-nombre-rubrica">{`${estudiante.nombre} ${estudiante.apellido}`}</div>
-                              <div className={`td-estado-rubrica ${claseEstado}`}>{estadoEstudiante}</div>
-                              <div className="td-nota-rubrica">
-                                {informe ? (
-                                  <span className="nota-visible-rubrica">{formatearNota(notaPresentacion)}</span>
-                                ) : '-'}
-                              </div>
-                              <div className="td-nota-rubrica">
-                                {informe ? (
-                                  <span className="nota-visible-rubrica">{formatearNota(notaSustentacion)}</span>
-                                ) : '-'}
-                              </div>
-                              <div className="td-nota-rubrica">
-                                {informe ? (
-                                  <span className="nota-visible-rubrica">{formatearNota(notaDocumentacion)}</span>
-                                ) : '-'}
-                              </div>
-                              <div className="td-nota-rubrica">
-                                {informe ? (
-                                  <span className="nota-visible-rubrica">{formatearNota(notaInnovacion)}</span>
-                                ) : '-'}
-                              </div>
-                              <div className="td-nota-rubrica">
-                                {informe ? (
-                                  <span className="nota-visible-rubrica">{formatearNota(notaFinal)}</span>
-                                ) : '-'}
-                              </div>
-                            </div>
-                          );
-                        })}
+                    <div className="estudiantes-table">
+                      <div className="table-header-rubricas">
+                        <div className="th-numero-rubrica">#</div>
+                        <div className="th-codigo-rubrica">Código</div>
+                        <div className="th-nombre-rubrica">Nombre Completo</div>
+                        <div className="th-estado-rubrica">Estado</div>
+                        <div className="th-nota-rubrica">Presentación</div>
+                        <div className="th-nota-rubrica">Sustentación</div>
+                        <div className="th-nota-rubrica">Documentación</div>
+                        <div className="th-nota-rubrica">Innovación</div>
+                        <div className="th-nota-rubrica">Nota Final</div>
                       </div>
-                    ) : (
-                      <div className="no-estudiantes">
-                        <p>No hay estudiantes asignados a este grupo</p>
-                        <button 
-                          className="btn-asignar-empty" 
-                          onClick={() => navigate(`/grupos/asignar?id=${grupo.id}`)}
-                        >
-                          Asignar estudiantes
-                        </button>
-                      </div>
-                    )}
+                      
+                      {gruposConEstudiantes[grupo.id] && gruposConEstudiantes[grupo.id].length > 0 ? (
+                        <div className="table-body">
+                          {gruposConEstudiantes[grupo.id].map((estudiante, index) => {
+                            // Buscar si este estudiante tiene un informe
+                            const informe = rubricaInfo.informes.find(
+                              inf => inf.estudiante_id === estudiante.id
+                            );
+                            
+                            const estadoEstudiante = informe ? 
+                              'Evaluado' : 'Sin evaluar';
+                              
+                            const claseEstado = informe ? 
+                              'estado-evaluado' : 'estado-sin-evaluar';
+                            
+                            // Obtener la rúbrica si existe
+                            const rubricaEstudiante = informe && informe.rubrica_id ? rubricas[informe.rubrica_id] : null;
+                            
+                            // Obtener las notas por área
+                            const notaPresentacion = rubricaEstudiante ? rubricaEstudiante.presentacion : null;
+                            const notaSustentacion = rubricaEstudiante ? rubricaEstudiante.sustentacion : null;
+                            const notaDocumentacion = rubricaEstudiante ? rubricaEstudiante.documentacion : null;
+                            const notaInnovacion = rubricaEstudiante ? rubricaEstudiante.innovacion : null;
+                            const notaFinal = rubricaEstudiante ? rubricaEstudiante.nota_final : null;
+                            
+                            // Función para formatear notas
+                            const formatearNota = (nota) => {
+                              if (nota === null || nota === undefined) return '-';
+                              if (typeof nota === 'number') return nota.toFixed(1);
+                              if (typeof nota === 'string' && !isNaN(parseFloat(nota))) return parseFloat(nota).toFixed(1);
+                              return nota || '-';
+                            };
+                            
+                            return (
+                              <div key={estudiante.id} className="table-row-rubricas">
+                                <div className="td-numero-rubrica">{index + 1}</div>
+                                <div className="td-codigo-rubrica">{estudiante.codigo}</div>
+                                <div className="td-nombre-rubrica">{`${estudiante.nombre} ${estudiante.apellido}`}</div>
+                                <div className={`td-estado-rubrica ${claseEstado}`}>{estadoEstudiante}</div>
+                                <div className="td-nota-rubrica">
+                                  {informe ? (
+                                    <span className="nota-visible-rubrica">{formatearNota(notaPresentacion)}</span>
+                                  ) : '-'}
+                                </div>
+                                <div className="td-nota-rubrica">
+                                  {informe ? (
+                                    <span className="nota-visible-rubrica">{formatearNota(notaSustentacion)}</span>
+                                  ) : '-'}
+                                </div>
+                                <div className="td-nota-rubrica">
+                                  {informe ? (
+                                    <span className="nota-visible-rubrica">{formatearNota(notaDocumentacion)}</span>
+                                  ) : '-'}
+                                </div>
+                                <div className="td-nota-rubrica">
+                                  {informe ? (
+                                    <span className="nota-visible-rubrica">{formatearNota(notaInnovacion)}</span>
+                                  ) : '-'}
+                                </div>
+                                <div className="td-nota-rubrica">
+                                  {informe ? (
+                                    <span className="nota-visible-rubrica">{formatearNota(notaFinal)}</span>
+                                  ) : '-'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="no-estudiantes">
+                          <p>No hay estudiantes asignados a este grupo</p>
+                          <button 
+                            className="btn-asignar-empty" 
+                            onClick={() => navigate(`/grupos/asignar?id=${grupo.id}`)}
+                          >
+                            Asignar estudiantes
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+          
+          {/* Paginación inferior */}
+          <div className="paginacion-container paginacion-bottom">
+            {renderPaginacion()}
           </div>
-        )}
-      </div>
+        </div>
       </main>
     </div>
   );

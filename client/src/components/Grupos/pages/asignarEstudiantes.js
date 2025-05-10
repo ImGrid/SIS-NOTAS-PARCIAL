@@ -12,7 +12,8 @@ import {
   asignarEstudianteAGrupo,      
   desasignarEstudianteDeGrupo,  
   getEstudiantesByGrupoId,
-  estudianteYaAsignadoAMateria,  
+  estudianteYaAsignadoAMateria,
+  getEstudiantesBySemestreYCarrera,  
 } from '../../../service/estudianteService';
 import { getGrupoPorId } from '../../../service/grupoService';
 
@@ -60,7 +61,7 @@ function AsignarEstudiantes() {
         setEstudiantesOriginales(estudiantesAsignados);
         
         // Paso 3: Obtener todos los estudiantes del mismo semestre
-        const estudiantesSemestre = await getEstudiantesBySemestre(grupoData.semestre);
+        const estudiantesSemestre = await getEstudiantesBySemestreYCarrera(grupoData.semestre, grupoData.carrera);
         
         // Paso 4: Filtrar estudiantes según disponibilidad por materia y si ya están asignados a este grupo
         const estudiantesYaAsignados = new Set(estudiantesAsignados.map(e => e.id));

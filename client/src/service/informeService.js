@@ -112,10 +112,7 @@ export const crearInforme = async (informeData) => {
   try {
     validateInformeData(informeData);
     
-    const response = await api.post('/api/informe/create', {
-      ...informeData,
-      createdAt: new Date().toISOString()
-    });
+    const response = await api.post('/api/informe/create', informeData);
     return response.data;
   } catch (error) {
     console.error('Error en crearInforme:', error);
@@ -129,10 +126,7 @@ export const actualizarInforme = async (id, informeData) => {
     validateId(id);
     validateInformeData(informeData);
     
-    const response = await api.put(`/api/informe/update/${id}`, {
-      ...informeData,
-      updatedAt: new Date().toISOString()
-    });
+    const response = await api.put(`/api/informe/update/${id}`, informeData);
     return response.data;
   } catch (error) {
     console.error('Error en actualizarInforme:', error);
@@ -352,7 +346,7 @@ export const getInformesDetallados = async (page = 1, limit = 10, filters = {}) 
   }
 };
 
-// Función para evaluar a un estudiante (crear rúbrica, calificación y luego informe)
+// FUNCIÓN MODIFICADA: Evaluar a un estudiante (actualiza directamente las entidades existentes)
 export const evaluarEstudiante = async (grupo_id, estudiante_id, docente_id, calificaciones, asignatura, comentarios_generales = '') => {
   try {
     // Validar que todas las calificaciones necesarias estén presentes
@@ -369,7 +363,7 @@ export const evaluarEstudiante = async (grupo_id, estudiante_id, docente_id, cal
     let rubricaResultado, calificacionResultado, informeResultado;
     
     if (modoEdicion) {
-      // Actualizar entidades existentes
+      // CAMBIO PRINCIPAL: Actualizamos correctamente los registros existentes
       // 1. Actualizar la rúbrica
       rubricaResultado = await actualizarRubrica(calificaciones._rubrica_id, calificaciones);
       

@@ -150,7 +150,7 @@ function CrearGrupos() {
               >
                 <option value="">Seleccione una carrera</option>
                 <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                <option value="Ingeniería de Sistemas Electronicos">Ingeniería de Sistemas Electronicos</option>
+                <option value="Sistemas Electronicos">Sistemas Electronicos</option>
               </select>
             </div>
             

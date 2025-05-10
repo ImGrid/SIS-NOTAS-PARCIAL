@@ -53,4 +53,8 @@ router.get('/con-estado-grupo',
   authService.createAuthMiddleware(),
   estudiantesController.obtenerEstudiantesConEstadoGrupo
 );
+router.get('/semestre-carrera/:semestre/:carrera', 
+  authService.createAuthMiddleware(),
+  estudiantesController.obtenerEstudiantesPorSemestreYCarrera
+);
 module.exports = router; 

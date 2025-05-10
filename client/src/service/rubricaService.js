@@ -104,7 +104,7 @@ export const crearRubrica = async (calificaciones) => {
   }
 };
 
-// Función para actualizar una rúbrica existente con validación
+// Función MODIFICADA para actualizar correctamente una rúbrica existente
 export const actualizarRubrica = async (id, calificaciones) => {
   try {
     validateId(id);
@@ -135,15 +135,18 @@ export const actualizarRubrica = async (id, calificaciones) => {
       nota_final,
       resultado,
       docente_id: calificaciones.docente_id,
-      observaciones: calificaciones.observaciones || '',
+      observaciones: calificaciones.observaciones || resultado,
       comentarios: calificaciones.comentarios || ''
     };
     
     // Enviar al servidor
-    const response = await api.put(`/api/rubricas/update/${id}`, {
-      ...rubricaData,
-      updatedAt: new Date().toISOString()
-    });
+    const response = await api.put(`/api/rubricas/update/${id}`, rubricaData);
+    
+    // Verificar si la actualización fue exitosa
+    if (!response.data) {
+      throw new Error(`Error al actualizar la rúbrica ${id}: No se recibió respuesta del servidor`);
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Error en actualizarRubrica:', error);
@@ -178,7 +181,7 @@ export const inicializarRubricaVaciaConDocente = (docenteId) => {
   return rubricaVacia;
 };
 
-// NUEVA FUNCIÓN: Convertir una rúbrica al formato de calificaciones individuales por criterio
+// FUNCIÓN PARA CONVERTIR UNA RÚBRICA AL FORMATO DE CALIFICACIONES INDIVIDUALES
 export const rubricaACriterios = (rubrica) => {
   if (!rubrica) return null;
   
@@ -188,9 +191,6 @@ export const rubricaACriterios = (rubrica) => {
     observaciones: rubrica.observaciones || '',
     comentarios: rubrica.comentarios || ''
   };
-  
-  // Para cada sección, asignar valores aproximados a cada criterio
-  // NOTA: Esta es una aproximación, ya que no tenemos los valores exactos por criterio
   
   // Para la sección de presentación
   Object.values(ESTRUCTURA_RUBRICA.presentacion.criterios).forEach(criterio => {

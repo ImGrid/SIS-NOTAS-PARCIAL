@@ -68,22 +68,25 @@
   padding: 0 2rem 2rem;
 }
 
-/* Estilos para búsqueda y filtros */
+/* Estilos para búsqueda y filtros en una sola línea */
 .grupo-gestion-styles .search-filters-container {
-  background-color: white;
-  border-radius: 8px;
   margin-bottom: 1.5rem;
-  padding: 0 1.5rem 0 0;
 }
 
-.grupo-gestion-styles .search-bar {
+/* Contenedor de todos los elementos en una sola línea */
+.grupo-gestion-styles .search-filters-row {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  width: 100%;
 }
 
+/* Barra de búsqueda con ancho reducido */
 .grupo-gestion-styles .search-input-container {
   flex: 1;
+  min-width: 200px;
+  max-width: 300px;
   display: flex;
   align-items: center;
   background-color: #f8f9fa;
@@ -116,54 +119,11 @@
   color: #8e9cae;
 }
 
-.grupo-gestion-styles .clear-search {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #8e9cae;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.3s ease;
-}
-
-.grupo-gestion-styles .clear-search:hover {
-  color: #e74c3c;
-}
-
-.grupo-gestion-styles .filter-toggle {
-  background-color: #f8f9fa;
-  border: 1px solid #e0e6ed;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: #2c3e50;
-  font-size: 0.9rem;
-}
-
-.grupo-gestion-styles .filter-toggle:hover {
-  background-color: #e9ecef;
-}
-
-.grupo-gestion-styles .filter-toggle.active {
-  background-color: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-.grupo-gestion-styles .filters-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
+/* Estilos para los filtros en línea */
 .grupo-gestion-styles .filter-select {
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
   padding: 0.5rem 1rem;
   border: 1px solid #e0e6ed;
   border-radius: 6px;
@@ -171,7 +131,6 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 200px;
 }
 
 .grupo-gestion-styles .filter-select:hover {
@@ -184,18 +143,22 @@
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
+/* Botón X para limpiar filtros */
 .grupo-gestion-styles .clear-filters {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: #e74c3c;
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
+  font-weight: bold;
 }
 
 .grupo-gestion-styles .clear-filters:hover {
@@ -512,6 +475,81 @@
   animation: pulse 1.5s infinite;
 }
 
+/* Estilos para el encabezado de la tabla con paginación */
+.grupo-gestion-styles .tabla-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0 0.5rem;
+  width: 100%;
+}
+
+/* Estilos para la información de resultados */
+.grupo-gestion-styles .resultados-info {
+  color: #666;
+  font-size: 0.9rem;
+  margin-left: auto;
+}
+
+/* Estilos para la paginación */
+.grupo-gestion-styles .paginacion-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.grupo-gestion-styles .paginacion-bottom {
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.grupo-gestion-styles .btn-pagina {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #555;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.grupo-gestion-styles .btn-pagina:hover {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+}
+
+.grupo-gestion-styles .btn-pagina.active {
+  background-color: #3498db;
+  border-color: #3498db;
+  color: white;
+  font-weight: 600;
+}
+
+.grupo-gestion-styles .btn-pagina:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.grupo-gestion-styles .pagina-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  color: #555;
+  font-size: 0.9rem;
+}
+
 /* Animaciones */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -536,6 +574,19 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .grupo-gestion-styles .search-filters-row {
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
+  
+  .grupo-gestion-styles .search-input-container,
+  .grupo-gestion-styles .filter-select {
+    flex: 1 1 200px;
+    max-width: none;
+  }
+}
+
 @media (max-width: 992px) {
   .grupo-gestion-styles .grupos-header {
     padding: 1rem 1.5rem;
@@ -545,16 +596,8 @@
     padding: 0 1.5rem 1.5rem;
   }
   
-  .grupo-gestion-styles .search-bar {
-    flex-direction: column;
-  }
-  
-  .grupo-gestion-styles .filters-row {
-    flex-direction: column;
-  }
-  
-  .grupo-gestion-styles .filter-select {
-    width: 100%;
+  .grupo-gestion-styles .search-filters-container {
+    padding: 1rem;
   }
 }
 
@@ -606,6 +649,10 @@
 }
 
 @media (max-width: 576px) {
+  .grupo-gestion-styles .search-filters-container {
+    padding: 0.8rem;
+  }
+  
   .grupo-gestion-styles .table-header,
   .grupo-gestion-styles .table-row {
     grid-template-columns: 30px 80px 1fr 60px;
@@ -629,9 +676,5 @@
   .grupo-gestion-styles .btn-editar span,
   .grupo-gestion-styles .btn-eliminar span {
     display: none;
-  }
-  
-  .grupo-gestion-styles .search-filters-container {
-    padding: 1rem;
   }
 }

@@ -21,7 +21,7 @@ import NotasRubrica from './components/Rubricas/pages/notasRubrica'
 import NotasInformes from './components/Informes/pages/notasInformes';
 import Estadisticas from './components/Informes/pages/estadisticas';
 import SupervisorRubricas from './components/Supervisor/pages/supRubricas';
-
+import SupervisorInformes from './components/Supervisor/pages/supInformes';
 import CrearDocenteAdmin from './components/Docentes/pages/crearDocenteSup';
 import ListarDocentesAdmin from './components/Docentes/pages/listarDocenteSup';
 
@@ -173,7 +173,14 @@ function App() {
             </AdminProtectedRoute>
           } 
         />
-        
+        <Route 
+          path="/supervisor/informes" 
+          element={
+            <AdminProtectedRoute>
+              <SupervisorInformes />
+            </AdminProtectedRoute>
+          } 
+        />
         <Route 
           path="/informes/notas-finales" 
           element={

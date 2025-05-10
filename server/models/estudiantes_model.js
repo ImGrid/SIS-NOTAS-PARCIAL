@@ -124,6 +124,12 @@ async function obtenerEstudiantesConEstadoGrupo(docenteId) {
     throw error;
   }
 }
+async function obtenerEstudiantesPorSemestreYCarrera(semestre, carrera) {
+  // Esta consulta filtra estudiantes que coincidan con el semestre Y la carrera
+  const query = 'SELECT * FROM estudiantes WHERE semestre = $1 AND carrera = $2';
+  const result = await pool.query(query, [semestre, carrera]);
+  return result.rows;
+}
 module.exports = {
   crearEstudiante,
   obtenerEstudiantes,
@@ -136,5 +142,6 @@ module.exports = {
   asignarEstudianteAGrupo,         // NUEVO
   desasignarEstudianteDeGrupo,     // NUEVO
   estudianteYaAsignadoAMateria,
-  obtenerEstudiantesConEstadoGrupo
+  obtenerEstudiantesConEstadoGrupo,
+  obtenerEstudiantesPorSemestreYCarrera
 };

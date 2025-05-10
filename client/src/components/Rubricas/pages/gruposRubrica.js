@@ -767,10 +767,9 @@ function GruposRubrica() {
             <thead>
               <tr>
                 <th className="columna-fija">Estudiante</th>
-                <th>Presentación (30%)</th>
-                <th>Sustentación (30%)</th>
-                <th>Documentación (30%)</th>
-                <th>Innovación (10%)</th>
+                {Object.entries(ESTRUCTURA_RUBRICA).map(([key, seccion]) => (
+                  <th key={key}>{seccion.nombre} ({seccion.ponderacion * 100}%)</th>
+                ))}
                 <th>Nota Final</th>
                 <th>Resultado</th>
               </tr>
@@ -788,10 +787,9 @@ function GruposRubrica() {
                         <div className="estudiante-codigo">{estudiante.codigo}</div>
                       </div>
                     </td>
-                    <td>{calificacionesEstructuradas.presentacion?.calificacion?.toFixed(2) || '-'}</td>
-                    <td>{calificacionesEstructuradas.sustentacion?.calificacion?.toFixed(2) || '-'}</td>
-                    <td>{calificacionesEstructuradas.documentacion?.calificacion?.toFixed(2) || '-'}</td>
-                    <td>{calificacionesEstructuradas.innovacion?.calificacion?.toFixed(2) || '-'}</td>
+                    {Object.keys(ESTRUCTURA_RUBRICA).map(key => (
+                      <td key={key}>{calificacionesEstructuradas[key]?.calificacion?.toFixed(2) || '-'}</td>
+                    ))}
                     <td className={`nota-final ${resultado.resultado === 'APROBADO' ? 'aprobado' : 'reprobado'}`}>
                       {resultado.notaFinal ? resultado.notaFinal.toFixed(2) : '-'}
                     </td>
@@ -892,30 +890,15 @@ function GruposRubrica() {
           
           <div className="tabs-container">
             <div className="tabs">
-              <div 
-                className={`tab ${seccionActiva === 'presentacion' ? 'active' : ''}`}
-                onClick={() => cambiarSeccion('presentacion')}
-              >
-                Presentación (30%)
-              </div>
-              <div 
-                className={`tab ${seccionActiva === 'sustentacion' ? 'active' : ''}`}
-                onClick={() => cambiarSeccion('sustentacion')}
-              >
-                Sustentación (30%)
-              </div>
-              <div 
-                className={`tab ${seccionActiva === 'documentacion' ? 'active' : ''}`}
-                onClick={() => cambiarSeccion('documentacion')}
-              >
-                Documentación (30%)
-              </div>
-              <div 
-                className={`tab ${seccionActiva === 'innovacion' ? 'active' : ''}`}
-                onClick={() => cambiarSeccion('innovacion')}
-              >
-                Innovación (10%)
-              </div>
+              {Object.entries(ESTRUCTURA_RUBRICA).map(([key, seccion]) => (
+                <div 
+                  key={key}
+                  className={`tab ${seccionActiva === key ? 'active' : ''}`}
+                  onClick={() => cambiarSeccion(key)}
+                >
+                  {seccion.nombre} ({seccion.ponderacion * 100}%)
+                </div>
+              ))}
               <div 
                 className={`tab ${seccionActiva === 'resumen' ? 'active' : ''}`}
                 onClick={() => cambiarSeccion('resumen')}

@@ -200,6 +200,17 @@ export const getEstudiantesConEstadoGrupo = async () => {
     throw error;
   }
 };
+export const getEstudiantesBySemestreYCarrera = async (semestre, carrera) => {
+  try {
+    // Codificar la carrera para URL ya que puede contener espacios
+    const carreraEncoded = encodeURIComponent(carrera);
+    const response = await api.get(`/api/estudiantes/semestre-carrera/${semestre}/${carreraEncoded}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error al obtener estudiantes por semestre y carrera:', error);
+    throw error;
+  }
+};
 export default {
   getEstudiantes,
   getEstudianteById,
@@ -210,5 +221,6 @@ export default {
   getEstudiantesByCarrera,
   getEstudiantesBySemestre,
   estudianteYaAsignadoAMateria,
-  getEstudiantesConEstadoGrupo
+  getEstudiantesConEstadoGrupo,
+  getEstudiantesBySemestreYCarrera
 };

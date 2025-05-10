@@ -42,6 +42,9 @@ function NotasInformes() {
   const [carreraSeleccionada, setCarreraSeleccionada] = useState('TODAS');
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('TODOS');
   
+  // Estado para el campo de búsqueda de estudiantes
+  const [busquedaEstudiante, setBusquedaEstudiante] = useState('');
+  
   // Estados para carga y errores
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -201,13 +204,58 @@ function NotasInformes() {
 
   // Función para obtener datos filtrados (utilizando la utilidad importada)
   const obtenerDatosFiltradosActuales = () => {
-    return obtenerDatosFiltrados(
+    let datosFiltrados = obtenerDatosFiltrados(
       datosPorMateria,
       materiaSeleccionada,
       carreraSeleccionada,
       semestreSeleccionado
     );
+    
+    // Si hay búsqueda de estudiante, filtramos los datos
+    if (busquedaEstudiante.trim() !== '') {
+      const busquedaLower = busquedaEstudiante.toLowerCase();
+      
+      // Recorrer cada carrera
+      Object.keys(datosFiltrados).forEach(carrera => {
+        // Recorrer cada semestre
+        Object.keys(datosFiltrados[carrera]).forEach(semestre => {
+          // Filtrar estudiantes en cada sección
+          const seccion = datosFiltrados[carrera][semestre];
+          if (seccion && seccion.estudiantes) {
+            // Filtrar los estudiantes que coincidan con la búsqueda
+            const estudiantesFiltrados = seccion.estudiantes.filter(datos => {
+              const nombreCompleto = `${datos.estudiante.nombre || ''} ${datos.estudiante.apellido || ''}`.toLowerCase();
+              const codigo = (datos.estudiante.codigo || '').toLowerCase();
+              
+              return nombreCompleto.includes(busquedaLower) || 
+                     codigo.includes(busquedaLower);
+            });
+            
+            // Actualizar los datos de la sección
+            datosFiltrados[carrera][semestre] = {
+              ...seccion,
+              estudiantes: estudiantesFiltrados,
+              total: estudiantesFiltrados.length,
+              // Recalcular aprobados y reprobados
+              aprobados: estudiantesFiltrados.filter(e => e.resultado === 'APROBADO').length,
+              reprobados: estudiantesFiltrados.filter(e => e.resultado === 'REPROBADO').length,
+              pendientes: estudiantesFiltrados.filter(e => e.resultado === 'PENDIENTE').length
+            };
+          }
+        });
+      });
+    }
+    
+    return datosFiltrados;
   };
+
+  // Función para limpiar la búsqueda
+  const limpiarBusqueda = () => {
+  setBusquedaEstudiante('');
+  setCarreraSeleccionada('TODAS');
+  setSemestreSeleccionado('TODOS');
+  setMateriaSeleccionada('TODAS');
+};
 
   // Función para generar PDF utilizando el módulo externo
   const generarPDF = () => {
@@ -222,7 +270,8 @@ function NotasInformes() {
         filtros: {
           carrera: carreraSeleccionada,
           semestre: semestreSeleccionado,
-          materia: materiaSeleccionada
+          materia: materiaSeleccionada,
+          busqueda: busquedaEstudiante
         },
         docente: docenteActual,
         datosFiltrados: obtenerDatosFiltradosActuales(),
@@ -324,10 +373,38 @@ function NotasInformes() {
           </div>
 
           <div className="evaluacion-container">
-            {/* Filtros */}
-            <div className="filtros-container">
+            {/* Barra de búsqueda para estudiantes */}
+            {/* Filtros y búsqueda en una sola línea */}
+            <div className="filters-search-row">
+              {/* Barra de búsqueda */}
+              <div className="search-input-container">
+                <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o código..."
+                  value={busquedaEstudiante}
+                  onChange={(e) => setBusquedaEstudiante(e.target.value)}
+                  className="search-input"
+                />
+                {busquedaEstudiante && (
+                  <button 
+                    onClick={limpiarBusqueda} 
+                    className="clear-search"
+                    title="Limpiar búsqueda"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              {/* Filtro de carrera */}
               <div className="filtro">
-                <label htmlFor="carrera-select">Carrera:</label>
                 <select 
                   id="carrera-select" 
                   value={carreraSeleccionada}
@@ -336,21 +413,22 @@ function NotasInformes() {
                     setSemestreSeleccionado('TODOS');
                   }}
                 >
-                  {carrerasUnicas.map(carrera => (
+                  <option value="TODAS">Todas las carreras</option>
+                  {carrerasUnicas.filter(c => c !== 'TODAS').map(carrera => (
                     <option key={carrera} value={carrera}>{carrera}</option>
                   ))}
                 </select>
               </div>
               
+              {/* Filtro de semestre */}
               <div className="filtro">
-                <label htmlFor="semestre-select">Semestre:</label>
                 <select 
                   id="semestre-select" 
                   value={semestreSeleccionado}
                   onChange={(e) => setSemestreSeleccionado(e.target.value)}
                   disabled={carreraSeleccionada === 'TODAS'}
                 >
-                  <option value="TODOS">TODOS</option>
+                  <option value="TODOS">Todos los semestres</option>
                   {carreraSeleccionada !== 'TODAS' && semestresPorCarrera[carreraSeleccionada] 
                     ? semestresPorCarrera[carreraSeleccionada].map(semestre => (
                         <option key={semestre} value={semestre}>{`${semestre}° Semestre`}</option>
@@ -360,18 +438,29 @@ function NotasInformes() {
                 </select>
               </div>
 
+              {/* Filtro de materia */}
               <div className="filtro">
-                <label htmlFor="materia-select">Asignatura:</label>
                 <select 
                   id="materia-select" 
                   value={materiaSeleccionada}
                   onChange={(e) => setMateriaSeleccionada(e.target.value)}
                 >
-                  {materiasUnicas.map(materia => (
+                  <option value="TODAS">Todas las materias</option>
+                  {materiasUnicas.filter(m => m !== 'TODAS').map(materia => (
                     <option key={materia} value={materia}>{materia}</option>
                   ))}
                 </select>
               </div>
+              
+              {/* Botón X para limpiar todos los filtros */}
+              <button 
+                onClick={limpiarBusqueda} 
+                className="btn-limpiar-busqueda"
+                title="Limpiar búsqueda"
+                disabled={!busquedaEstudiante && carreraSeleccionada === 'TODAS' && semestreSeleccionado === 'TODOS' && materiaSeleccionada === 'TODAS'}
+              >
+                X
+              </button>
             </div>
             
             {/* Contenedor para PDF */}
@@ -392,6 +481,7 @@ function NotasInformes() {
                   {carreraSeleccionada !== 'TODAS' && <div>Carrera: {carreraSeleccionada}</div>}
                   {semestreSeleccionado !== 'TODOS' && <div>Semestre: {semestreSeleccionado}° Semestre</div>}
                   {materiaSeleccionada !== 'TODAS' && <div>Asignatura: {materiaSeleccionada}</div>}
+                  {busquedaEstudiante && <div>Filtro estudiante: {busquedaEstudiante}</div>}
                 </div>
               </div>
             

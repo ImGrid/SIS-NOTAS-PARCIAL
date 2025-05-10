@@ -410,7 +410,7 @@ function Docentes() {
                       
                       <div className="pending-item">
                         <span className="pending-count">{resumen.gruposPendientes}</span>
-                        <span className="pending-label">Grupos con evaluaciones parciales</span>
+                        <span className="pending-label">Grupos con evaluaciones pendientes</span>
                       </div>
                       
                       <div className="pending-item">

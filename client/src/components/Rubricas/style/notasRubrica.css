@@ -89,9 +89,6 @@
   .notas-evaluacion .evaluacion-estudiantes {
     background-color: white;
     border-radius: 8px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-    padding: 0.8rem;
-    margin-bottom: 2rem;
     animation: notas-fadeInUp 0.5s ease-out;
   }
   
@@ -187,7 +184,7 @@
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    margin-top: 2rem;
+    padding: 0 32px;
   }
   
   .notas-evaluacion .btn-volver,
@@ -299,7 +296,27 @@
     animation: notas-spin 1s linear infinite;
     margin: 20px auto 0;
   }
-  
+  .notas-evaluacion .proyecto-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+/* Responsive para tabletas */
+@media (max-width: 992px) {
+  .notas-evaluacion .proyecto-info {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+  }
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .notas-evaluacion .proyecto-info {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+}
   /* Animaciones con prefijo para evitar conflictos */
   @keyframes notas-fadeIn {
     0% { opacity: 0; }

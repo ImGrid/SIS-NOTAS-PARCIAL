@@ -134,6 +134,16 @@ async function obtenerEstudiantesConEstadoGrupo(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+async function obtenerEstudiantesPorSemestreYCarrera(req, res) {
+  try {
+    const semestre = req.params.semestre;
+    const carrera = req.params.carrera;
+    const estudiantes = await estudiantesModel.obtenerEstudiantesPorSemestreYCarrera(semestre, carrera);
+    res.json(estudiantes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 module.exports = {
   crearEstudiante,
   obtenerEstudiantes,
@@ -146,5 +156,6 @@ module.exports = {
   asignarEstudianteAGrupo,         // NUEVO
   desasignarEstudianteDeGrupo,
   verificarMateria,
-  obtenerEstudiantesConEstadoGrupo
+  obtenerEstudiantesConEstadoGrupo,
+  obtenerEstudiantesPorSemestreYCarrera
 };

@@ -80,57 +80,133 @@
   /* =================
      Filtros
      ================= */
-  .notas-informe-styles .filtros-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    background-color: white;
-    border-radius: 8px;
-    padding: 1.2rem 0;
-    animation: fadeInUp 0.6s ease-out;
-  }
-  
-  .notas-informe-styles .filtro {
-    display: flex;
-    flex-direction: column;
-    min-width: 200px;
-    flex: 1;
-  }
-  
-  .notas-informe-styles .filtro label {
-    font-weight: 600;
-    color: #555;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-  }
-  
-  .notas-informe-styles .filtro select {
-    padding: 0.65rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background-color: white;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
-    padding-right: 40px;
-  }
-  
-  .notas-informe-styles .filtro select:focus {
-    border-color: #3498db;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
-  }
-  
-  .notas-informe-styles .filtro select:disabled {
-    background-color: #f9f9f9;
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
+  .notas-informe-styles .filters-search-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  width: 100%;
+  background-color: white;
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Barra de búsqueda con ancho reducido */
+.notas-informe-styles .search-input-container {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.notas-informe-styles .search-input-container:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.notas-informe-styles .search-icon {
+  color: #8e9cae;
+  margin-right: 0.75rem;
+}
+
+.notas-informe-styles .search-input {
+  border: none;
+  background: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.notas-informe-styles .search-input::placeholder {
+  color: #8e9cae;
+}
+
+.notas-informe-styles .clear-search {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #8e9cae;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.notas-informe-styles .clear-search:hover {
+  color: #e74c3c;
+}
+
+/* Estilos para los filtros en línea */
+.notas-informe-styles .filtro {
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.notas-informe-styles .filtro select {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.notas-informe-styles .filtro select:hover {
+  border-color: #3498db;
+}
+
+.notas-informe-styles .filtro select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.notas-informe-styles .filtro select:disabled {
+  background-color: #f9f9f9;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Botón X para limpiar búsqueda */
+.notas-informe-styles .btn-limpiar-busqueda {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.notas-informe-styles .btn-limpiar-busqueda:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
   
   /* =================
      Contenedor para PDF
@@ -554,7 +630,142 @@
     margin-bottom: 15px !important;
     font-size: 16px !important;
   }
+  /* Estilos para la barra de búsqueda de estudiantes */
+.notas-informe-styles .search-container {
+  width: 100%;
+  padding: 1rem 0;
+  background-color: white;
+  border-radius: 8px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.notas-informe-styles .search-input-container {
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.notas-informe-styles .search-input-container:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.notas-informe-styles .search-icon {
+  color: #8e9cae;
+  margin-right: 0.75rem;
+}
+
+.notas-informe-styles .search-input {
+  border: none;
+  background: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #2c3e50;
+  padding: 0.2rem 0;
+}
+
+.notas-informe-styles .search-input::placeholder {
+  color: #8e9cae;
+}
+
+.notas-informe-styles .clear-search {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #8e9cae;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.notas-informe-styles .clear-search:hover {
+  color: #e74c3c;
+}
+
+/* Estilos para el indicador de filtro activo */
+.notas-informe-styles .filtro-activo {
+  background-color: #f1f5f9;
+  border-left: 4px solid #3498db;
+  padding: 0.75rem 1rem;
+  color: #2c3e50;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notas-informe-styles .btn-limpiar-filtro {
+  background-color: transparent;
+  border: none;
+  color: #3498db;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.notas-informe-styles .btn-limpiar-filtro:hover {
+  background-color: #e6f0f7;
+  text-decoration: underline;
+}
+
+/* Ajustes responsivos */
+/* Responsive para filtros en línea */
+@media (max-width: 1200px) {
+  .notas-informe-styles .filters-search-row {
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
   
+  .notas-informe-styles .search-input-container,
+  .notas-informe-styles .filtro {
+    flex: 1 1 200px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .notas-informe-styles .filters-search-row {
+    padding: 0.8rem;
+  }
+  
+  .notas-informe-styles .filtro-activo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .notas-informe-styles .btn-limpiar-filtro {
+    align-self: flex-end;
+  }
+}
+@media (max-width: 992px) {
+  .notas-informe-styles .pdf-info {
+    max-width: 100%;
+  }
+}
+@media (max-width: 576px) {
+  .notas-informe-styles .search-input {
+    font-size: 0.85rem;
+  }
+  
+  .notas-informe-styles .filtro-activo {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+}
   /* Tablas en el PDF */
   .generando-pdf .tabla-evaluacion {
     border: 1px solid #333 !important;
@@ -705,7 +916,6 @@
   /* Ajustes adicionales para pantallas muy pequeñas */
   @media (max-width: 480px) {
     .notas-informe-styles .header-actions {
-      flex-direction: column;
       align-items: center;
     }
     

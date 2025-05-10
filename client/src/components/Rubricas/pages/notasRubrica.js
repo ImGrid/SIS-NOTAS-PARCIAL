@@ -1,10 +1,10 @@
 // src/components/Rubricas/pages/notasRubrica.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../Docentes/sidebar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import '../style/notasRubrica.css'; // Importar los estilos
+import '../style/notasRubrica.css';
 
 // Importar servicios para obtener los datos necesarios
 import { getGrupoPorId } from '../../../service/grupoService';
@@ -13,6 +13,13 @@ import { getInformesPorGrupoId } from '../../../service/informeService';
 import { getRubricaPorId } from '../../../service/rubricaService';
 import { getDocenteById } from '../../../service/docenteService';
 import { getCalificacionPorId } from '../../../service/calificacionService';
+
+// Importar utilidades para PDF
+import { 
+  generarPDFEvaluacion, 
+  generarNombreArchivoPDF, 
+  verificarSoportePDF 
+} from '../../../util/pdf/gruposPdf';
 
 function NotasRubrica() {
   // Estados para almacenar los datos
@@ -25,10 +32,21 @@ function NotasRubrica() {
   const [error, setError] = useState(null);
   const [datosEvaluacion, setDatosEvaluacion] = useState([]);
   const [docenteActual, setDocenteActual] = useState(null);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
+
+  // Ref para el contenedor del PDF
+  const pdfRef = useRef(null);
 
   // Obtener el ID del grupo de los parámetros de la URL
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Verificar soporte de PDF al montar el componente
+  useEffect(() => {
+    if (!verificarSoportePDF()) {
+      toast.warning('Tu navegador podría tener problemas para generar PDFs. Se recomienda usar Chrome o Firefox.');
+    }
+  }, []);
 
   // Función para cargar todos los datos necesarios
   useEffect(() => {
@@ -59,9 +77,7 @@ function NotasRubrica() {
         if (usuarioString) {
           try {
             const usuario = JSON.parse(usuarioString);
-            // Guardar el ID del docente actual
             if (usuario && usuario.id) {
-              // Obtener la información completa del docente utilizando el ID obtenido de sessionStorage
               const docenteData = await getDocenteById(usuario.id);
               setDocenteActual(docenteData);
             }
@@ -79,7 +95,7 @@ function NotasRubrica() {
           // Buscar estudiante correspondiente
           const estudiante = estudiantesData.find(est => est.id === informe.estudiante_id);
           
-          if (!estudiante) continue; // Si no se encuentra el estudiante, continuar con el siguiente informe
+          if (!estudiante) continue;
           
           // Cargar rúbrica
           let rubrica = null;
@@ -140,6 +156,61 @@ function NotasRubrica() {
     return `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1).toString().padStart(2, '0')}/${fecha.getFullYear()}`;
   };
 
+  // Función para manejar la descarga del PDF
+  const handleDescargarPDF = async () => {
+    if (!pdfRef.current) {
+      toast.error('No se pudo encontrar el contenido para generar el PDF');
+      return;
+    }
+
+    try {
+      setGenerandoPDF(true);
+      toast.info('Generando PDF...', { autoClose: 2000 });
+
+      // Generar nombre de archivo
+      const nombreArchivo = generarNombreArchivoPDF(
+        'evaluacion-grupal',
+        grupo?.nombre_proyecto || '',
+        obtenerFechaActual()
+      );
+
+      // Configuración personalizada para el PDF
+      const opciones = {
+        margin: [15, 15, 20, 15],
+        filename: `${nombreArchivo}.pdf`,
+        image: { 
+          type: 'jpeg', 
+          quality: 0.98 
+        },
+        html2canvas: { 
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'landscape'
+        }
+      };
+
+      // Generar el PDF
+      const exito = await generarPDFEvaluacion(pdfRef.current, nombreArchivo, opciones);
+      
+      if (exito) {
+        toast.success('PDF descargado exitosamente');
+      } else {
+        toast.error('Error al generar el PDF. Por favor, intenta nuevamente.');
+      }
+    } catch (error) {
+      console.error('Error durante la generación del PDF:', error);
+      toast.error('Ocurrió un error al generar el PDF');
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
   // Renderizado para estado de carga
   if (loading) {
     return (
@@ -177,7 +248,7 @@ function NotasRubrica() {
                 className="btn-volver"
                 onClick={() => navigate('/evaluaciones/gestionar')}
               >
-                Ir atras
+                Ir atrás
               </button>
             </div>
           </div>
@@ -192,49 +263,63 @@ function NotasRubrica() {
       <ToastContainer position="top-right" autoClose={3000} />
       <Sidebar />
       <main className="content content-with-sidebar notas-evaluacion">
-        <div className="evaluacion-header">
-          <h1>EVALUACIÓN GRUPAL</h1>
-          <h2>Examen Final - Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
-        </div>
-
-        <div className="evaluacion-container">
-          {/* Información del proyecto fuera del encabezado */}
-          <div className="proyecto-info-container">
-            <div className="proyecto-info">
-              <div className="proyecto-info-item">
-                <div className="proyecto-info-label">Proyecto:</div>
-                <div className="proyecto-info-value">{grupo?.nombre_proyecto || 'Sin nombre de proyecto'}</div>
-              </div>
-              <div className="proyecto-info-item">
-                <div className="proyecto-info-label">Fecha de evaluación:</div>
-                <div className="proyecto-info-value">{obtenerFechaActual()}</div>
-              </div>
-              <div className="proyecto-info-item">
-                <div className="proyecto-info-label">Docente evaluador:</div>
-                <div className="proyecto-info-value">{docenteActual ? docenteActual.nombre_completo : 'No especificado'}</div>
-              </div>
-            </div>
+        {/* Contenedor con ref para el PDF */}
+        <div ref={pdfRef} className="pdf-container">
+          <div className="evaluacion-header">
+            <h1>EVALUACIÓN GRUPAL</h1>
+            <h2>Examen Final - Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
           </div>
 
-          <div className="evaluacion-estudiantes">
-            <h3>Evaluación de estudiantes</h3>
-            
-            <table className="tabla-evaluacion">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Estudiante</th>
-                  <th>Presentación (30%)</th>
-                  <th>Sustentación (30%)</th>
-                  <th>Documentación (30%)</th>
-                  <th>Innovación (10%)</th>
-                  <th>Nota Final</th>
-                  <th>Resultado</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="evaluacion-container">
+            {/* Información del proyecto */}
+            <div className="proyecto-info-container">
+              <div className="proyecto-info">
+                <div className="proyecto-info-item">
+                  <div className="proyecto-info-label">Proyecto:</div>
+                  <div className="proyecto-info-value">{grupo?.nombre_proyecto || 'Sin nombre de proyecto'}</div>
+                </div>
+                <div className="proyecto-info-item">
+                  <div className="proyecto-info-label">Asignatura:</div>
+                  <div className="proyecto-info-value">{grupo?.materia || 'Sin asignatura especificada'}</div>
+                </div>
+                <div className="proyecto-info-item">
+                  <div className="proyecto-info-label">Carrera:</div>
+                  <div className="proyecto-info-value">{grupo?.carrera || 'Sin carrera especificada'}</div>
+                </div>
+                <div className="proyecto-info-item">
+                  <div className="proyecto-info-label">Semestre:</div>
+                  <div className="proyecto-info-value">{grupo?.semestre || 'Sin semestre especificado'}</div>
+                </div>
+                <div className="proyecto-info-item">
+                  <div className="proyecto-info-label">Fecha de evaluación:</div>
+                  <div className="proyecto-info-value">{obtenerFechaActual()}</div>
+                </div>
+                <div className="proyecto-info-item">
+                  <div className="proyecto-info-label">Docente evaluador:</div>
+                  <div className="proyecto-info-value">{docenteActual ? docenteActual.nombre_completo : 'No especificado'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="evaluacion-estudiantes">
+              <h3>Evaluación de estudiantes</h3>
+              
+              <table className="tabla-evaluacion">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Estudiante</th>
+                    <th>Presentación (30%)</th>
+                    <th>Sustentación (30%)</th>
+                    <th>Documentación (30%)</th>
+                    <th>Innovación (10%)</th>
+                    <th>Nota Final</th>
+                    <th>Resultado</th>
+                  </tr>
+                </thead>
+                <tbody>
                 {datosEvaluacion.map((datos) => (
-                  <tr key={datos.estudiante.id}>
+                  <tr key={`${datos.estudiante.id}-${datos.informe.id}`}>
                     <td>{datos.estudiante.codigo}</td>
                     <td>{`${datos.estudiante.nombre} ${datos.estudiante.apellido}`}</td>
                     <td>
@@ -259,25 +344,28 @@ function NotasRubrica() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
+        </div>
 
-          <div className="acciones-container">
-            <button 
-              className="btn-volver"
-              onClick={() => navigate('/evaluaciones/gestionar')}
-            >
-              Ir atras
-            </button>
-            
-            <button 
-              className="btn-imprimir"
-              onClick={() => window.print()}
-            >
-              Imprimir Evaluación
-            </button>
-          </div>
+        {/* Botones de acción (fuera del contenedor del PDF) */}
+        <div className="acciones-container">
+          <button 
+            className="btn-volver"
+            onClick={() => navigate('/evaluaciones/gestionar')}
+          >
+            Ir atrás
+          </button>
+          
+          <button 
+            className="btn-imprimir"
+            onClick={handleDescargarPDF}
+            disabled={generandoPDF}
+          >
+            {generandoPDF ? 'Generando PDF...' : 'Descargar PDF'}
+          </button>
         </div>
       </main>
     </div>
