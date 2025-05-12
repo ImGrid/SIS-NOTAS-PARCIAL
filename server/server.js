@@ -15,7 +15,6 @@ const rubricaRoute = require('./routes/rubrica_route');
 const informeRoute = require('./routes/informe_route');
 const borradoresRoute = require('./routes/borradores_routes');
 const supervisorRoute = require('./routes/supervisor_routes');
-
 class Server {
   constructor() {
     this.app = express();
@@ -29,23 +28,15 @@ class Server {
   middlewares() {
     this.app.use(helmet()); 
     this.app.use(cors({
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3000', 
+
+      origin: '*',
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'] // Añade X-Requested-With
+      allowedHeaders: ['Content-Type', 'Authorization']
     }));
-
-    // limita solicitudes
-    //const limiter = rateLimit({
-    //  windowMs: 15 * 60 * 1000, // 15 minutos
-    //  max: 2000, // maximo de solicitudes por sesion
-    //  message: 'Demasiadas solicitudes desde esta IP, por favor intente más tarde'
-    //});
-
-    //this.app.use(limiter);
     this.app.use(compression());
     this.app.use(morgan('combined')); // ver mas detalles del log
     this.app.use(express.json({
-      limit: '1mb' // limites del tamaños de solicitudes json
+      limit: '10mb' // limites del tamaños de solicitudes json
     }));
     this.app.use(express.urlencoded({ extended: true }));
   }
@@ -71,7 +62,6 @@ class Server {
   }
 
   errorHandlers() {
-
     this.app.use((req, res, next) => {
       res.status(404).json({ 
         error: 'Ruta no encontrada',
@@ -91,8 +81,9 @@ class Server {
   }
 
   start() {
-    this.app.listen(this.port, () => {
-      console.log(`servidor corriendo en puerto ${this.port}`);
+    this.app.listen(this.port, '0.0.0.0', () => {
+      console.log(`Servidor corriendo en puerto ${this.port}`);
+      console.log(`Escuchando en todas las interfaces de red (0.0.0.0)`);
       console.log(`Modo: ${process.env.NODE_ENV || 'development'}`);
     });
   }

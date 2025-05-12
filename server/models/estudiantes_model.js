@@ -130,6 +130,92 @@ async function obtenerEstudiantesPorSemestreYCarrera(semestre, carrera) {
   const result = await pool.query(query, [semestre, carrera]);
   return result.rows;
 }
+async function obtenerEstudiantesPorMateriaConEstado(materia) {
+  const query = `
+    WITH estudiantes_grupo AS (
+      -- Todos los estudiantes asignados a grupos de esta materia
+      SELECT 
+        e.id, e.nombre, e.apellido, e.codigo, e.carrera, e.semestre,
+        e.unidad_educativa, g.id as grupo_id, g.nombre_proyecto,
+        g.materia
+      FROM estudiantes e
+      JOIN estudiante_grupo eg ON e.id = eg.estudiante_id
+      JOIN grupos g ON eg.grupo_id = g.id
+      WHERE g.materia = $1 AND eg.activo = true
+    ), 
+    informes_rubricas AS (
+      -- Todos los informes con sus rúbricas de los grupos de esta materia
+      SELECT 
+        i.*, r.presentacion, r.sustentacion, r.documentacion, 
+        r.innovacion, r.nota_final, r.observaciones 
+      FROM informes i
+      LEFT JOIN rubricas r ON i.rubrica_id = r.id
+      JOIN grupos g ON i.grupo_id = g.id
+      WHERE g.materia = $1
+    )
+    SELECT 
+      eg.id, eg.nombre, eg.apellido, eg.codigo, eg.carrera, eg.semestre,
+      eg.unidad_educativa, eg.grupo_id, eg.nombre_proyecto, eg.materia,
+      ir.id as informe_id, ir.nota_final, ir.observaciones,
+      CASE 
+        WHEN ir.id IS NULL THEN 'PENDIENTE'
+        WHEN ir.observaciones = 'APROBADO' OR ir.nota_final >= 5.1 THEN 'APROBADO'
+        ELSE 'REPROBADO'
+      END as estado
+    FROM estudiantes_grupo eg
+    LEFT JOIN informes_rubricas ir ON eg.id = ir.estudiante_id AND eg.grupo_id = ir.grupo_id
+    ORDER BY eg.apellido, eg.nombre
+  `;
+  
+  const result = await pool.query(query, [materia]);
+  return result.rows;
+}
+// En estudiantes_model.js
+async function obtenerEstudiantesUnicosPorSemestreYCarreraConEstado(semestre, carrera) {
+  const query = `
+    WITH estudiantes_base AS (
+      -- Estudiantes básicos de este semestre y carrera
+      SELECT 
+        e.id, e.nombre, e.apellido, e.codigo, e.carrera, e.semestre,
+        e.unidad_educativa, 
+        EXISTS (
+          SELECT 1 FROM estudiante_grupo eg 
+          JOIN grupos g ON eg.grupo_id = g.id
+          WHERE eg.estudiante_id = e.id AND eg.activo = true
+        ) as asignado_a_grupo
+      FROM estudiantes e
+      WHERE e.semestre = $1 AND e.carrera = $2
+    ),
+    estudiantes_con_informes AS (
+      -- Estudiantes con sus informes (si existen)
+      SELECT 
+        eb.*,
+        i.id as informe_id,
+        r.nota_final,
+        r.observaciones
+      FROM estudiantes_base eb
+      LEFT JOIN informes i ON eb.id = i.estudiante_id
+      LEFT JOIN rubricas r ON i.rubrica_id = r.id
+    )
+    SELECT 
+      id, nombre, apellido, codigo, carrera, semestre, unidad_educativa,
+      asignado_a_grupo,
+      informe_id,
+      nota_final,
+      observaciones,
+      CASE 
+        WHEN asignado_a_grupo = false THEN 'NO_ASIGNADO'
+        WHEN informe_id IS NULL THEN 'PENDIENTE'
+        WHEN observaciones = 'APROBADO' OR nota_final >= 5.1 THEN 'APROBADO'
+        ELSE 'REPROBADO'
+      END as estado
+    FROM estudiantes_con_informes
+    ORDER BY apellido, nombre
+  `;
+  
+  const result = await pool.query(query, [semestre, carrera]);
+  return result.rows;
+}
 module.exports = {
   crearEstudiante,
   obtenerEstudiantes,
@@ -143,5 +229,6 @@ module.exports = {
   desasignarEstudianteDeGrupo,     // NUEVO
   estudianteYaAsignadoAMateria,
   obtenerEstudiantesConEstadoGrupo,
-  obtenerEstudiantesPorSemestreYCarrera
+  obtenerEstudiantesPorSemestreYCarrera,
+  obtenerEstudiantesUnicosPorSemestreYCarreraConEstado
 };

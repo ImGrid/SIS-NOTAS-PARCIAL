@@ -144,6 +144,16 @@ async function obtenerEstudiantesPorSemestreYCarrera(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+async function obtenerEstudiantesPorMateria(req, res) {
+  try {
+    const materia = req.params.materia;
+    const estudiantes = await estudiantesModel.obtenerEstudiantesPorMateriaConEstado(materia);
+    res.json(estudiantes);
+  } catch (error) {
+    console.error('Error al obtener estudiantes por materia:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
 module.exports = {
   crearEstudiante,
   obtenerEstudiantes,
@@ -157,5 +167,6 @@ module.exports = {
   desasignarEstudianteDeGrupo,
   verificarMateria,
   obtenerEstudiantesConEstadoGrupo,
-  obtenerEstudiantesPorSemestreYCarrera
+  obtenerEstudiantesPorSemestreYCarrera,
+  obtenerEstudiantesPorMateria
 };

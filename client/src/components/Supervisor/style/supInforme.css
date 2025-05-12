@@ -74,14 +74,11 @@
    ================= */
 .sup-informes-styles .filters-search-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* Cambiar de 'center' a 'flex-end' */
   justify-content: space-between;
   gap: 0.8rem;
   width: 100%;
-  background-color: white;
-  border-radius: 8px;
-  padding: 0.8rem 0;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1.5rem;
   animation: fadeInUp 0.5s ease-out;
 }
 
@@ -89,7 +86,19 @@
 .sup-informes-styles .search-input-container {
   flex: 1;
   min-width: 200px;
-  max-width: 300px;
+  max-width: 400px;
+  position: relative;
+}
+.sup-informes-styles .search-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sup-informes-styles .search-input-field {
   display: flex;
   align-items: center;
   background-color: #f8f9fa;
@@ -98,7 +107,10 @@
   padding: 0.5rem 1rem;
   transition: all 0.3s ease;
 }
-
+.sup-informes-styles .search-input-field:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
 .sup-informes-styles .search-input-container:focus-within {
   border-color: #3498db;
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
@@ -140,11 +152,21 @@
 
 /* Estilos para los filtros en línea */
 .sup-informes-styles .filtro {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 150px;
-  max-width: 250px;
+  max-width: 200px;
+  position: relative;
 }
-
+.sup-informes-styles .filtro-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
 .sup-informes-styles .filtro select {
   width: 100%;
   padding: 0.5rem 1rem;
@@ -181,7 +203,7 @@
 /* Botón X para limpiar búsqueda */
 .sup-informes-styles .btn-limpiar-busqueda {
   width: 40px;
-  height: 40px;
+  height: 35px; /* Altura fija para alinearse */
   min-width: 40px;
   display: flex;
   align-items: center;
@@ -194,6 +216,7 @@
   transition: all 0.3s ease;
   font-size: 1.2rem;
   font-weight: bold;
+  margin-top: 16px; /* Para alinearse con los selects que tienen label */
 }
 
 .sup-informes-styles .btn-limpiar-busqueda:hover {
@@ -762,12 +785,32 @@
     max-width: 100%;
   }
 }
-
+@media (max-width: 768px) {
+  .sup-informes-styles .filters-search-row {
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
+  
+  .sup-informes-styles .search-input-container,
+  .sup-informes-styles .filtro {
+    flex: 1 1 200px;
+    max-width: none;
+  }
+  
+  .sup-informes-styles .search-label,
+  .sup-informes-styles .filtro-label {
+    text-align: center;
+  }
+  
+  .sup-informes-styles .btn-limpiar-busqueda {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
 @media (max-width: 768px) {
   .sup-informes-styles .evaluacion-header {
     flex-direction: column;
     align-items: center;
-    padding: 1.5rem;
     text-align: center;
   }
   
@@ -837,10 +880,6 @@
 
 /* Ajustes adicionales para pantallas muy pequeñas */
 @media (max-width: 576px) {
-  .sup-informes-styles .search-input-container {
-    padding: 0.6rem 0.8rem;
-    margin: 0 0.5rem;
-  }
   
   .sup-informes-styles .search-input {
     font-size: 0.85rem;

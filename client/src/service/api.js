@@ -3,10 +3,24 @@ import { jwtDecode } from 'jwt-decode'; // Added JWT decoding for token validati
 
 // Configuration constants
 const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  BASE_URL: determinaBaseUrl(),
   TIMEOUT: 10000, // 10 seconds timeout
   CONTENT_TYPE: 'application/json',
 };
+
+function determinaBaseUrl() {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  const currentHost = window.location.hostname;
+  
+  if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+    return 'http://localhost:5000';
+  } 
+  else {
+    return `http://${currentHost}:5000`;
+  }
+}
 
 // Custom error handler
 class ApiError extends Error {
@@ -26,6 +40,9 @@ const api = axios.create({
     'Content-Type': API_CONFIG.CONTENT_TYPE,
   },
 });
+
+// Log the base URL for debugging purposes
+console.log('API Base URL:', API_CONFIG.BASE_URL);
 
 // Request interceptor with advanced token management
 api.interceptors.request.use(
@@ -149,31 +166,6 @@ api.updateResource = async (url, data) => {
     return response.data;
   } catch (error) {
     console.error(`Update failed for ${url}:`, error);
-    throw error;
-  }
-};
-
-api.deleteResource = async (url) => {
-  try {
-    const response = await api.delete(url);
-    return response.data;
-  } catch (error) {
-    console.error(`Delete failed for ${url}:`, error);
-    throw error;
-  }
-};
-api.getSilent = async (url, options = {}) => {
-  try {
-    return await api.get(url, { 
-      ...options, 
-      silentErrors: true,
-      silentErrorCodes: [404, ...((options.silentErrorCodes || []))]
-    });
-  } catch (error) {
-    // Procesar como un resultado vacío o nulo en lugar de error
-    if (error.status === 404) {
-      return { data: null };
-    }
     throw error;
   }
 };

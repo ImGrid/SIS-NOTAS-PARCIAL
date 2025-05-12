@@ -4,146 +4,246 @@ import LayoutSup from './LayoutSup';
 import supRubricaService from '../../../service/supRubricaService';
 import { getEstudiantesByGrupoId } from '../../../service/estudianteService';
 import { getInformesPorGrupoId } from '../../../service/informeService';
-import { getMisGrupos } from '../../../service/grupoService';
+import { getGrupos } from '../../../service/grupoService'; // Cambiado a getGrupos para obtener TODOS los grupos
 import { getBorradorPorDocenteYGrupo } from '../../../service/borradorService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import '../style/supRubrica.css'; // Cambiamos a la nueva hoja de estilos aislada
+import '../style/supRubrica.css';
+
+// Importar catálogos de materias
+import MATERIAS_POR_SEMESTRE from '../../../util/materias';
+import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias_etn';
 
 const SupervisorRubricas = () => {
+  // Estados para los catálogos
+  const [catalogoMaterias, setCatalogoMaterias] = useState({});
+  const [carreras, setCarreras] = useState([]);
+  const [semestres, setSemestres] = useState({});
+  const [asignaturas, setAsignaturas] = useState([]);
+  
+  // Estados para los grupos
   const [grupos, setGrupos] = useState([]);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState(null);
+  
+  // Estados para los modales
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDetallesVisible, setModalDetallesVisible] = useState(false);
-  const [motivo, setMotivo] = useState('');
-  const [loading, setLoading] = useState(true);
   const [historialVisible, setHistorialVisible] = useState(false);
   const [historial, setHistorial] = useState([]);
+  
+  // Estados para formularios
+  const [motivo, setMotivo] = useState('');
+  
+  // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroCarrera, setFiltroCarrera] = useState('');
   const [filtroSemestre, setFiltroSemestre] = useState('');
+  const [filtroAsignatura, setFiltroAsignatura] = useState('TODAS');
+  
+  // Estados de carga
+  const [loading, setLoading] = useState(true);
   
   const navigate = useNavigate();
 
-  // Cargar los datos iniciales - MODIFICADO para obtener TODOS los grupos
+  // Cargar datos iniciales usando catálogos de materias
   useEffect(() => {
-    const cargarDatos = async () => {
+    const cargarDatosIniciales = async () => {
       try {
         setLoading(true);
         
-        // 1. Obtenemos todos los grupos disponibles en el sistema
-        // (no solo los finalizados como hacía antes)
-        const todosLosGrupos = await getMisGrupos();
+        // 1. Configurar catálogos de materias
+        // Asegurar que el nombre de carrera coincida exactamente con el de la base de datos (sin tilde)
+        const catalogoCompleto = {
+          'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
+          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN // Sin tilde, según datos de DB
+        };
+        setCatalogoMaterias(catalogoCompleto);
         
-        // 2. Array para almacenar grupos con información completa
-        const gruposConEstado = [];
+        // 2. Obtener lista de carreras
+        const carrerasDisponibles = Object.keys(catalogoCompleto);
+        setCarreras(carrerasDisponibles);
         
-        // 3. Procesamos cada grupo para calcular su estado
-        for (const grupo of todosLosGrupos) {
-          try {
-            // Obtener estudiantes del grupo
-            const estudiantes = await getEstudiantesByGrupoId(grupo.id);
-            
-            // Obtener informes asociados al grupo
-            const informes = await getInformesPorGrupoId(grupo.id);
-            
-            // Crear un mapa para almacenar solo el informe más reciente por estudiante
-            const informesPorEstudiante = {};
-            for (const informe of informes) {
-              if (!informesPorEstudiante[informe.estudiante_id] || 
-                  informesPorEstudiante[informe.estudiante_id].id < informe.id) {
-                informesPorEstudiante[informe.estudiante_id] = informe;
-              }
-            }
-            
-            // Convertir el mapa de vuelta a un array
-            const informesFiltrados = Object.values(informesPorEstudiante);
-            
-            // Verificar si hay borradores para este grupo
-            let tieneBorrador = false;
-            if (grupo.docente_id) {
-              try {
-                const borrador = await getBorradorPorDocenteYGrupo(grupo.docente_id, grupo.id, true);
-                tieneBorrador = borrador !== null;
-              } catch (error) {
-                console.log('Error al verificar borrador:', error);
-              }
-            }
-            
-            // Determinar el estado del grupo según la lógica de gestionRubricas.js
-            let estadoGrupo = {
-              id: grupo.id,
-              ...grupo,
-              total_estudiantes: estudiantes.length,
-              total_informes: informesFiltrados.length,
-              informes: informesFiltrados
-            };
-            
-            // Lógica para determinar el estado
-            if (informesFiltrados.length === 0) {
-              if (tieneBorrador) {
-                estadoGrupo.estado = 'pendiente';
-                estadoGrupo.texto_estado = 'Pendiente';
-              } else {
-                estadoGrupo.estado = 'sin_rubrica';
-                estadoGrupo.texto_estado = 'Sin Rúbrica';
-              }
-            } else if (informesFiltrados.length < estudiantes.length) {
-              estadoGrupo.estado = 'pendiente';
-              estadoGrupo.texto_estado = 'Pendiente';
-            } else {
-              estadoGrupo.estado = 'finalizado';
-              estadoGrupo.texto_estado = 'Finalizado';
-            }
-            
-            // Verificar si el grupo tiene habilitación activa
-            try {
-              const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupo.id);
-              if (detallesGrupo.grupo && detallesGrupo.grupo.habilitacion_activa) {
-                estadoGrupo.habilitacion_activa = true;
-                estadoGrupo.detalle_habilitacion = detallesGrupo.grupo.detalle_habilitacion;
-              }
-            } catch (error) {
-              console.log('Error al verificar habilitación:', error);
-            }
-            
-            // Añadir a la lista de grupos
-            gruposConEstado.push(estadoGrupo);
-            
-          } catch (error) {
-            console.error(`Error al procesar grupo ${grupo.id}:`, error);
-            // Si hay error, añadir el grupo con información básica
-            gruposConEstado.push({
-              ...grupo,
-              estado: 'error',
-              texto_estado: 'Error',
-              total_estudiantes: 0,
-              total_informes: 0
-            });
-          }
-        }
+        // 3. Preparar semestres disponibles por carrera
+        const semestresObj = {};
+        carrerasDisponibles.forEach(carrera => {
+          semestresObj[carrera] = Object.keys(catalogoCompleto[carrera]).sort((a, b) => parseInt(a) - parseInt(b));
+        });
+        setSemestres(semestresObj);
         
-        setGrupos(gruposConEstado);
+        // 4. No seleccionar filtros específicos al iniciar, mantener vista amplia
+        setFiltroCarrera('');
+        setFiltroSemestre('');
+        setFiltroAsignatura('TODAS');
+        
+        // 5. Cargar todos los grupos registrados
+        await cargarTodosLosGrupos();
+        
         setLoading(false);
       } catch (error) {
-        console.error('Error al cargar rúbricas:', error);
-        toast.error('Error al cargar datos de rúbricas');
+        toast.error('Error al cargar los datos. Por favor, intente de nuevo más tarde.');
         setLoading(false);
       }
     };
-
-    cargarDatos();
+    
+    cargarDatosIniciales();
   }, []);
+
+  // Actualizar asignaturas cuando cambia carrera o semestre
+  useEffect(() => {
+    if (!filtroCarrera || !filtroSemestre) {
+      // Si no hay carrera o semestre seleccionado, mostrar "TODAS" como única opción
+      setAsignaturas(['TODAS']);
+      return;
+    }
+    
+    // Actualizar lista de asignaturas
+    if (catalogoMaterias[filtroCarrera] && catalogoMaterias[filtroCarrera][filtroSemestre]) {
+      const asignaturasSemestre = catalogoMaterias[filtroCarrera][filtroSemestre];
+      setAsignaturas(['TODAS', ...asignaturasSemestre]);
+      setFiltroAsignatura('TODAS'); // Resetear a TODAS cuando cambia carrera o semestre
+    }
+  }, [filtroCarrera, filtroSemestre, catalogoMaterias]);
+
+  // Función para cargar todos los grupos y procesarlos
+  const cargarTodosLosGrupos = async () => {
+    try {
+      // Obtener todos los grupos existentes en el sistema, no solo los del docente
+      const gruposExistentes = await getGrupos();
+      
+      // Procesar cada grupo existente con su información
+      const gruposConDatos = await Promise.all(gruposExistentes.map(async (grupo) => {
+        try {
+          // Obtener estudiantes del grupo
+          const estudiantes = await getEstudiantesByGrupoId(grupo.id);
+          
+          // Obtener informes del grupo
+          const informes = await getInformesPorGrupoId(grupo.id);
+          
+          // Determinar estado del grupo
+          let estadoGrupo = determinarEstadoGrupo(estudiantes, informes);
+          
+          // Verificar si hay borradores para este grupo
+          if (grupo.docente_id && estadoGrupo === 'sin_rubrica') {
+            try {
+              const borrador = await getBorradorPorDocenteYGrupo(grupo.docente_id, grupo.id, true);
+              if (borrador !== null) {
+                estadoGrupo = 'pendiente';
+              }
+            } catch (error) {
+            }
+          }
+          
+          // Verificar habilitación activa
+          let habilitacionActiva = false;
+          let detalleHabilitacion = null;
+          
+          try {
+            const detalles = await supRubricaService.obtenerRubricasGrupo(grupo.id);
+            if (detalles.grupo && detalles.grupo.habilitacion_activa) {
+              habilitacionActiva = true;
+              detalleHabilitacion = detalles.grupo.detalle_habilitacion;
+            }
+          } catch (error) {
+            console.log('Error al verificar habilitación:', error);
+          }
+          
+          return {
+            ...grupo,
+            total_estudiantes: estudiantes.length,
+            total_informes: informes.filter((inf, index, self) => 
+              index === self.findIndex(i => i.estudiante_id === inf.estudiante_id)
+            ).length,
+            estado: estadoGrupo,
+            texto_estado: getTextoEstado(estadoGrupo),
+            habilitacion_activa: habilitacionActiva,
+            detalle_habilitacion: detalleHabilitacion,
+            informes: informes,
+            // Guardar datos para referencia futura
+            _estudiantes: estudiantes
+          };
+        } catch (error) {
+          console.error(`Error al procesar grupo ${grupo.id}:`, error);
+          return {
+            ...grupo,
+            estado: 'error',
+            texto_estado: 'Error',
+            total_estudiantes: 0,
+            total_informes: 0,
+            habilitacion_activa: false
+          };
+        }
+      }));
+      
+      // Log para verificar cuántos grupos y de qué carreras se han cargado
+      const gruposPorCarrera = {};
+      gruposConDatos.forEach(grupo => {
+        if (!gruposPorCarrera[grupo.carrera]) {
+          gruposPorCarrera[grupo.carrera] = 0;
+        }
+        gruposPorCarrera[grupo.carrera]++;
+      });
+      
+      setGrupos(gruposConDatos);
+    } catch (error) {
+      toast.error('Error al cargar datos de rúbricas');
+    }
+  };
+
+  // Función para determinar el estado de un grupo
+  const determinarEstadoGrupo = (estudiantes, informes) => {
+    if (!estudiantes || estudiantes.length === 0) {
+      return 'sin_rubrica'; // Si no hay estudiantes, no puede haber rúbricas
+    }
+    
+    if (!informes || informes.length === 0) {
+      return 'sin_rubrica'; // Si no hay informes, no hay rúbricas
+    }
+    
+    // Crear mapa de informes por estudiante (solo el más reciente)
+    const informesPorEstudiante = {};
+    informes.forEach(informe => {
+      if (!informesPorEstudiante[informe.estudiante_id] || 
+          new Date(informesPorEstudiante[informe.estudiante_id].fecha_creacion || 0) < 
+          new Date(informe.fecha_creacion || 0)) {
+        informesPorEstudiante[informe.estudiante_id] = informe;
+      }
+    });
+    
+    const informesUnicos = Object.values(informesPorEstudiante);
+    
+    // Un grupo está finalizado cuando todos los estudiantes tienen informes
+    if (informesUnicos.length >= estudiantes.length) {
+      return 'finalizado';
+    } else {
+      // Si hay algunos informes pero no para todos los estudiantes
+      return 'pendiente';
+    }
+  };
+
+  // Función para obtener texto del estado
+  const getTextoEstado = (estado) => {
+    switch (estado) {
+      case 'finalizado':
+        return 'Finalizado';
+      case 'pendiente':
+        return 'Pendiente';
+      case 'sin_rubrica':
+        return 'Sin Rúbrica';
+      default:
+        return 'Error';
+    }
+  };
 
   // Aplicar filtros a los grupos
   const gruposFiltrados = React.useMemo(() => {
-    return grupos.filter(grupo => {
+    const resultado = grupos.filter(grupo => {
       // Filtro por búsqueda (nombre proyecto, carrera o materia)
       const matchBusqueda = 
-        grupo.nombre_proyecto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        grupo.carrera?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        grupo.materia?.toLowerCase().includes(searchTerm.toLowerCase());
+        !searchTerm || // Si no hay término de búsqueda, incluir todos
+        (grupo.nombre_proyecto && grupo.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (grupo.carrera && grupo.carrera.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (grupo.materia && grupo.materia.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Filtro por estado
       const matchEstado = !filtroEstado || grupo.estado === filtroEstado;
@@ -152,28 +252,30 @@ const SupervisorRubricas = () => {
       const matchCarrera = !filtroCarrera || grupo.carrera === filtroCarrera;
       
       // Filtro por semestre
-      const matchSemestre = !filtroSemestre || grupo.semestre.toString() === filtroSemestre;
+      const matchSemestre = !filtroSemestre || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
       
-      return matchBusqueda && matchEstado && matchCarrera && matchSemestre;
+      // Filtro por asignatura
+      const matchAsignatura = filtroAsignatura === 'TODAS' || grupo.materia === filtroAsignatura;
+      
+      return matchBusqueda && matchEstado && matchCarrera && matchSemestre && matchAsignatura;
     });
-  }, [grupos, searchTerm, filtroEstado, filtroCarrera, filtroSemestre]);
-
-  // Obtener lista de carreras únicas
-  const carreras = React.useMemo(() => {
-    const carrerasSet = new Set(grupos.map(g => g.carrera).filter(Boolean));
-    return [...carrerasSet].sort();
-  }, [grupos]);
-
-  // Obtener lista de semestres únicos
-  const semestres = React.useMemo(() => {
-    const semestresSet = new Set(grupos.map(g => g.semestre).filter(Boolean));
-    return [...semestresSet].sort((a, b) => a - b);
-  }, [grupos]);
+    
+    return resultado;
+  }, [grupos, searchTerm, filtroEstado, filtroCarrera, filtroSemestre, filtroAsignatura]);
 
   // Función para ver detalles de un grupo
   const verDetalles = async (grupo) => {
     try {
       setLoading(true);
+      
+      // Verificar si el grupo tiene rúbricas registradas
+      if (grupo.estado === 'sin_rubrica') {
+        setGrupoSeleccionado(grupo);
+        setModalDetallesVisible(true);
+        setLoading(false);
+        return;
+      }
+      
       // Si ya tenemos todos los detalles del grupo, usarlos directamente
       if (grupo.total_estudiantes !== undefined && grupo.total_informes !== undefined) {
         setGrupoSeleccionado(grupo);
@@ -188,7 +290,6 @@ const SupervisorRubricas = () => {
       setModalDetallesVisible(true);
       setLoading(false);
     } catch (error) {
-      console.error(`Error al obtener detalles del grupo ${grupo.id}:`, error);
       toast.error('Error al cargar detalles del grupo');
       setLoading(false);
     }
@@ -223,15 +324,11 @@ const SupervisorRubricas = () => {
       toast.success('Grupo habilitado correctamente');
       setModalVisible(false);
       
-      // Recargar datos (utilizando la misma lógica de carga inicial)
-      const resultado = await getMisGrupos();
-      // Procesar los grupos de la misma forma que en el useEffect
-      // Aquí podríamos repetir el código, pero para simplicidad, recargaremos la página
-      window.location.reload();
+      // Recargar datos
+      await cargarTodosLosGrupos();
       
       setLoading(false);
     } catch (error) {
-      console.error('Error al habilitar grupo:', error);
       toast.error(error.message || 'Error al habilitar grupo');
       setLoading(false);
     }
@@ -246,7 +343,6 @@ const SupervisorRubricas = () => {
       setHistorialVisible(true);
       setLoading(false);
     } catch (error) {
-      console.error('Error al obtener historial:', error);
       toast.error('Error al cargar historial de habilitaciones');
       setLoading(false);
     }
@@ -272,7 +368,6 @@ const SupervisorRubricas = () => {
       
       setLoading(false);
     } catch (error) {
-      console.error('Error al desactivar habilitación:', error);
       toast.error('Error al desactivar habilitación');
       setLoading(false);
     }
@@ -305,6 +400,7 @@ const SupervisorRubricas = () => {
     setFiltroEstado('');
     setFiltroCarrera('');
     setFiltroSemestre('');
+    setFiltroAsignatura('TODAS');
   };
 
   // Renderizar modal de detalles del grupo
@@ -348,6 +444,15 @@ const SupervisorRubricas = () => {
                   <span className="sup-badge sup-estado-habilitado">Habilitado para edición</span>
                 )}
               </div>
+              
+              {/* Mostrar mensaje específico si no hay rúbricas */}
+              {grupoSeleccionado.estado === 'sin_rubrica' && (
+                <div className="sup-info-row">
+                  <span style={{ color: '#f39c12', fontStyle: 'italic' }}>
+                    El docente aún no ha registrado ninguna rúbrica para este grupo.
+                  </span>
+                </div>
+              )}
             </div>
             
             <div className="sup-detalles-acciones">
@@ -536,31 +641,83 @@ const SupervisorRubricas = () => {
           <div className="sup-header-content">
             <h1>GESTIÓN DE RÚBRICAS</h1>
           </div>
-          <div className="sup-header-actions">
-            {/* Acciones futuras si son necesarias */}
-          </div>
+          
         </div>
         
         <div className="sup-evaluacion-container">
-          {/* Filtros y búsqueda en una sola línea */}
+          {/* Filtros y búsqueda en una sola línea con etiquetas */}
           <div className="sup-filters-search-row">
-            {/* Barra de búsqueda */}
+            {/* Barra de búsqueda con etiqueta */}
             <div className="sup-search-input-container">
-              <svg className="sup-search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input
-                type="text"
-                placeholder="Buscar por proyecto, carrera o materia..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="sup-search-input"
-              />
+              <label className="sup-search-label">Búsqueda</label>
+              <div className="sup-search-input-field">
+                <svg className="sup-search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar por proyecto, carrera o materia..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="sup-search-input"
+                />
+              </div>
             </div>
             
-            {/* Filtro de estado */}
+            {/* Filtro de carrera con etiqueta */}
             <div className="sup-filtro">
+              <label className="sup-filtro-label">Carrera</label>
+              <select 
+                value={filtroCarrera} 
+                onChange={e => {
+                  setFiltroCarrera(e.target.value);
+                  // Resetear semestre al cambiar carrera
+                  setFiltroSemestre('');
+                }}
+              >
+                <option value="">Todas las carreras</option>
+                {carreras.map(carrera => (
+                  <option key={carrera} value={carrera}>{carrera}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro de semestre con etiqueta */}
+            <div className="sup-filtro">
+              <label className="sup-filtro-label">Semestre</label>
+              <select 
+                value={filtroSemestre} 
+                onChange={e => setFiltroSemestre(e.target.value)}
+                disabled={!filtroCarrera}
+              >
+                <option value="">Todos los semestres</option>
+                {filtroCarrera && semestres[filtroCarrera] ? 
+                  semestres[filtroCarrera].map(semestre => (
+                    <option key={semestre} value={semestre}>{`${semestre}° Semestre`}</option>
+                  )) : 
+                  null
+                }
+              </select>
+            </div>
+            
+            {/* Filtro de asignatura con etiqueta */}
+            <div className="sup-filtro">
+              <label className="sup-filtro-label">Asignatura</label>
+              <select 
+                value={filtroAsignatura} 
+                onChange={e => setFiltroAsignatura(e.target.value)}
+                disabled={!filtroCarrera || !filtroSemestre}
+              >
+                {asignaturas.map(asignatura => (
+                  <option key={asignatura} value={asignatura}>{asignatura}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro de estado con etiqueta */}
+            <div className="sup-filtro">
+              <label className="sup-filtro-label">Estado</label>
               <select 
                 value={filtroEstado} 
                 onChange={e => setFiltroEstado(e.target.value)}
@@ -572,38 +729,12 @@ const SupervisorRubricas = () => {
               </select>
             </div>
             
-            {/* Filtro de carrera */}
-            <div className="sup-filtro">
-              <select 
-                value={filtroCarrera} 
-                onChange={e => setFiltroCarrera(e.target.value)}
-              >
-                <option value="">Todas las carreras</option>
-                {carreras.map(carrera => (
-                  <option key={carrera} value={carrera}>{carrera}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Filtro de semestre */}
-            <div className="sup-filtro">
-              <select 
-                value={filtroSemestre} 
-                onChange={e => setFiltroSemestre(e.target.value)}
-              >
-                <option value="">Todos los semestres</option>
-                {semestres.map(semestre => (
-                  <option key={semestre} value={semestre}>Semestre {semestre}</option>
-                ))}
-              </select>
-            </div>
-            
             {/* Botón limpiar filtros */}
             <button 
               className="sup-btn-limpiar-filtros"
               onClick={limpiarFiltros}
             >
-              Limpiar filtros
+              X
             </button>
           </div>
           

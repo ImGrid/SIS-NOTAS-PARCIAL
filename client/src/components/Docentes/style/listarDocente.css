@@ -67,7 +67,6 @@
   
   /* Filtros */
   .docente-admin-list-styles .filtros-container {
-    padding: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;

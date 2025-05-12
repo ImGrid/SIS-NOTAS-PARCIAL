@@ -327,81 +327,93 @@ function GestionGrupos() {
             <div className="search-filters-row">
               {/* Barra de búsqueda */}
               <div className="search-input-container">
-                {icons.search}
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre de proyecto, carrera o materia..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPaginaActual(1); // Resetear a primera página al buscar
-                  }}
-                  className="search-input"
-                />
-                {searchTerm && (
-                  <button 
-                    onClick={() => {
-                      setSearchTerm('');
-                      setPaginaActual(1); // Resetear a primera página al limpiar
-                    }} 
-                    className="clear-search"
-                    title="Limpiar búsqueda"
-                  >
-                    {icons.clear}
-                  </button>
-                )}
+                <label className="search-label">BÚSQUEDA</label>
+                <div className="search-input-field">
+                  {icons.search}
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre de proyecto, carrera o materia..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPaginaActual(1);
+                    }}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button 
+                      onClick={() => {
+                        setSearchTerm('');
+                        setPaginaActual(1);
+                      }} 
+                      className="clear-search"
+                      title="Limpiar búsqueda"
+                    >
+                      {icons.clear}
+                    </button>
+                  )}
+                </div>
               </div>
               
               {/* Filtro de semestres */}
-              <select 
-                value={semestroFilter} 
-                onChange={(e) => {
-                  setSemestroFilter(e.target.value);
-                  setPaginaActual(1); // Resetear a primera página al filtrar
-                }}
-                className="filter-select"
-              >
-                <option value="">Todos los semestres</option>
-                {getSemestrosUnicos().map(semestre => (
-                  <option key={semestre} value={semestre}>
-                    Semestre {semestre}
-                  </option>
-                ))}
-              </select>
+              <div className="filter-container">
+                <label className="filter-label">SEMESTRE</label>
+                <select 
+                  value={semestroFilter} 
+                  onChange={(e) => {
+                    setSemestroFilter(e.target.value);
+                    setPaginaActual(1);
+                  }}
+                  className="filter-select"
+                >
+                  <option value="">Todos los semestres</option>
+                  {getSemestrosUnicos().map(semestre => (
+                    <option key={semestre} value={semestre}>
+                      Semestre {semestre}
+                    </option>
+                  ))}
+                </select>
+              </div>
               
               {/* Filtro de carreras */}
-              <select 
-                value={carreraFilter} 
-                onChange={(e) => {
-                  setCarreraFilter(e.target.value);
-                  setPaginaActual(1); // Resetear a primera página al filtrar
-                }}
-                className="filter-select"
-              >
-                <option value="">Todas las carreras</option>
-                {getCarrerasUnicas().map(carrera => (
-                  <option key={carrera} value={carrera}>
-                    {carrera}
-                  </option>
-                ))}
-              </select>
+              <div className="filter-container">
+                <label className="filter-label">CARRERA</label>
+                <select 
+                  value={carreraFilter} 
+                  onChange={(e) => {
+                    setCarreraFilter(e.target.value);
+                    setPaginaActual(1);
+                  }}
+                  className="filter-select"
+                >
+                  <option value="">Todas las carreras</option>
+                  {getCarrerasUnicas().map(carrera => (
+                    <option key={carrera} value={carrera}>
+                      {carrera}
+                    </option>
+                  ))}
+                </select>
+              </div>
               
               {/* Filtro de materias */}
-              <select 
-                value={materiaFilter} 
-                onChange={(e) => {
-                  setMateriaFilter(e.target.value);
-                  setPaginaActual(1); // Resetear a primera página al filtrar
-                }}
-                className="filter-select"
-              >
-                <option value="">Todas las materias</option>
-                {getMateriasUnicas().map(materia => (
-                  <option key={materia} value={materia}>
-                    {materia}
-                  </option>
-                ))}
-              </select>
+              <div className="filter-container">
+                <label className="filter-label">MATERIA</label>
+                <select 
+                  value={materiaFilter} 
+                  onChange={(e) => {
+                    setMateriaFilter(e.target.value);
+                    setPaginaActual(1);
+                  }}
+                  className="filter-select"
+                >
+                  <option value="">Todas las materias</option>
+                  {getMateriasUnicas().map(materia => (
+                    <option key={materia} value={materia}>
+                      {materia}
+                    </option>
+                  ))}
+                </select>
+              </div>
               
               {/* Botón X para limpiar todos los filtros */}
               <button 

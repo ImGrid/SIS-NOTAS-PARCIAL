@@ -734,16 +734,16 @@ function GruposRubrica() {
                             onChange={(e) => handleCalificacionChange(estudiante.id, criterio.id, e.target.value)}
                           >
                             <option value="">Seleccionar</option>
-                            <option value="SOBRESALIENTE">SOBRESALIENTE (10)</option>
-                            <option value="EXCELENTE">EXCELENTE (9)</option>
-                            <option value="MUY BUENO">MUY BUENO (8)</option>
-                            <option value="BUENO">BUENO (7)</option>
-                            <option value="SATISFACTORIO">SATISFACTORIO (6)</option>
-                            <option value="ACEPTABLE">ACEPTABLE (5)</option>
-                            <option value="BÁSICAMENTE ACEPTABLE">BÁSICAMENTE ACEPTABLE (4)</option>
-                            <option value="INSUFICIENTE">INSUFICIENTE (3)</option>
-                            <option value="DEFICIENTE">DEFICIENTE (2)</option>
-                            <option value="MUY DEFICIENTE">MUY DEFICIENTE (1)</option>
+                            <option value="SOBRESALIENTE">SOBRESALIENTE (10 pts)</option>
+                            <option value="EXCELENTE">EXCELENTE (9 pts)</option>
+                            <option value="MUY BUENO">MUY BUENO (8 pts)</option>
+                            <option value="BUENO">BUENO (7 pts)</option>
+                            <option value="SATISFACTORIO">SATISFACTORIO (6 pts)</option>
+                            <option value="ACEPTABLE">ACEPTABLE (5 pts )</option>
+                            <option value="BÁSICAMENTE ACEPTABLE">BÁSICAMENTE ACEPTABLE (4 pts)</option>
+                            <option value="INSUFICIENTE">INSUFICIENTE (3 pts)</option>
+                            <option value="DEFICIENTE">DEFICIENTE (2 pts)</option>
+                            <option value="MUY DEFICIENTE">MUY DEFICIENTE (1 pts)</option>
                           </select>
                         )}
                       </td>

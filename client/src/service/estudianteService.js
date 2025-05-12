@@ -211,6 +211,19 @@ export const getEstudiantesBySemestreYCarrera = async (semestre, carrera) => {
     throw error;
   }
 };
+export const getEstudiantesByMateria = async (materia) => {
+  try {
+    if (!materia || typeof materia !== 'string') {
+      throw new Error('Materia inválida');
+    }
+    const materiaEncoded = encodeURIComponent(materia);
+    const response = await api.get(`/api/estudiantes/materia/${materiaEncoded}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error al obtener estudiantes por materia:', error);
+    throw error;
+  }
+};
 export default {
   getEstudiantes,
   getEstudianteById,
@@ -222,5 +235,6 @@ export default {
   getEstudiantesBySemestre,
   estudianteYaAsignadoAMateria,
   getEstudiantesConEstadoGrupo,
-  getEstudiantesBySemestreYCarrera
+  getEstudiantesBySemestreYCarrera,
+  getEstudiantesByMateria
 };

@@ -82,7 +82,7 @@
      ================= */
   .notas-informe-styles .filters-search-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* Cambiar de 'center' a 'flex-end' */
   justify-content: space-between;
   gap: 0.8rem;
   width: 100%;
@@ -97,6 +97,18 @@
   flex: 1;
   min-width: 200px;
   max-width: 300px;
+  position: relative;
+}
+.notas-informe-styles .search-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.notas-informe-styles .search-input-field {
   display: flex;
   align-items: center;
   background-color: #f8f9fa;
@@ -106,6 +118,10 @@
   transition: all 0.3s ease;
 }
 
+.notas-informe-styles .search-input-field:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
 .notas-informe-styles .search-input-container:focus-within {
   border-color: #3498db;
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
@@ -150,8 +166,18 @@
   flex: 1;
   min-width: 150px;
   max-width: 250px;
+  position: relative;
 }
-
+.notas-informe-styles .filtro-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
 .notas-informe-styles .filtro select {
   width: 100%;
   padding: 0.5rem 1rem;
@@ -188,7 +214,7 @@
 /* Botón X para limpiar búsqueda */
 .notas-informe-styles .btn-limpiar-busqueda {
   width: 40px;
-  height: 40px;
+  height: 35px; /* Altura fija para alinearse */
   min-width: 40px;
   display: flex;
   align-items: center;
@@ -201,8 +227,32 @@
   transition: all 0.3s ease;
   font-size: 1.2rem;
   font-weight: bold;
+  margin-top: 16px; /* Para alinearse con los selects que tienen label */
+}
+@media (max-width: 1200px) {
+  .notas-informe-styles .filters-search-row {
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
+  
+  .notas-informe-styles .search-input-container,
+  .notas-informe-styles .filtro {
+    flex: 1 1 200px;
+    max-width: none;
+  }
 }
 
+@media (max-width: 768px) {
+  .notas-informe-styles .search-label,
+  .notas-informe-styles .filtro-label {
+    text-align: left;
+  }
+  
+  .notas-informe-styles .btn-limpiar-busqueda {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
 .notas-informe-styles .btn-limpiar-busqueda:hover {
   background-color: #c0392b;
   transform: translateY(-2px);
@@ -637,16 +687,6 @@
   background-color: white;
   border-radius: 8px;
   animation: fadeInUp 0.5s ease-out;
-}
-
-.notas-informe-styles .search-input-container {
-  display: flex;
-  align-items: center;
-  background-color: #f8f9fa;
-  border: 1px solid #e0e6ed;
-  border-radius: 6px;
-  padding: 0.7rem 1rem;
-  transition: all 0.3s ease;
 }
 
 .notas-informe-styles .search-input-container:focus-within {

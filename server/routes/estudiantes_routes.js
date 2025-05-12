@@ -57,4 +57,6 @@ router.get('/semestre-carrera/:semestre/:carrera',
   authService.createAuthMiddleware(),
   estudiantesController.obtenerEstudiantesPorSemestreYCarrera
 );
+router.get('/materia/:materia', authService.createAuthMiddleware(),
+  estudiantesController.obtenerEstudiantesPorMateria);
 module.exports = router; 

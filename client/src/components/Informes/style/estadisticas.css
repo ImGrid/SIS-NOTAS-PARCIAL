@@ -60,7 +60,7 @@
   animation: fadeIn 0.5s ease-out;
 }
 
-/* PDF info style - similar to notasInformes */
+/* PDF info style */
 .estadisticas-styles .pdf-header {
   width: 100%;
   padding: 0;
@@ -93,19 +93,29 @@
 /* Filtros en línea horizontal */
 .estadisticas-styles .filters-search-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.8rem;
   width: 100%;
-  background-color: white;
-  border-radius: 8px;
   padding: 1rem 0;
   animation: fadeInUp 0.5s ease-out;
 }
 
 .estadisticas-styles .filtro {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 150px;
-  max-width: 250px;
+  max-width: 200px;
+  position: relative;
+}
+
+.estadisticas-styles .filtro-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
 }
 
 .estadisticas-styles .filtro select {
@@ -143,25 +153,27 @@
 
 /* Botón X para limpiar filtros */
 .estadisticas-styles .btn-limpiar-filtros {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0.5rem 1rem;
   background-color: #e74c3c;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: auto;
+  height: 35px;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .estadisticas-styles .btn-limpiar-filtros:hover {
   background-color: #c0392b;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Resumen estadístico */
@@ -578,7 +590,6 @@
     flex-wrap: wrap;
     row-gap: 0.8rem;
   }
-  
   
   .estadisticas-styles .pdf-info {
     max-width: 40%;

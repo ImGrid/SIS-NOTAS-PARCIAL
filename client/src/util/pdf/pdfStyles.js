@@ -294,6 +294,7 @@ export default {
   getPdfStyles,
   getCustomPdfStyles
 };
+
 export const estilosPDF = {
   // Estilos del contenedor principal
   contenidoPDF: {
@@ -477,15 +478,29 @@ export const estilosEstadisticasPDF = {
     ...estilosPDF.headerFlex,
     width: '100%',
     marginBottom: '30px',
-    pageBreakAfter: 'avoid'
+    pageBreakAfter: 'avoid',
+    backgroundColor: 'white' // AÑADIDO: Fondo blanco explícito
   },
   
-  headerFlex: estilosPDF.headerFlex,
+  headerFlex: {
+    ...estilosPDF.headerFlex,
+    backgroundColor: 'white' // AÑADIDO: Fondo blanco explícito
+  },
+  
   headerText: estilosPDF.headerText,
   logoContainer: estilosPDF.logoContainer,
   logo: estilosPDF.logo,
-  titulo: estilosPDF.titulo,
-  subtitulo: estilosPDF.subtitulo,
+  
+  titulo: {
+    ...estilosPDF.titulo,
+    color: '#2c3e50' // AÑADIDO: Color explícito
+  },
+  
+  subtitulo: {
+    ...estilosPDF.subtitulo,
+    color: '#555' // AÑADIDO: Color explícito
+  },
+  
   infoContainer: estilosPDF.infoContainer,
   infoItem: estilosPDF.infoItem,
   
@@ -511,16 +526,17 @@ export const estilosEstadisticasPDF = {
     textAlign: 'center'
   },
   
-  // Estilos para el contenedor de gráficos
+  // Estilos para el contenedor de gráficos - MEJORADO
   contenedorGraficos: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
     gap: '30px',
-    marginBottom: '30px'
+    marginBottom: '30px',
+    backgroundColor: 'white' // AÑADIDO: Fondo blanco explícito
   },
   
-  // Estilos para cada contenedor de gráfico
+  // Estilos para cada contenedor de gráfico - MEJORADO
   graficoContainer: {
     width: '100%',
     marginBottom: '25px',
@@ -531,7 +547,8 @@ export const estilosEstadisticasPDF = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center'
+    alignItems: 'center',
+    overflow: 'hidden' // AÑADIDO: Evitar desbordamiento
   },
   
   tituloGrafico: {
@@ -543,14 +560,16 @@ export const estilosEstadisticasPDF = {
     width: '100%'
   },
   
-  // Estilos para la imagen del gráfico
+  // Estilos para la imagen del gráfico - MEJORADO
   imagenGrafico: {
-    maxWidth: '100%',
+    maxWidth: '95%', // MODIFICADO: Reducido para evitar desbordamiento
     height: 'auto',
     marginTop: '10px',
     marginBottom: '10px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    borderRadius: '4px'
+    borderRadius: '4px',
+    backgroundColor: 'white', // AÑADIDO: Fondo blanco explícito
+    border: '1px solid #ddd' // AÑADIDO: Borde para mejor visualización
   },
   
   // Estilos para la información de estudiantes
@@ -583,7 +602,8 @@ export const estilosEstadisticasPDF = {
     width: '100%',
     marginTop: '20px',
     marginBottom: '20px',
-    pageBreakInside: 'avoid'
+    pageBreakInside: 'avoid',
+    backgroundColor: 'white' // AÑADIDO: Fondo blanco explícito
   },
   
   tituloTabla: {
@@ -598,18 +618,23 @@ export const estilosEstadisticasPDF = {
   tabla: {
     ...estilosPDF.tabla,
     width: '100%',
-    margin: '0 auto'
+    margin: '0 auto',
+    border: '2px solid #333', // MEJORADO: Borde más visible
+    backgroundColor: 'white' // AÑADIDO: Fondo blanco explícito
   },
   
   encabezadoTabla: {
     ...estilosPDF.encabezado,
-    fontSize: '12px'
+    fontSize: '12px',
+    backgroundColor: '#2c3e50', // AÑADIDO: Color explícito
+    color: 'white' // AÑADIDO: Color explícito
   },
   
   celda: {
     ...estilosPDF.celda,
     fontSize: '12px',
-    padding: '8px'
+    padding: '8px',
+    backgroundColor: 'white' // AÑADIDO: Fondo blanco explícito
   },
   
   filaPromedio: {
@@ -654,6 +679,7 @@ export const configurarAnchoColumnas = (tabla) => {
   tabla.style.width = '100%';
   tabla.style.tableLayout = 'fixed';
   tabla.style.border = '1px solid #333';
+  tabla.style.backgroundColor = 'white'; // AÑADIDO: Fondo blanco explícito
   
   const columnas = tabla.querySelectorAll('th');
   if (columnas.length >= 11) {
@@ -706,6 +732,7 @@ export const configurarAnchoColumnas = (tabla) => {
         // Estilos comunes para todas las celdas
         celda.style.border = '1px solid #333';
         celda.style.padding = '5px';
+        celda.style.backgroundColor = 'white'; // AÑADIDO: Fondo blanco explícito
         
         // Alineación según el tipo de dato
         if (index >= 4 && index <= 9) { // Columnas numéricas

@@ -229,6 +229,20 @@ function SidebarSup() {
                 </div>
               </Link>
             </li>
+
+            <li>
+              <Link to="/supervisor/estadisticas" className="menu-sup-item">
+                <div className="menu-sup-text">
+                  <span className="menu-sup-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#d4af37">
+                      <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                      <path d="M21 5h-2V4c0-.55-.45-1-1-1s-1 .45-1 1v1H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z" fillOpacity="0.2"/>
+                    </svg>
+                  </span>
+                  Estadísticas
+                </div>
+              </Link>
+            </li>
           </ul>
         </nav>
         

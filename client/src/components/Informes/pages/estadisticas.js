@@ -194,24 +194,32 @@ function Estadisticas() {
   // Efecto para filtrar datos cuando cambian los filtros
   useEffect(() => {
     if (!loading && todosLosEstudiantes.length > 0) {
-      // Filtrar los datos según los filtros seleccionados
-      const filtrados = filtrarDatos(
-        grupos,
-        todosLosEstudiantes,
-        estudiantesPorGrupo,
-        informesPorGrupo,
-        rubricasPorInforme,
-        carreraSeleccionada,
-        semestreSeleccionado,
-        materiaSeleccionada
-      );
-      
-      setDatosFiltrados(filtrados);
-      
-      // Recalcular estadísticas con los datos filtrados
-      calcularEstadisticas(filtrados, gruposPorCarreraYSemestre);
+      try {
+        // Filtrar los datos según los filtros seleccionados
+        const filtrados = filtrarDatos(
+          grupos,
+          todosLosEstudiantes,
+          estudiantesPorGrupo,
+          informesPorGrupo,
+          rubricasPorInforme,
+          carreraSeleccionada,
+          semestreSeleccionado,
+          materiaSeleccionada,
+          semestresPorCarrera  // Asegurarnos de pasar este parámetro
+        );
+        
+        setDatosFiltrados(filtrados);
+        
+        // Recalcular estadísticas con los datos filtrados
+        calcularEstadisticas(filtrados, gruposPorCarreraYSemestre);
+      } catch (error) {
+        console.error("Error al filtrar datos:", error);
+        toast.error("Error al aplicar filtros. Por favor, inténtalo de nuevo.");
+      }
     }
-  }, [carreraSeleccionada, semestreSeleccionado, materiaSeleccionada]);
+  }, [carreraSeleccionada, semestreSeleccionado, materiaSeleccionada, 
+      grupos, todosLosEstudiantes, estudiantesPorGrupo, informesPorGrupo, 
+      rubricasPorInforme, semestresPorCarrera, gruposPorCarreraYSemestre]);
 
   const generarPDF = async () => {
     setGenerandoPDF(true);
@@ -276,57 +284,135 @@ function Estadisticas() {
     rubricasPorInforme,
     carrera,
     semestre,
-    materia
+    materia,
+    semestresPorCarrera
   ) => {
     const datosEstadisticas = [];
 
-    // Filtrar estudiantes según los criterios
+    // Comprobar si semestresPorCarrera está definido
+    if (!semestresPorCarrera) {
+      console.warn("semestresPorCarrera no está definido");
+      return [];
+    }
+
+    // Recorrer todos los estudiantes
     for (const estudiante of todosLosEstudiantes) {
-      // Filtrar por carrera si está seleccionada
-      if (carrera !== 'TODAS' && estudiante.carrera !== carrera) {
-        continue;
+      const estudianteCarrera = estudiante.carrera;
+      const estudianteSemestre = estudiante.semestre;
+      
+      // LÓGICA CORREGIDA: Verificar si el estudiante pertenece a carreras/semestres del docente
+      let perteneceAGruposDocente = false;
+      
+      // Caso 1: Sin filtros o solo filtro de carrera
+      if (semestre === 'TODOS' && materia === 'TODAS') {
+        // Si no hay filtro de carrera, verificar todas las carreras/semestres del docente
+        if (carrera === 'TODAS') {
+          perteneceAGruposDocente = 
+            semestresPorCarrera && 
+            semestresPorCarrera[estudianteCarrera] && 
+            Array.isArray(semestresPorCarrera[estudianteCarrera]) &&
+            semestresPorCarrera[estudianteCarrera].includes(estudianteSemestre);
+        } 
+        // Si hay filtro de carrera, verificar solo si el docente tiene grupos en la carrera y semestre del estudiante
+        else if (estudianteCarrera === carrera) {
+          perteneceAGruposDocente = 
+            semestresPorCarrera && 
+            semestresPorCarrera[carrera] && 
+            Array.isArray(semestresPorCarrera[carrera]) &&
+            semestresPorCarrera[carrera].includes(estudianteSemestre);
+        }
+      }
+      // Caso 2: Filtros más específicos (semestre o materia)
+      else {
+        // Para filtros específicos, la validación de si pertenece o no
+        // se hará en los otros condicionales, así que aquí solo permitimos continuar
+        perteneceAGruposDocente = true;
       }
       
-      // Filtrar por semestre si está seleccionado
-      if (semestre !== 'TODOS' && estudiante.semestre.toString() !== semestre) {
-        continue;
+      if (!perteneceAGruposDocente) {
+        continue; // Estudiante no está en ninguna carrera/semestre donde el docente tenga grupos
       }
       
-      // Buscar si el estudiante pertenece a algún grupo
+      // Aplicar filtros de carrera y semestre si están seleccionados
+      if ((carrera !== 'TODAS' && estudianteCarrera !== carrera) ||
+          (semestre !== 'TODOS' && estudianteSemestre.toString() !== semestre)) {
+        continue; // Si no cumple estos filtros, pasar al siguiente estudiante
+      }
+      
+      // El resto del código sigue igual...
+      // Variables para almacenar las relaciones encontradas
       let grupoDelEstudiante = null;
       let informeDelEstudiante = null;
       let rubricaDelEstudiante = null;
+      let cumpleFiltroMateria = (materia === 'TODAS'); // Por defecto cumple si no hay filtro
       
-      // Buscar en todos los grupos
+      // Buscar si el estudiante pertenece a algún grupo
+      // y si ese grupo cumple con el filtro de materia
       for (const grupo of grupos) {
-        // Filtrar por materia si está seleccionada
-        if (materia !== 'TODAS' && grupo.materia !== materia) {
-          continue;
-        }
-        
         // Verificar si la carrera y semestre coinciden con los del estudiante
-        if (grupo.carrera === estudiante.carrera && grupo.semestre === estudiante.semestre) {
+        if (grupo.carrera === estudianteCarrera && grupo.semestre === estudianteSemestre) {
           const estudiantesDelGrupo = estudiantesPorGrupo[grupo.id] || [];
           
+          // Verificar si el estudiante está en este grupo
           if (estudiantesDelGrupo.some(est => est.id === estudiante.id)) {
-            grupoDelEstudiante = grupo;
-            
-            // Buscar si tiene informe en este grupo
-            const informesDelGrupo = informesPorGrupo[grupo.id] || [];
-            informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
-            
-            // Si tiene informe, buscar su rúbrica
-            if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
-              rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
+            // Si hay filtro de materia, verificar si el grupo lo cumple
+            if (materia === 'TODAS' || grupo.materia === materia) {
+              grupoDelEstudiante = grupo;
+              cumpleFiltroMateria = true;
+              
+              // Buscar si tiene informe en este grupo
+              const informesDelGrupo = informesPorGrupo[grupo.id] || [];
+              informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
+              
+              // Si tiene informe, buscar su rúbrica
+              if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
+                rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
+              }
+              
+              break; // Si encontramos un grupo que cumple todos los filtros, no necesitamos seguir buscando
             }
             
-            break; // Si encontramos el grupo, no necesitamos seguir buscando
+            // Si no cumple con el filtro de materia pero es el primer grupo encontrado, guardarlo
+            // para usarlo si no encontramos otro grupo que cumpla todos los filtros
+            if (!grupoDelEstudiante) {
+              grupoDelEstudiante = grupo;
+              
+              // Buscar si tiene informe en este grupo
+              const informesDelGrupo = informesPorGrupo[grupo.id] || [];
+              informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
+              
+              // Si tiene informe, buscar su rúbrica
+              if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
+                rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
+              }
+            }
           }
         }
       }
       
-      // Solo agregar estudiante si pertenece a un grupo que coincide con los filtros
-      if (grupoDelEstudiante) {
+      // PUNTO CLAVE: Decidir si incluir este estudiante en los resultados
+      
+      // Caso 1: Si hay filtro de materia pero el estudiante no cumple, omitirlo
+      if (materia !== 'TODAS' && !cumpleFiltroMateria) {
+        continue;
+      }
+      
+      // Caso 2: Estudiante pendiente (sin rúbrica)
+      if (!rubricaDelEstudiante) {
+        datosEstadisticas.push({
+          estudiante,
+          grupo: grupoDelEstudiante || { 
+            nombre_proyecto: 'Sin asignar',
+            carrera: estudianteCarrera,
+            semestre: estudianteSemestre,
+            materia: materia !== 'TODAS' ? materia : 'No asignada'
+          },
+          informe: informeDelEstudiante,
+          rubrica: rubricaDelEstudiante
+        });
+      }
+      // Caso 3: Estudiante con rúbrica (APROBADO/REPROBADO)
+      else {
         datosEstadisticas.push({
           estudiante,
           grupo: grupoDelEstudiante,
@@ -348,60 +434,19 @@ function Estadisticas() {
     rubricasPorInforme,
     semestresPorCarrera
   ) => {
-    const datosEstadisticas = [];
-
-    // Filtrar estudiantes que pertenecen a las carreras y semestres que tienen grupos
-    for (const estudiante of todosLosEstudiantes) {
-      const carrera = estudiante.carrera;
-      const semestre = estudiante.semestre;
-      
-      // Verificar si la carrera y semestre de este estudiante tiene grupos creados
-      if (
-        semestresPorCarrera[carrera] && 
-        semestresPorCarrera[carrera].includes(semestre)
-      ) {
-        // Buscar si el estudiante pertenece a algún grupo
-        let grupoDelEstudiante = null;
-        let informeDelEstudiante = null;
-        let rubricaDelEstudiante = null;
-        
-        // Buscar en los grupos que corresponden a esta carrera y semestre
-        for (const grupo of grupos) {
-          if (grupo.carrera === carrera && grupo.semestre === semestre) {
-            const estudiantesDelGrupo = estudiantesPorGrupo[grupo.id] || [];
-            
-            if (estudiantesDelGrupo.some(est => est.id === estudiante.id)) {
-              grupoDelEstudiante = grupo;
-              
-              // Buscar si tiene informe en este grupo
-              const informesDelGrupo = informesPorGrupo[grupo.id] || [];
-              informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
-              
-              // Si tiene informe, buscar su rúbrica
-              if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
-                rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
-              }
-              
-              break; // Si encontramos el grupo, no necesitamos seguir buscando
-            }
-          }
-        }
-        
-        // Agregar estudiante con sus datos a la lista
-        datosEstadisticas.push({
-          estudiante,
-          grupo: grupoDelEstudiante || { 
-            nombre_proyecto: 'Sin asignar',
-            carrera: estudiante.carrera,
-            semestre: estudiante.semestre
-          },
-          informe: informeDelEstudiante,
-          rubrica: rubricaDelEstudiante
-        });
-      }
-    }
-
-    return datosEstadisticas;
+    // Usamos directamente la función de filtrado con los parámetros iniciales
+    // Esto mantiene la coherencia entre la carga inicial y los filtrados posteriores
+    return filtrarDatos(
+      grupos,
+      todosLosEstudiantes,
+      estudiantesPorGrupo,
+      informesPorGrupo,
+      rubricasPorInforme,
+      'TODAS', // carrera por defecto
+      'TODOS',  // semestre por defecto
+      'TODAS',  // materia por defecto
+      semestresPorCarrera
+    );
   };
   
   // Función para organizar grupos por carrera y semestre
@@ -827,6 +872,7 @@ function Estadisticas() {
               <div className="filters-search-row">
                 {/* Filtro de carrera */}
                 <div className="filtro">
+                  <label className="filtro-label">CARRERA</label>
                   <select 
                     id="carrera-select" 
                     value={carreraSeleccionada}
@@ -844,6 +890,7 @@ function Estadisticas() {
                 
                 {/* Filtro de semestre */}
                 <div className="filtro">
+                  <label className="filtro-label">SEMESTRE</label>
                   <select 
                     id="semestre-select" 
                     value={semestreSeleccionado}
@@ -862,6 +909,7 @@ function Estadisticas() {
 
                 {/* Filtro de materia */}
                 <div className="filtro">
+                  <label className="filtro-label">MATERIA</label>
                   <select 
                     id="materia-select" 
                     value={materiaSeleccionada}

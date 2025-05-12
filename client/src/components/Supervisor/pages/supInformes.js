@@ -431,39 +431,43 @@ const SupervisorInformes = () => {
           <div className="filters-search-row">
             {/* Barra de búsqueda */}
             <div className="search-input-container">
-              <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input
-                type="text"
-                placeholder="Buscar por nombre o código de estudiante..."
-                value={busquedaEstudiante}
-                onChange={(e) => {
-                  setBusquedaEstudiante(e.target.value);
-                  // Si se borra completamente, recargar datos
-                  if (e.target.value === '') {
-                    generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada);
-                  }
-                }}
-                className="search-input"
-              />
-              {busquedaEstudiante && (
-                <button 
-                  onClick={limpiarBusqueda} 
-                  className="clear-search"
-                  title="Limpiar búsqueda"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              )}
+              <label className="search-label">Búsqueda</label>
+              <div className="search-input-field">
+                <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o código de estudiante..."
+                  value={busquedaEstudiante}
+                  onChange={(e) => {
+                    setBusquedaEstudiante(e.target.value);
+                    // Si se borra completamente, recargar datos
+                    if (e.target.value === '') {
+                      generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada);
+                    }
+                  }}
+                  className="search-input"
+                />
+                {busquedaEstudiante && (
+                  <button 
+                    onClick={limpiarBusqueda} 
+                    className="clear-search"
+                    title="Limpiar búsqueda"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
             
             {/* Filtro de carrera */}
             <div className="filtro">
+              <label className="filtro-label">Carrera</label>
               <select 
                 id="carrera-select" 
                 value={carreraSeleccionada}
@@ -485,6 +489,7 @@ const SupervisorInformes = () => {
             
             {/* Filtro de semestre */}
             <div className="filtro">
+              <label className="filtro-label">Semestre</label>
               <select 
                 id="semestre-select" 
                 value={semestreSeleccionado}
@@ -502,6 +507,7 @@ const SupervisorInformes = () => {
             
             {/* Filtro de materia */}
             <div className="filtro">
+              <label className="filtro-label">Asignatura</label>
               <select 
                 id="materia-select" 
                 value={asignaturaSeleccionada}

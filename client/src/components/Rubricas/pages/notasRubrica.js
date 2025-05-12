@@ -220,7 +220,7 @@ function NotasRubrica() {
         <main className="content content-with-sidebar notas-evaluacion">
           <div className="evaluacion-header">
             <h1>EVALUACIÓN GRUPAL</h1>
-            <h2>Examen Final - Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+            <h2>GESTION - {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
           </div>
           <div className="evaluacion-container">
             <div className="loading-indicator">Cargando datos de evaluación...</div>
@@ -239,7 +239,7 @@ function NotasRubrica() {
         <main className="content content-with-sidebar notas-evaluacion">
           <div className="evaluacion-header">
             <h1>EVALUACIÓN GRUPAL</h1>
-            <h2>Examen Final - Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+            <h2>GESTION - {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
           </div>
           <div className="evaluacion-container">
             <div className="error-message">{error}</div>
@@ -267,7 +267,7 @@ function NotasRubrica() {
         <div ref={pdfRef} className="pdf-container">
           <div className="evaluacion-header">
             <h1>EVALUACIÓN GRUPAL</h1>
-            <h2>Examen Final - Semestre {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+            <h2>GESTION - {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
           </div>
 
           <div className="evaluacion-container">

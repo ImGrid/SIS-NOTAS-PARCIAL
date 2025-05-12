@@ -24,7 +24,7 @@ import SupervisorRubricas from './components/Supervisor/pages/supRubricas';
 import SupervisorInformes from './components/Supervisor/pages/supInformes';
 import CrearDocenteAdmin from './components/Docentes/pages/crearDocenteSup';
 import ListarDocentesAdmin from './components/Docentes/pages/listarDocenteSup';
-
+import SupervisorEstadisticas from './components/Supervisor/pages/supEstadisticas';
 function App() {
   return (
     <Router>
@@ -153,6 +153,14 @@ function App() {
           element={
             <AdminProtectedRoute>
               <SupervisorRubricas />
+            </AdminProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/supervisor/estadisticas" 
+          element={
+            <AdminProtectedRoute>
+              <SupervisorEstadisticas />
             </AdminProtectedRoute>
           } 
         />
