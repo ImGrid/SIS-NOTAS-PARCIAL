@@ -2,7 +2,7 @@ const pool = require('../database/db');
 
 async function crearEstudiante(estudiante) {
   const { nombre, apellido, codigo, carrera, semestre, unidad_educativa, } = estudiante;
-  const query = 'INSERT INTO estudiantes (nombre, apellido, codigo, carrera, semestre, unidad_educativa, ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *';
+  const query = 'INSERT INTO estudiantes (nombre, apellido, codigo, carrera, semestre, unidad_educativa) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *';
   const values = [nombre, apellido, codigo, carrera, semestre, unidad_educativa, ];
   const result = await pool.query(query, values);
   return result.rows[0];

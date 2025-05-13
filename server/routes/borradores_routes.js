@@ -86,5 +86,32 @@ router.get('/docente/:docenteId',
   authService.createAuthMiddleware(), 
   borradoresController.obtenerBorradoresPorDocenteId
 );
-
+router.delete('/grupo/:grupoId', 
+  authService.createAuthMiddleware(), 
+  async (req, res) => {
+    try {
+      const grupoId = req.params.grupoId;
+      
+      // Obtener todos los borradores del grupo
+      const borradores = await borradoresModel.obtenerBorradoresPorGrupoId(grupoId);
+      
+      // Eliminar cada borrador
+      const eliminados = [];
+      for (const borrador of borradores) {
+        const resultado = await borradoresModel.eliminarBorrador(borrador.id);
+        if (resultado) {
+          eliminados.push(resultado);
+        }
+      }
+      
+      res.json({ 
+        message: `Se eliminaron ${eliminados.length} borradores del grupo ${grupoId}`, 
+        eliminados 
+      });
+    } catch (error) {
+      console.error('Error al eliminar borradores por grupo:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
 module.exports = router;

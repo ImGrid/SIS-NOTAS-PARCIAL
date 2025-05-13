@@ -1,5 +1,6 @@
 import api from './api';
-
+import borradorService from './borradorService';
+import informeService from './informeService';
 // Función para obtener información del docente actual desde el token
 const getDocenteIdFromToken = () => {
   const token = sessionStorage.getItem('token');
@@ -146,25 +147,44 @@ export const updateGrupo = async (id, grupoData) => {
   }
 };
 
-// Función para eliminar un grupo por su ID con validación
 export const deleteGrupo = async (id) => {
   try {
     validateId(id);
     
-    const token = sessionStorage.getItem('token');
+    // 1. Intentar eliminar informes y rúbricas si existen
+    try {
+      await informeService.eliminarRubricasGrupo(id);
+    } catch (error) {
+    }
     
-    const response = await api.delete(`/api/grupos/delete/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    try {
+      const borradores = await api.get('/api/borradores/get');
+      
+      const borradoresDelGrupo = borradores.data.filter(
+        borrador => borrador.grupo_id && borrador.grupo_id.toString() === id.toString()
+      );
+      
+      for (const borrador of borradoresDelGrupo) {
+        await api.delete(`/api/borradores/delete/${borrador.id}`);
       }
+      
+      const docenteId = getDocenteIdFromToken();
+      await borradorService.eliminarBorradorPorDocenteYGrupo(docenteId, id);
+      
+    } catch (error) {
+    }
+    
+    const token = sessionStorage.getItem('token');
+    const response = await api.delete(`/api/grupos/delete/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    
     return response.data;
   } catch (error) {
     console.error('Error en deleteGrupo:', error);
     throw error;
   }
 };
-
 // Función para obtener grupos por ID de docente
 export const getGruposPorDocenteId = async (docenteId) => {
   try {
@@ -207,7 +227,6 @@ export const getGruposPorSemestre = async (semestre) => {
   }
 };
 
-// Nueva función para obtener grupos por materia
 export const getGruposPorMateria = async (materia) => {
   try {
     if (!materia || typeof materia !== 'string') {
