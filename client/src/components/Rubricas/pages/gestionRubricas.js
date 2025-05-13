@@ -335,21 +335,26 @@ function GestionarEvaluaciones() {
   const handleEvaluarGrupo = async (grupoId, estado) => {
     if (estado === 'finalizado') {
       try {
-        const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupoId);
-        if (detallesGrupo.grupo.habilitacion_activa) {
+        // Usar la nueva función específica de verificación
+        const estadoHabilitacion = await supRubricaService.verificarHabilitacionGrupo(grupoId);
+        
+        if (estadoHabilitacion.habilitacion_activa) {
           toast.info('Este grupo ha sido habilitado por un administrador para permitir modificaciones.');
           navigate(`/evaluaciones/evaluar?grupo=${grupoId}`);
           return;
-        }        
+        }
+        
         toast.warning('Este grupo ya ha sido evaluado y la evaluación ha sido finalizada. No es posible modificar evaluaciones finalizadas.');
         return;
       } catch (error) {
         console.error('Error al verificar habilitación:', error);
+        // En caso de error, asumir que no está habilitado por seguridad
         toast.warning('Este grupo ya ha sido evaluado y la evaluación ha sido finalizada. No es posible modificar evaluaciones finalizadas.');
         return;
       }
     }
     
+    // Si no está finalizado, permitir acceso
     navigate(`/evaluaciones/evaluar?grupo=${grupoId}`);
   };
 
