@@ -310,7 +310,8 @@
 /* Tabla de estudiantes */
 .evaluaciones-styles .estudiantes-table {
   width: 100%;
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 400px;
 }
 
 /* Estilos específicos para la tabla de rubricas */
@@ -333,11 +334,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.evaluaciones-styles .table-body {
-  max-height: 400px;
-  overflow-y: auto;
 }
 
 .evaluaciones-styles .table-row-rubricas {

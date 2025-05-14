@@ -1,5 +1,19 @@
 import api from './api';
-
+api.getSilent = async (url, options = {}) => {
+  try {
+    return await api.get(url, { 
+      ...options, 
+      silentErrors: true,
+      silentErrorCodes: [404, ...((options.silentErrorCodes || []))]
+    });
+  } catch (error) {
+    // Si es un 404, manejar silenciosamente
+    if (error.response && error.response.status === 404) {
+      return { data: null };
+    }
+    throw error;
+  }
+};
 // Validación de entrada
 const validateId = (id) => {
   if (!id || (typeof id !== 'number' && typeof id !== 'string')) {
@@ -41,11 +55,6 @@ const validateBorradorData = (borradorData) => {
   }
 };
 
-/**
- * Guarda un borrador. Si ya existe uno para el mismo docente y grupo, lo actualiza.
- * @param {Object} borradorData - Datos del borrador a guardar
- * @returns {Promise<Object>} - El borrador creado o actualizado
- */
 export const guardarBorrador = async (borradorData) => {
   try {
     validateBorradorData(borradorData);
@@ -55,12 +64,10 @@ export const guardarBorrador = async (borradorData) => {
       const docenteId = borradorData.docente_id;
       const grupoId = borradorData.grupo_id;
       
-      // Usar getSilent para evitar errores en consola si no existe
-      const respuesta = await api.getSilent(`/api/borradores/docente-grupo/${docenteId}/${grupoId}`);
+      const respuesta = await api.get(`/api/borradores/docente-grupo/${docenteId}/${grupoId}`);
       
       if (respuesta.data && respuesta.data.id) {
         // Si existe, actualizar
-        console.log('Actualizando borrador existente:', respuesta.data.id);
         return await actualizarBorrador(respuesta.data.id, borradorData);
       }
     } catch (error) {
@@ -72,7 +79,6 @@ export const guardarBorrador = async (borradorData) => {
     }    
     
     // Si no se encontró o hubo un error 404, crear nuevo
-    console.log('Creando nuevo borrador');
     const response = await api.post('/api/borradores/create', borradorData);
     return response.data;
   } catch (error) {
@@ -92,11 +98,6 @@ export const getBorradores = async () => {
   }
 };
 
-/**
- * Obtiene un borrador por su ID
- * @param {number|string} id - ID del borrador
- * @returns {Promise<Object>} - El borrador encontrado
- */
 export const getBorradorPorId = async (id) => {
   try {
     validateId(id);
@@ -108,28 +109,19 @@ export const getBorradorPorId = async (id) => {
   }
 };
 
-/**
- * Obtiene un borrador por docente y grupo
- * @param {number|string} docenteId - ID del docente
- * @param {number|string} grupoId - ID del grupo
- * @param {boolean} silent - Si es true, no mostrará errores en consola
- * @returns {Promise<Object|null>} - El borrador encontrado o null si no existe
- */
 export const getBorradorPorDocenteYGrupo = async (docenteId, grupoId, silent = false) => {
   try {
     validateDocenteId(docenteId);
     validateGrupoId(grupoId);
 
-    // Usar getSilent para evitar errores en consola si silent es true
-    const method = silent ? api.getSilent : api.get;
-    
     try {
+      // Usar getSilent si silent es true
+      const method = silent ? api.getSilent : api.get;
       const response = await method(`/api/borradores/docente-grupo/${docenteId}/${grupoId}`);
       return response.data;
     } catch (error) {
       // Si hay error y es 404, retornar null sin mostrar error
       if (error.status === 404 || 
-          (error.response && error.response.status === 404) ||
           (error.originalError && error.originalError.response && error.originalError.response.status === 404)) {
         return null;
       }
@@ -147,12 +139,7 @@ export const getBorradorPorDocenteYGrupo = async (docenteId, grupoId, silent = f
   }
 };
 
-/**
- * Actualiza un borrador existente
- * @param {number|string} id - ID del borrador
- * @param {Object} borradorData - Nuevos datos para el borrador
- * @returns {Promise<Object>} - El borrador actualizado
- */
+// Función para actualizar un borrador existente
 export const actualizarBorrador = async (id, borradorData) => {
   try {
     validateId(id);
@@ -166,11 +153,7 @@ export const actualizarBorrador = async (id, borradorData) => {
   }
 };
 
-/**
- * Elimina un borrador por su ID
- * @param {number|string} id - ID del borrador
- * @returns {Promise<Object>} - Resultado de la eliminación
- */
+// Función para eliminar un borrador
 export const eliminarBorrador = async (id) => {
   try {
     validateId(id);
@@ -182,38 +165,24 @@ export const eliminarBorrador = async (id) => {
   }
 };
 
-/**
- * Elimina un borrador por docente y grupo
- * @param {number|string} docenteId - ID del docente
- * @param {number|string} grupoId - ID del grupo
- * @returns {Promise<Object>} - Resultado de la eliminación
- */
+// Función para eliminar un borrador por docente y grupo
 export const eliminarBorradorPorDocenteYGrupo = async (docenteId, grupoId) => {
   try {
     validateDocenteId(docenteId);
     validateGrupoId(grupoId);
     
-    // Verificar si existe usando silent para evitar errores en consola
     const borrador = await getBorradorPorDocenteYGrupo(docenteId, grupoId, true);
     
     if (!borrador) {
       return { success: true, message: "No existe borrador para eliminar" };
     }
     
-    // Usar deleteSilent para evitar errores en consola si ya fue eliminado
     const response = await api.deleteSilent(`/api/borradores/delete/docente-grupo/${docenteId}/${grupoId}`);
     return response.data;
   } catch (error) {
-    // Siempre retornar éxito para evitar errores en el frontend
     return { success: true, message: "Operación completada" };
   }
 };
-
-/**
- * Obtiene todos los borradores de un docente
- * @param {number|string} docenteId - ID del docente
- * @returns {Promise<Array>} - Lista de borradores del docente
- */
 export const getBorradoresPorDocenteId = async (docenteId) => {
   try {
     validateDocenteId(docenteId);
@@ -225,7 +194,6 @@ export const getBorradoresPorDocenteId = async (docenteId) => {
   }
 };
 
-// Exportar todos los métodos para uso en otros archivos
 export default {
   guardarBorrador,
   getBorradores,
