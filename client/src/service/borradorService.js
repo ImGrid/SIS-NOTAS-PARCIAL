@@ -120,16 +120,8 @@ export const getBorradorPorDocenteYGrupo = async (docenteId, grupoId, silent = f
       
       // Solo verificar que la respuesta y los datos existan
       if (!response.data) {
-        console.log('[DEBUG] Respuesta sin datos');
         return null;
       }
-      
-      // Log para depuración
-      console.log('[DEBUG] Borrador recuperado:', 
-        response.data.id, 
-        'Contenido:', typeof response.data.contenido, 
-        response.data.contenido ? 'con datos' : 'vacío'
-      );
       
       return response.data;
     } catch (error) {

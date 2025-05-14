@@ -40,12 +40,9 @@ const cargarBorradorRemoto = async (grupoId) => {
     
     const usuario = JSON.parse(usuarioString);
     const docenteId = usuario.id;
-    
-    console.log(`[DEBUG] Intentando cargar borrador para docente=${docenteId}, grupo=${grupoId}`);
-    
+        
     // Verificar IDs válidos
     if (!docenteId) {
-      console.log('[DEBUG] No hay docente_id válido');
       return null;
     }
     
@@ -54,17 +51,13 @@ const cargarBorradorRemoto = async (grupoId) => {
     try {
       borrador = await getBorradorPorDocenteYGrupo(docenteId, grupoId, true);
     } catch (error) {
-      console.log('[DEBUG] Error controlado al intentar cargar borrador:', error.message);
       return null;
     }
     
     if (!borrador) {
-      console.log('[DEBUG] No se encontró borrador para el docente ID:', docenteId, 'y grupo ID:', grupoId);
       return null;
     }
-    
-    console.log('[DEBUG] Borrador recuperado exitosamente:', borrador.id);
-    
+        
     // Validar contenido pero ser más permisivo
     const contenido = borrador.contenido || {};
     const calificacionesLimpias = {};
@@ -91,7 +84,6 @@ const cargarBorradorRemoto = async (grupoId) => {
       progresoEvaluacion: borrador.progreso
     };
   } catch (error) {
-    console.log('[DEBUG] Error general al cargar borrador:', error.message);
     return null;
   }
 };
