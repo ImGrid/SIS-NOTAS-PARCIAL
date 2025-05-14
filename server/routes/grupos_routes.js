@@ -41,41 +41,4 @@ router.get('/semestre/:semestre', authService.createAuthMiddleware(),
 
 router.get('/materia/:materia', authService.createAuthMiddleware(),
   gruposController.obtenerGruposPorMateria);
-router.get('/habilitacion/:grupoId', authService.createAuthMiddleware(),
-  async (req, res) => {
-    try {
-      const { grupoId } = req.params;
-      const docenteId = req.user.id;
-      
-      // Verificar primero si el grupo pertenece al docente
-      const grupo = await gruposModel.obtenerGrupoPorId(grupoId);
-      
-      // No bloqueamos acceso a grupos de otros docentes para permitir colaboración
-      // pero mantenemos un registro del acceso para auditoría
-      if (grupo && grupo.docente_id !== docenteId) {
-        console.log(`Docente ${docenteId} accediendo a grupo ${grupoId} de otro docente`);
-      }
-      
-      if (!grupo) {
-        return res.status(404).json({ error: 'Grupo no encontrado' });
-      }
-      
-      // Importar y usar el modelo de supervisor solo para verificar habilitación
-      const supervisorModel = require('../models/supervisor_model');
-      const habilitacion = await supervisorModel.verificarHabilitacionActiva(grupoId);
-      
-      res.json({
-        habilitacion_activa: !!habilitacion,
-        grupo_id: parseInt(grupoId),
-        estado: 'finalizado' // Estado por defecto para grupos con evaluaciones finalizadas
-      });
-    } catch (error) {
-      console.error('Error al verificar habilitación:', error);
-      res.status(500).json({ 
-        error: 'Error al verificar estado de habilitación',
-        habilitacion_activa: false
-      });
-    }
-  }
-);
 module.exports = router;

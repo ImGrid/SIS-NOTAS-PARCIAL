@@ -87,8 +87,21 @@ api.interceptors.response.use(
     const silentErrors = config.silentErrors || false;
     const silentErrorCodes = config.silentErrorCodes || [];
     
-    // If this is a silent error or a specifically silenced error code, don't log it
+    // Rutas que nunca deben mostrar error 404 en consola
+    const rutasSilenciosas404 = [
+      '/api/borradores/docente-grupo/'
+    ];
+    
+    // Si esta es una ruta de borrador y el error es 404, siempre silenciar
+    const esBorrador404 = error.response && 
+                          error.response.status === 404 && 
+                          error.config && 
+                          error.config.url && 
+                          rutasSilenciosas404.some(ruta => error.config.url.includes(ruta));
+    
+    // Si esta es una ruta silenciosa o configurada para ser silenciada
     const shouldSilence = silentErrors || 
+                         esBorrador404 ||
                          (error.response && silentErrorCodes.includes(error.response.status));
     
     // Centralized error handling
@@ -139,6 +152,25 @@ api.interceptors.response.use(
     }
   }
 );
+
+// Implementación correcta de getSilent
+api.getSilent = async (url, options = {}) => {
+  try {
+    return await api.get(url, { 
+      ...options, 
+      silentErrors: true,
+      silentErrorCodes: [404, ...((options.silentErrorCodes || []))]
+    });
+  } catch (error) {
+    // Para errores 404, retornar un objeto con data: null sin mostrar error
+    if (error.response && error.response.status === 404) {
+      return { data: null };
+    }
+    // Para otros errores, rechazar la promesa pero sin logear nada
+    return Promise.reject(error);
+  }
+};
+
 // Utility methods for different HTTP methods with error handling
 api.fetchData = async (url, params = {}) => {
   try {
@@ -180,12 +212,13 @@ api.deleteSilent = async (url, options = {}) => {
     });
   } catch (error) {
     // Procesar como un éxito en lugar de error para 404
-    if (error.status === 404) {
+    if (error.status === 404 || (error.response && error.response.status === 404)) {
       return { data: { success: true, message: "Recurso no encontrado o ya eliminado" } };
     }
     throw error;
   }
 };
+
 export default {
   ...api,
   getSilent: api.getSilent,

@@ -95,7 +95,6 @@ router.get('/rubricas',
 
 router.get('/rubricas/grupo/:grupoId', 
   authService.createAuthMiddleware(), 
-  verificarSupervisor, 
   supervisorController.obtenerRubricasGrupo
 );
 
@@ -113,7 +112,6 @@ router.get('/rubricas/historial/:grupoId',
 
 router.put('/rubricas/desactivar/:habilitacionId', 
   authService.createAuthMiddleware(), 
-  verificarSupervisor, 
   supervisorController.desactivarHabilitacion
 );
 

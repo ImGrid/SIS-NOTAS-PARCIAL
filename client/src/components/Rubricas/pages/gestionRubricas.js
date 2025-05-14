@@ -1,4 +1,3 @@
-// src/components/Evaluaciones/pages/GestionarEvaluaciones.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../Docentes/sidebar';
@@ -63,13 +62,13 @@ function GestionarEvaluaciones() {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [eliminando, setEliminando] = useState(false);
-  
+
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [semestroFilter, setSemestroFilter] = useState('');
   const [carreraFilter, setCarreraFilter] = useState('');
   const [materiaFilter, setMateriaFilter] = useState('');
-  
+
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const gruposPorPagina = 5; // Puedes ajustar este valor según tus necesidades
@@ -83,17 +82,17 @@ function GestionarEvaluaciones() {
         setLoading(true);        
         const gruposData = await getMisGrupos();
         setGrupos(gruposData);
-        
+
         const estudiantesPorGrupo = {};
         const rubricasPorGrupo = {};
         const rubricasData = {};
-        
+
         for (const grupo of gruposData) {
           const estudiantes = await getEstudiantesByGrupoId(grupo.id);
           estudiantesPorGrupo[grupo.id] = estudiantes;
-          
+
           const informes = await getInformesPorGrupoId(grupo.id);
-          
+
           // Crear un mapa para almacenar solo el informe más reciente por estudiante
           // (Este paso será innecesario cuando el backend ya filtre los informes más recientes)
           const informesPorEstudiante = {};
@@ -104,10 +103,10 @@ function GestionarEvaluaciones() {
               informesPorEstudiante[informe.estudiante_id] = informe;
             }
           }
-          
+
           // Convertir el mapa de vuelta a un array
           const informesFiltrados = Object.values(informesPorEstudiante);
-          
+
           for (const informe of informesFiltrados) {
             if (informe.rubrica_id) {
               try {
@@ -118,7 +117,7 @@ function GestionarEvaluaciones() {
               }
             }
           }
-          
+
           const usuarioString = sessionStorage.getItem('usuario');
           let docenteId = null;
           if (usuarioString) {
@@ -129,7 +128,7 @@ function GestionarEvaluaciones() {
               console.error('Error al parsear datos del usuario:', error);
             }
           }
-          
+
           let tieneBorrador = false;
           if (docenteId) {
             try {
@@ -140,7 +139,7 @@ function GestionarEvaluaciones() {
               tieneBorrador = false;
             }
           }
-          
+
           // Usar los informes filtrados en lugar de los originales
           if (informesFiltrados.length === 0) {
             if (tieneBorrador) {
@@ -169,10 +168,10 @@ function GestionarEvaluaciones() {
               informes: informesFiltrados  // Usar informes filtrados
             };
           }
-          
+
           try {
             const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupo.id);
-            
+
             // Si hay habilitación activa, cambiar el estado visual
             if (detallesGrupo.grupo.habilitacion_activa) {
               rubricasPorGrupo[grupo.id] = {
@@ -186,12 +185,12 @@ function GestionarEvaluaciones() {
             console.log('Error al verificar habilitación:', error);
           }
         }
-        
+
         setGruposConEstudiantes(estudiantesPorGrupo);
         setGruposConRubricas(rubricasPorGrupo);
         setRubricas(rubricasData); 
         setLoading(false);
-        
+
       } catch (err) {
         console.error('Error al cargar datos:', err);
         setError('Error al cargar los datos. Por favor, intente de nuevo más tarde.');
@@ -222,19 +221,19 @@ function GestionarEvaluaciones() {
     const matchesSearch = grupo.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           grupo.carrera.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (grupo.materia && grupo.materia.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     const matchesSemestre = !semestroFilter || grupo.semestre.toString() === semestroFilter;
     const matchesCarrera = !carreraFilter || grupo.carrera === carreraFilter;
     const matchesMateria = !materiaFilter || grupo.materia === materiaFilter;
-    
+
     return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria;
   });
-  
+
   // Calcular grupos a mostrar en la página actual
   const indexUltimoGrupo = paginaActual * gruposPorPagina;
   const indexPrimerGrupo = indexUltimoGrupo - gruposPorPagina;
   const gruposActuales = gruposFiltrados.slice(indexPrimerGrupo, indexUltimoGrupo);
-  
+
   // Calcular número total de páginas
   const totalPaginas = Math.ceil(gruposFiltrados.length / gruposPorPagina);
 
@@ -261,31 +260,31 @@ function GestionarEvaluaciones() {
   const renderPaginacion = () => {
     // Solo mostrar paginación si hay más de una página
     if (totalPaginas <= 1) return null;
-    
+
     // Determinar cuántos números de página mostrar
     const mostrarNumeros = [];
-    
+
     // Siempre mostrar la primera página
     if (paginaActual > 1) mostrarNumeros.push(1);
-    
+
     // Mostrar elipsis antes si la página actual es mayor a 3
     if (paginaActual > 3) mostrarNumeros.push('...');
-    
+
     // Mostrar la página anterior si existe y no es la primera
     if (paginaActual > 2) mostrarNumeros.push(paginaActual - 1);
-    
+
     // Mostrar la página actual
     mostrarNumeros.push(paginaActual);
-    
+
     // Mostrar la página siguiente si existe y no es la última
     if (paginaActual < totalPaginas - 1) mostrarNumeros.push(paginaActual + 1);
-    
+
     // Mostrar elipsis después si la página actual es menor a la última página - 2
     if (paginaActual < totalPaginas - 2) mostrarNumeros.push('...');
-    
+
     // Siempre mostrar la última página si hay más de una página
     if (paginaActual < totalPaginas) mostrarNumeros.push(totalPaginas);
-    
+
     return (
       <div className="paginacion-container">
         <button 
@@ -295,7 +294,7 @@ function GestionarEvaluaciones() {
         >
           &laquo;
         </button>
-        
+
         {mostrarNumeros.map((numero, index) => (
           numero === '...' ? (
             <span key={`ellipsis-${index}`} className="pagina-ellipsis">...</span>
@@ -309,7 +308,7 @@ function GestionarEvaluaciones() {
             </button>
           )
         ))}
-        
+
         <button 
           className="btn-pagina" 
           onClick={irPaginaSiguiente}
@@ -335,14 +334,12 @@ function GestionarEvaluaciones() {
   const handleEvaluarGrupo = async (grupoId, estado) => {
     if (estado === 'finalizado') {
       try {
-        // Usar la nueva función específica de verificación
-        const estadoHabilitacion = await supRubricaService.verificarHabilitacionGrupo(grupoId);
-        
-        if (estadoHabilitacion.habilitacion_activa) {
+        const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupoId);
+        if (detallesGrupo.grupo.habilitacion_activa) {
           toast.info('Este grupo ha sido habilitado por un administrador para permitir modificaciones.');
           navigate(`/evaluaciones/evaluar?grupo=${grupoId}`);
           return;
-        }
+        }        
         
         toast.warning('Este grupo ya ha sido evaluado y la evaluación ha sido finalizada. No es posible modificar evaluaciones finalizadas.');
         return;
@@ -353,7 +350,7 @@ function GestionarEvaluaciones() {
         return;
       }
     }
-    
+
     // Si no está finalizado, permitir acceso
     navigate(`/evaluaciones/evaluar?grupo=${grupoId}`);
   };
@@ -376,7 +373,7 @@ function GestionarEvaluaciones() {
         return '';
     }
   };
-  
+
   // Función para exportar (antes llamada imprimir)
   const handleExportar = async () => {
     try {
@@ -388,7 +385,7 @@ function GestionarEvaluaciones() {
       toast.error(`Error al exportar evaluaciones: ${error.message || 'Error desconocido'}`);
     }
   };
-  
+
   if (loading) {
     return (
       <div className="docentes-container">
@@ -414,7 +411,7 @@ function GestionarEvaluaciones() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="docentes-container">
@@ -458,7 +455,7 @@ function GestionarEvaluaciones() {
             </button>
           </div>
         </div>
-        
+
         <div className="grupos-container">
           {message && (
             <div className={`message-container ${message.type}-message`}>
@@ -496,7 +493,7 @@ function GestionarEvaluaciones() {
                   )}
                 </div>
               </div>
-              
+
               {/* Filtro de semestres */}
               <div className="filter-container">
                 <label className="filter-label">SEMESTRE</label>
@@ -516,7 +513,7 @@ function GestionarEvaluaciones() {
                   ))}
                 </select>
               </div>
-              
+
               {/* Filtro de carreras */}
               <div className="filter-container">
                 <label className="filter-label">CARRERA</label>
@@ -536,7 +533,7 @@ function GestionarEvaluaciones() {
                   ))}
                 </select>
               </div>
-              
+
               {/* Filtro de materias */}
               <div className="filter-container">
                 <label className="filter-label">MATERIA</label>
@@ -556,7 +553,7 @@ function GestionarEvaluaciones() {
                   ))}
                 </select>
               </div>
-              
+
               {/* Botón X para limpiar todos los filtros */}
               <button 
                 onClick={clearFilters} 
@@ -567,7 +564,7 @@ function GestionarEvaluaciones() {
               </button>
             </div>
           </div>
-          
+
           {/* Paginación superior y contador de resultados */}
           <div className="tabla-header">
             {renderPaginacion()}
@@ -577,7 +574,7 @@ function GestionarEvaluaciones() {
               </div>
             )}
           </div>
-          
+
           {grupos.length === 0 ? (
             <div className="empty-state">
               <p>No tiene grupos asignados para evaluar.</p>
@@ -597,7 +594,7 @@ function GestionarEvaluaciones() {
                   texto: 'Sin Rúbrica',
                   informes: []
                 };
-                
+
                 return (
                   <div key={grupo.id} className={`grupo-card-table ${getEstadoColor(rubricaInfo.estado)}`}>
                     <div className="grupo-header-row">
@@ -607,12 +604,12 @@ function GestionarEvaluaciones() {
                           {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
                         </span>
                       </div>
-                      
+
                       <div className="grupo-estado-container">
                         <span className={`grupo-estado ${getEstadoColor(rubricaInfo.estado)}`}>
                           {rubricaInfo.texto}
                         </span>
-                        
+
                         <div className="grupo-actions">
                         <button 
                           className="btn-evaluar" 
@@ -625,7 +622,7 @@ function GestionarEvaluaciones() {
                           {icons.evaluar}
                           <span>Evaluar</span>
                         </button>
-                          
+
                         {rubricaInfo.estado !== 'sin_rubrica' && (
                           <button 
                             className="btn-ver-evaluaciones" 
@@ -640,7 +637,7 @@ function GestionarEvaluaciones() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="estudiantes-table">
                       <div className="table-header-rubricas">
                         <div className="th-numero-rubrica">#</div>
@@ -653,7 +650,7 @@ function GestionarEvaluaciones() {
                         <div className="th-nota-rubrica">Innovación</div>
                         <div className="th-nota-rubrica">Nota Final</div>
                       </div>
-                      
+
                       {gruposConEstudiantes[grupo.id] && gruposConEstudiantes[grupo.id].length > 0 ? (
                         <div className="table-body">
                           {gruposConEstudiantes[grupo.id].map((estudiante, index) => {
@@ -661,23 +658,23 @@ function GestionarEvaluaciones() {
                             const informe = rubricaInfo.informes.find(
                               inf => inf.estudiante_id === estudiante.id
                             );
-                            
+
                             const estadoEstudiante = informe ? 
                               'Evaluado' : 'Sin evaluar';
-                              
+
                             const claseEstado = informe ? 
                               'estado-evaluado' : 'estado-sin-evaluar';
-                            
+
                             // Obtener la rúbrica si existe
                             const rubricaEstudiante = informe && informe.rubrica_id ? rubricas[informe.rubrica_id] : null;
-                            
+
                             // Obtener las notas por área
                             const notaPresentacion = rubricaEstudiante ? rubricaEstudiante.presentacion : null;
                             const notaSustentacion = rubricaEstudiante ? rubricaEstudiante.sustentacion : null;
                             const notaDocumentacion = rubricaEstudiante ? rubricaEstudiante.documentacion : null;
                             const notaInnovacion = rubricaEstudiante ? rubricaEstudiante.innovacion : null;
                             const notaFinal = rubricaEstudiante ? rubricaEstudiante.nota_final : null;
-                            
+
                             // Función para formatear notas
                             const formatearNota = (nota) => {
                               if (nota === null || nota === undefined) return '-';
@@ -685,7 +682,7 @@ function GestionarEvaluaciones() {
                               if (typeof nota === 'string' && !isNaN(parseFloat(nota))) return parseFloat(nota).toFixed(1);
                               return nota || '-';
                             };
-                            
+
                             return (
                               <div key={estudiante.id} className="table-row-rubricas">
                                 <div className="td-numero-rubrica">{index + 1}</div>
@@ -738,7 +735,7 @@ function GestionarEvaluaciones() {
               })}
             </div>
           )}
-          
+
           {/* Paginación inferior */}
           <div className="paginacion-container paginacion-bottom">
             {renderPaginacion()}
@@ -748,5 +745,4 @@ function GestionarEvaluaciones() {
     </div>
   );
 }
-
 export default GestionarEvaluaciones;

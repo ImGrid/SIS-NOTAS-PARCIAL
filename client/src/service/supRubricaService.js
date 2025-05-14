@@ -147,58 +147,7 @@ export const verificarGrupoHabilitable = (grupo) => {
   resultado.habilitacionPosible = true;
   return resultado;
 };
-// Función específica para verificar habilitación de un grupo (para docentes)
-export const verificarHabilitacionGrupo = async (grupoId) => {
-  try {
-    // Determinar el tipo de usuario para usar la ruta apropiada
-    const usuarioString = sessionStorage.getItem('usuario');
-    let esSupevisor = false;
-    
-    if (usuarioString) {
-      try {
-        const usuario = JSON.parse(usuarioString);
-        // Aquí tendrías que determinar si es supervisor
-        // Podrías implementar esto basado en un campo en el objeto usuario
-        // O verificando si el correo coincide con la lista de supervisores
-        esSupevisor = usuario.rol === 'supervisor'; // Ajusta según tu modelo de datos
-      } catch (error) {
-        console.error('Error al analizar datos de usuario:', error);
-      }
-    }
-    
-    let response;
-    
-    if (esSupevisor) {
-      // Si es supervisor, usar la ruta completa de supervisores
-      try {
-        response = await api.get(`/api/supervisores/rubricas/grupo/${grupoId}`);
-        return {
-          habilitacion_activa: response.data.grupo.habilitacion_activa || false,
-          detalle_habilitacion: response.data.grupo.detalle_habilitacion || null,
-          grupo_id: parseInt(grupoId)
-        };
-      } catch (error) {
-        console.error(`Error en ruta de supervisor:`, error);
-        // Si falla la ruta de supervisor, intentar con la ruta de docente
-      }
-    }
-    
-    // Para docentes o si falló la ruta de supervisor
-    response = await api.get(`/api/grupos/habilitacion/${grupoId}`);
-    
-    return {
-      habilitacion_activa: response.data.habilitacion_activa || false,
-      grupo_id: parseInt(grupoId)
-    };
-  } catch (error) {
-    console.error(`Error al verificar habilitación del grupo ${grupoId}:`, error);
-    // En caso de error, asumir que no está habilitado
-    return { 
-      habilitacion_activa: false,
-      grupo_id: parseInt(grupoId)
-    };
-  }
-};
+
 export default {
   obtenerTodasRubricas,
   obtenerRubricasGrupo,
@@ -206,5 +155,4 @@ export default {
   obtenerHistorialHabilitaciones,
   desactivarHabilitacion,
   verificarGrupoHabilitable,
-  verificarHabilitacionGrupo
 };
