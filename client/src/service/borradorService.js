@@ -113,29 +113,37 @@ export const getBorradorPorDocenteYGrupo = async (docenteId, grupoId, silent = f
   try {
     validateDocenteId(docenteId);
     validateGrupoId(grupoId);
-
+    
+    // Usar siempre api.get en lugar de api.getSilent
     try {
-      // Usar getSilent si silent es true
-      const method = silent ? api.getSilent : api.get;
-      const response = await method(`/api/borradores/docente-grupo/${docenteId}/${grupoId}`);
-      return response.data;
-    } catch (error) {
-      // Si hay error y es 404, retornar null sin mostrar error
-      if (error.status === 404 || 
-          (error.originalError && error.originalError.response && error.originalError.response.status === 404)) {
+      const response = await api.get(`/api/borradores/docente-grupo/${docenteId}/${grupoId}`);
+      
+      // Solo verificar que la respuesta y los datos existan
+      if (!response.data) {
+        console.log('[DEBUG] Respuesta sin datos');
         return null;
       }
-      // Para otros errores, si silent es true no mostrar nada
-      if (!silent) {
-        throw error;
+      
+      // Log para depuración
+      console.log('[DEBUG] Borrador recuperado:', 
+        response.data.id, 
+        'Contenido:', typeof response.data.contenido, 
+        response.data.contenido ? 'con datos' : 'vacío'
+      );
+      
+      return response.data;
+    } catch (error) {
+      // Silenciar errores solo si silent=true
+      if (silent) {
+        return null;
       }
-      return null;
+      throw error;
     }
   } catch (error) {
     if (!silent) {
-      console.error('Error al obtener borrador por docente y grupo:', error.message || error);
+      console.error('Error al obtener borrador por docente y grupo:', error);
     }
-    return null;  // Retornamos null en cualquier caso de error
+    return null;
   }
 };
 

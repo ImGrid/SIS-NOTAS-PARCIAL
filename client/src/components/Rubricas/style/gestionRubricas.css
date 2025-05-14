@@ -757,15 +757,6 @@
     max-width: none;
   }
   
-  .evaluaciones-styles .estudiantes-table {
-    overflow-x: auto;
-    padding-bottom: 10px;
-  }
-  
-  .evaluaciones-styles .table-header-rubricas, 
-  .evaluaciones-styles .table-row-rubricas {
-    width: 1000px;
-  }
 }
 
 /* Responsive ajustado para pantallas medianas */
@@ -808,19 +799,6 @@
     min-width: 120px;
   }
 
-  /* Indicación visual de scroll horizontal */
-  .evaluaciones-styles .estudiantes-table::after {
-    content: "→ Deslizar →";
-    display: block;
-    text-align: center;
-    padding: 5px;
-    font-size: 12px;
-    color: #64748b;
-    background-color: #f8fafc;
-    border-radius: 0 0 8px 8px;
-    border-top: 1px solid #e0e6ed;
-    animation: evaluaciones-fadeInOut 2s ease-in-out infinite;
-  }
 }
 
 /* Responsive para móviles */
