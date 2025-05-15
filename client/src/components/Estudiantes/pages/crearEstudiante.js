@@ -93,16 +93,19 @@ function CrearEstudiante() {
       console.error("Error al crear el estudiante:", err);
       
       // Manejar específicamente el error de código duplicado
-      if (err.response && err.response.data && err.response.data.error === 'El código de estudiante ya está en uso') {
-        toast.error("El código de estudiante ya está registrado. Por favor, utilice otro código.", {
+      if (err.response && err.response.data && err.response.data.error) {
+        // Mostrar el mensaje de error exacto que viene del servidor
+        toast.error(err.response.data.error, {
           className: 'toast-notification'
         });
-      } else if (err.message) {
+      } else if (err.message && err.message !== 'An error occurred') {
+        // Si hay un mensaje de error pero no es el genérico
         toast.error(err.message, {
           className: 'toast-notification'
         });
       } else {
-        toast.error("Error al crear el estudiante. Por favor, intente de nuevo.", {
+        // Fallback genérico
+        toast.error("Error al crear el estudiante, el codigo de este ya esta en uso", {
           className: 'toast-notification'
         });
       }
