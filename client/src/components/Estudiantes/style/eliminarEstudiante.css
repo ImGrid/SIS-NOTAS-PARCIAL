@@ -1,0 +1,290 @@
+/* src/components/Estudiantes/style/eliminarEstudianteModal.css */
+
+/* Namespace específico para aislar los estilos del modal */
+.estudiante-eliminar-modal-styles {
+  box-sizing: border-box;
+}
+
+.estudiante-eliminar-modal-styles *,
+.estudiante-eliminar-modal-styles *::before,
+.estudiante-eliminar-modal-styles *::after {
+  box-sizing: border-box;
+}
+
+.estudiante-eliminar-modal-styles .eliminar-estudiante-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: modal-estudiante-fadeIn 0.3s ease-out;
+  /* Aseguramos que este contenedor permita scroll */
+  overflow-y: auto;
+  padding: 20px 0;
+}
+
+.estudiante-eliminar-modal-styles .modal-contenido {
+  background-color: white;
+  border-radius: 10px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  animation: modal-estudiante-slideDown 0.3s ease-out;
+  /* Estructura para colocar botones al final */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px); /* Altura máxima para asegurar que no exceda la pantalla */
+  position: relative; /* Para posicionamiento de botones */
+}
+
+.estudiante-eliminar-modal-styles .modal-contenido h2 {
+  color: #e74c3c;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e74c3c;
+  padding-bottom: 0.5rem;
+}
+
+.estudiante-eliminar-modal-styles .modal-scroll-area {
+  overflow-y: auto;
+  max-height: calc(100vh - 200px); /* Altura máxima para el área de contenido, dejando espacio para botones */
+  margin-bottom: 1rem;
+  padding-right: 5px; /* Espacio para scrollbar */
+}
+
+.estudiante-eliminar-modal-styles .mensaje-principal {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+}
+
+.estudiante-eliminar-modal-styles .botones-modal {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+  background-color: white;
+  /* Aseguramos que los botones siempre sean visibles */
+  position: sticky;
+  bottom: 0;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-cancelar {
+  background-color: #f1f1f1;
+  color: #555;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-cancelar:hover {
+  background-color: #e0e0e0;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-eliminar {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 180px;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-eliminar:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-eliminar.confirmar {
+  background-color: #c0392b;
+  font-weight: 700;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-eliminar:disabled,
+.estudiante-eliminar-modal-styles .btn-modal-cancelar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-eliminar.loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+
+.estudiante-eliminar-modal-styles .btn-modal-eliminar.loading::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: modal-estudiante-spin 1s linear infinite;
+}
+
+/* Alerta para dependencias */
+.estudiante-eliminar-modal-styles .alerta-modal {
+  border-left: 4px solid #f39c12;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 6px;
+  animation: modal-estudiante-fadeIn 0.5s ease-out;
+}
+
+.estudiante-eliminar-modal-styles .alerta-advertencia {
+  background-color: #fcf8e3;
+  border-color: #f39c12;
+}
+
+.estudiante-eliminar-modal-styles .alerta-peligro {
+  background-color: #fdedec;
+  border-color: #e74c3c;
+}
+
+.estudiante-eliminar-modal-styles .alerta-modal p {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.estudiante-eliminar-modal-styles .dependencias-list {
+  margin: 0.8rem 0 0.8rem 1.2rem;
+  padding: 0;
+  color: #e74c3c;
+}
+
+.estudiante-eliminar-modal-styles .dependencias-list li {
+  margin-bottom: 0.5rem;
+}
+
+.estudiante-eliminar-modal-styles .dependencias-list ul {
+  margin: 0.3rem 0 0.5rem 1.2rem;
+  padding: 0;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.estudiante-eliminar-modal-styles .loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 0;
+  color: #666;
+}
+
+.estudiante-eliminar-modal-styles .loading-spinner::after {
+  content: "";
+  width: 24px;
+  height: 24px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #3498db;
+  border-radius: 50%;
+  margin-left: 10px;
+  animation: modal-estudiante-spin 1s linear infinite;
+}
+
+.estudiante-eliminar-modal-styles .aviso-confirmacion {
+  font-weight: 600;
+  margin-top: 1rem !important;
+  padding: 0.8rem;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+}
+
+.estudiante-eliminar-modal-styles .aviso-confirmacion.fuerte {
+  color: #c0392b;
+  border: 1px solid #c0392b;
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+/* Namespace para las animaciones */
+@keyframes modal-estudiante-slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modal-estudiante-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-estudiante-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Media queries para versión móvil */
+@media (max-width: 768px) {
+  .estudiante-eliminar-modal-styles .eliminar-estudiante-modal {
+    padding: 15px 0;
+    align-items: flex-start; /* Alinear al inicio para mejor scroll */
+  }
+  
+  .estudiante-eliminar-modal-styles .modal-contenido {
+    padding: 1.5rem;
+    width: 95%;
+    max-height: 90vh; /* Control de altura máxima en móvil */
+  }
+  
+  .estudiante-eliminar-modal-styles .modal-scroll-area {
+    max-height: calc(70vh - 130px); /* Altura ajustada para móvil */
+  }
+  
+  .estudiante-eliminar-modal-styles .botones-modal {
+    flex-direction: column-reverse;
+    padding-top: 1rem;
+    position: sticky;
+    bottom: 0;
+    margin-top: 1rem;
+  }
+  
+  .estudiante-eliminar-modal-styles .btn-modal-cancelar,
+  .estudiante-eliminar-modal-styles .btn-modal-eliminar {
+    width: 100%;
+  }
+}
+
+/* Estilo para scrollbar */
+.estudiante-eliminar-modal-styles .modal-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.estudiante-eliminar-modal-styles .modal-scroll-area::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.estudiante-eliminar-modal-styles .modal-scroll-area::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 10px;
+}
+
+.estudiante-eliminar-modal-styles .modal-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}

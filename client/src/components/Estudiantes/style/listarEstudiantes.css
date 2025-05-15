@@ -31,17 +31,6 @@
   margin-bottom: 1.5rem;
 }
 
-.estudiante-list-styles .estudiantes-header::after {
-  position: absolute;
-  bottom: -3px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 3px;
-  background-color: #3498db;
-  border-radius: 3px;
-}
-
 .estudiante-list-styles .estudiantes-header h1 {
   font-size: 1.8rem;
   color: #ffffff;
@@ -170,7 +159,7 @@
   border-color: #ccc;
 }
 
-/* Nuevos estilos para la tabla con encabezado */
+/* Tabla y cabecera */
 .estudiante-list-styles .tabla-header {
   display: flex;
   justify-content: space-between;
@@ -219,13 +208,14 @@
   background-color: #f5f8fa;
 }
 
+/* Columnas específicas */
 .estudiante-list-styles .col-num {
   width: 50px;
   text-align: center;
 }
 
 .estudiante-list-styles .col-codigo {
-  width: 15%;
+  width: 10%;
 }
 
 .estudiante-list-styles .col-nombre {
@@ -237,14 +227,20 @@
 }
 
 .estudiante-list-styles .col-semestre {
-  width: 15%;
+  width: 10%;
 }
 
 .estudiante-list-styles .col-grupo {
-  width: 15%;
+  width: 10%;
   text-align: center;
 }
 
+.estudiante-list-styles .col-acciones {
+  width: 120px;
+  text-align: center;
+}
+
+/* Badges para estado de grupo */
 .estudiante-list-styles .badge {
   display: inline-block;
   padding: 0.35em 0.65em;
@@ -265,6 +261,55 @@
 
 .estudiante-list-styles .badge-warning {
   background-color: #f39c12;
+}
+
+/* Botones de acción */
+.estudiante-list-styles .acciones-estudiante {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.estudiante-list-styles .btn-accion {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.estudiante-list-styles .btn-accion svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.estudiante-list-styles .btn-accion:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.estudiante-list-styles .btn-editar {
+  background-color: #f39c12;
+  color: white;
+}
+
+.estudiante-list-styles .btn-editar:hover {
+  background-color: #e67e22;
+}
+
+.estudiante-list-styles .btn-eliminar {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.estudiante-list-styles .btn-eliminar:hover {
+  background-color: #c0392b;
 }
 
 /* Estilos para paginación */
@@ -325,7 +370,7 @@
   font-size: 0.9rem;
 }
 
-/* Reposicionamiento del contador de resultados */
+/* Resultados y estados */
 .estudiante-list-styles .resultados-info {
   color: #666;
   font-size: 0.9rem;
@@ -415,6 +460,16 @@
   .estudiante-list-styles .resultados-info {
     margin-left: 0;
   }
+  
+  .estudiante-list-styles .btn-accion {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .estudiante-list-styles .btn-accion svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -467,6 +522,24 @@
     padding: 0.6rem;
     font-size: 0.85rem;
   }
+  
+  .estudiante-list-styles .col-acciones {
+    width: 90px;
+  }
+  
+  .estudiante-list-styles .acciones-estudiante {
+    gap: 0.4rem;
+  }
+  
+  .estudiante-list-styles .btn-accion {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .estudiante-list-styles .btn-accion svg {
+    width: 15px;
+    height: 15px;
+  }
 }
 
 @media (max-width: 576px) {
@@ -486,5 +559,19 @@
     height: 1.8rem;
     padding: 0 0.4rem;
     font-size: 0.85rem;
+  }
+  
+  .estudiante-list-styles .col-acciones {
+    width: 80px;
+  }
+  
+  .estudiante-list-styles .btn-accion {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .estudiante-list-styles .btn-accion svg {
+    width: 14px;
+    height: 14px;
   }
 }

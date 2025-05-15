@@ -15,8 +15,9 @@ import EvaluarProyectos from './components/Rubricas/pages/gruposRubrica';
 import VistaRubrica from './components/Rubricas/pages/vistaRubrica';
 import SupervisorDashboard from './components/Supervisor/pages/supDashboard';
 import AdminProtectedRoute from './Auth/AdminProtectedRoute';
-import CrearEstudiante from './components/Grupos/pages/crearEstudiante';
-import ListarEstudiantes from './components/Grupos/pages/listarEstudiantes';
+import CrearEstudiante from './components/Estudiantes/pages/crearEstudiante';
+import ListarEstudiantes from './components/Estudiantes/pages/listarEstudiantes';
+import EditarEstudiante from './components/Estudiantes/pages/editarEstudiante'; // Nueva importación
 import NotasRubrica from './components/Rubricas/pages/notasRubrica'
 import NotasInformes from './components/Informes/pages/notasInformes';
 import Estadisticas from './components/Informes/pages/estadisticas';
@@ -25,6 +26,7 @@ import SupervisorInformes from './components/Supervisor/pages/supInformes';
 import CrearDocenteAdmin from './components/Docentes/pages/crearDocenteSup';
 import ListarDocentesAdmin from './components/Docentes/pages/listarDocenteSup';
 import SupervisorEstadisticas from './components/Supervisor/pages/supEstadisticas';
+
 function App() {
   return (
     <Router>
@@ -102,6 +104,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ListarEstudiantes />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/estudiantes/editar/:id" 
+          element={
+            <ProtectedRoute>
+              <EditarEstudiante />
             </ProtectedRoute>
           } 
         />

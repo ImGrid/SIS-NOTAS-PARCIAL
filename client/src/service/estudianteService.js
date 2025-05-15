@@ -49,6 +49,18 @@ export const getEstudianteById = async (id) => {
   }
 };
 
+// Función para verificar las dependencias de un estudiante
+export const verificarDependenciasEstudiante = async (id) => {
+  try {
+    validateId(id);
+    const response = await api.get(`/api/estudiantes/verificar-dependencias/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error en verificarDependenciasEstudiante:', error);
+    throw error;
+  }
+};
+
 // Función para crear un nuevo estudiante con validación de datos
 export const createEstudiante = async (estudianteData) => {
   try {
@@ -78,7 +90,7 @@ export const createEstudiante = async (estudianteData) => {
 };
 
 // Función para actualizar un estudiante existente con validación
-export const updateEstudiante = async (id, estudianteData) => {
+export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = false) => {
   try {
     validateId(id);
     
@@ -91,27 +103,67 @@ export const updateEstudiante = async (id, estudianteData) => {
       validateGrupoId(estudianteData.grupo_id);
     }
     
-    const response = await api.put(`/api/estudiantes/update/${id}`, {
+    // Obtener el estudiante actual para detectar cambios críticos
+    const estudianteActual = await getEstudianteById(id);
+    const cambioSemestre = estudianteData.semestre && estudianteData.semestre.toString() !== estudianteActual.semestre.toString();
+    const cambioCarrera = estudianteData.carrera && estudianteData.carrera !== estudianteActual.carrera;
+    
+    // Si hay cambios críticos, añadir parámetro de confirmación
+    let url = `/api/estudiantes/update/${id}`;
+    if ((cambioSemestre || cambioCarrera) && confirmarLimpieza) {
+      url += `?confirmar_limpieza=true`;
+    }
+    
+    const response = await api.put(url, {
       ...estudianteData,
       updatedAt: new Date().toISOString() // Añadir timestamp de actualización
     });
+    
     return response.data;
   } catch (error) {
     console.error('Error en updateEstudiante:', error);
+    
+    // Si es un error de conflicto (409) y no se ha confirmado la limpieza,
+    // propagamos la información sobre las dependencias
+    if (error.response && error.response.status === 409) {
+      throw {
+        ...error,
+        requiereConfirmacion: true,
+        dependencias: error.response.data.dependencias,
+        mensaje: error.response.data.mensaje
+      };
+    }
+    
     throw error;
   }
 };
 
-// Función para eliminar un estudiante por su ID con validación adicional
-export const deleteEstudiante = async (id) => {
+// Función para eliminar un estudiante por su ID con validación y confirmación
+export const deleteEstudiante = async (id, confirmar = false) => {
   try {
     validateId(id);
     
-    // Añadir confirmación o validación adicional si es necesario
-    const response = await api.delete(`/api/estudiantes/delete/${id}`);
+    let url = `/api/estudiantes/delete/${id}`;
+    if (confirmar) {
+      url += `?confirmar=true`;
+    }
+    
+    const response = await api.delete(url);
     return response.data;
   } catch (error) {
     console.error('Error en deleteEstudiante:', error);
+    
+    // Si es un error de conflicto (409) y no se ha confirmado la eliminación,
+    // propagamos la información sobre las dependencias
+    if (error.response && error.response.status === 409) {
+      throw {
+        ...error,
+        requiereConfirmacion: true,
+        dependencias: error.response.data.dependencias,
+        mensaje: error.response.data.mensaje
+      };
+    }
+    
     throw error;
   }
 };
@@ -155,6 +207,7 @@ export const getEstudiantesBySemestre = async (semestre) => {
     throw error;
   }
 };
+
 export const asignarEstudianteAGrupo = async (estudianteId, grupoId) => {
   try {
     const response = await api.post('/api/estudiantes/asignar-grupo', {
@@ -180,6 +233,7 @@ export const desasignarEstudianteDeGrupo = async (estudianteId, grupoId) => {
     throw error;
   }
 };
+
 export const estudianteYaAsignadoAMateria = async (estudianteId, materia) => {
   try {
     // Codificar la materia para URL
@@ -191,6 +245,7 @@ export const estudianteYaAsignadoAMateria = async (estudianteId, materia) => {
     throw error;
   }
 };
+
 export const getEstudiantesConEstadoGrupo = async () => {
   try {
     const response = await api.get('/api/estudiantes/con-estado-grupo');
@@ -200,6 +255,7 @@ export const getEstudiantesConEstadoGrupo = async () => {
     throw error;
   }
 };
+
 export const getEstudiantesBySemestreYCarrera = async (semestre, carrera) => {
   try {
     // Codificar la carrera para URL ya que puede contener espacios
@@ -211,6 +267,7 @@ export const getEstudiantesBySemestreYCarrera = async (semestre, carrera) => {
     throw error;
   }
 };
+
 export const getEstudiantesByMateria = async (materia) => {
   try {
     if (!materia || typeof materia !== 'string') {
@@ -224,6 +281,35 @@ export const getEstudiantesByMateria = async (materia) => {
     throw error;
   }
 };
+
+// Función de ayuda para mostrar un resumen de dependencias en texto amigable
+export const obtenerResumenDependencias = (dependencias) => {
+  if (!dependencias) return "No hay información sobre dependencias";
+  
+  let resumen = [];
+  
+  if (dependencias.asignaciones && dependencias.asignaciones.cantidad > 0) {
+    const gruposStr = dependencias.asignaciones.detalle
+      .map(a => `${a.nombre_proyecto} (${a.materia})`)
+      .join(", ");
+    resumen.push(`${dependencias.asignaciones.cantidad} asignaciones a grupos: ${gruposStr}`);
+  }
+  
+  if (dependencias.informes && dependencias.informes.cantidad > 0) {
+    resumen.push(`${dependencias.informes.cantidad} informes de evaluación`);
+  }
+  
+  if (dependencias.calificaciones && dependencias.calificaciones.cantidad > 0) {
+    resumen.push(`${dependencias.calificaciones.cantidad} calificaciones registradas`);
+  }
+  
+  if (resumen.length === 0) {
+    return "El estudiante no tiene ninguna dependencia y puede modificarse sin problemas.";
+  }
+  
+  return `El estudiante tiene: ${resumen.join(", ")}`;
+};
+
 export default {
   getEstudiantes,
   getEstudianteById,
@@ -236,5 +322,8 @@ export default {
   estudianteYaAsignadoAMateria,
   getEstudiantesConEstadoGrupo,
   getEstudiantesBySemestreYCarrera,
-  getEstudiantesByMateria
+  getEstudiantesByMateria,
+  // Nuevas funciones:
+  verificarDependenciasEstudiante,
+  obtenerResumenDependencias
 };

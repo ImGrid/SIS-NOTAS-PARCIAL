@@ -418,31 +418,33 @@ function EditarGrupos() {
       
       {/* Modal de confirmación para cambio de semestre o carrera */}
       {showConfirmModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>Advertencia</h2>
-            <p className="modal-message">
-              {changeType === 'carrera' 
-                ? 'Cambiar la carrera del grupo desasignará a todos los estudiantes actuales.' 
-                : 'Cambiar el semestre del grupo desasignará a todos los estudiantes actuales.'}
-            </p>
-            <p>Los estudiantes deberán ser reasignados manualmente después de guardar los cambios.</p>
-            
-            <div className="modal-actions">
-              <button 
-                className="btn-cancelar" 
-                onClick={handleCancelChange}
-                disabled={submitting}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="btn-confirmar" 
-                onClick={handleConfirmChange}
-                disabled={submitting}
-              >
-                {submitting ? 'Procesando...' : 'Confirmar'}
-              </button>
+        <div className="grupo-edit-styles">
+          <div className="grupo-modal-overlay">
+            <div className="grupo-modal-content">
+              <h2>Advertencia</h2>
+              <p className="grupo-modal-message">
+                {changeType === 'carrera' 
+                  ? 'Cambiar la carrera del grupo desasignará a todos los estudiantes actuales.' 
+                  : 'Cambiar el semestre del grupo desasignará a todos los estudiantes actuales.'}
+              </p>
+              <p>Los estudiantes deberán ser reasignados manualmente después de guardar los cambios.</p>
+              
+              <div className="grupo-modal-actions">
+                <button 
+                  className="btn-grupo-cancelar" 
+                  onClick={handleCancelChange}
+                  disabled={submitting}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn-grupo-confirmar" 
+                  onClick={handleConfirmChange}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Procesando...' : 'Confirmar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -450,34 +452,36 @@ function EditarGrupos() {
       
       {/* Modal de confirmación para eliminar evaluaciones */}
       {showEvaluacionesModal && (
-        <div className="modal-overlay">
-          <div className="modal-content danger">
-            <h2>¡Atención! Evaluaciones existentes</h2>
-            <p className="modal-message">
-              Este grupo ya tiene evaluaciones finalizadas. Los cambios que está realizando eliminarán permanentemente:
-            </p>
-            <ul className="modal-list">
-              <li>Todas las rúbricas de evaluación</li>
-              <li>Todas las calificaciones de los estudiantes</li>
-              <li>Todos los informes y borradores asociados</li>
-            </ul>
-            <p>Esta acción no se puede deshacer.</p>
-            
-            <div className="modal-actions">
-              <button 
-                className="btn-cancelar" 
-                onClick={handleCancelEliminarEvaluaciones}
-                disabled={submitting}
-              >
-                Cancelar cambios
-              </button>
-              <button 
-                className="btn-eliminar" 
-                onClick={handleConfirmEliminarEvaluaciones}
-                disabled={submitting}
-              >
-                {submitting ? 'Eliminando...' : 'Eliminar evaluaciones y continuar'}
-              </button>
+        <div className="grupo-edit-styles">
+          <div className="grupo-modal-overlay">
+            <div className="grupo-modal-content danger">
+              <h2>¡Atención! Evaluaciones existentes</h2>
+              <p className="grupo-modal-message">
+                Este grupo ya tiene evaluaciones finalizadas. Los cambios que está realizando eliminarán permanentemente:
+              </p>
+              <ul className="grupo-modal-list">
+                <li>Todas las rúbricas de evaluación</li>
+                <li>Todas las calificaciones de los estudiantes</li>
+                <li>Todos los informes y borradores asociados</li>
+              </ul>
+              <p>Esta acción no se puede deshacer.</p>
+              
+              <div className="grupo-modal-actions">
+                <button 
+                  className="btn-grupo-cancelar" 
+                  onClick={handleCancelEliminarEvaluaciones}
+                  disabled={submitting}
+                >
+                  Cancelar cambios
+                </button>
+                <button 
+                  className="btn-grupo-eliminar" 
+                  onClick={handleConfirmEliminarEvaluaciones}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Eliminando...' : 'Eliminar evaluaciones y continuar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -615,7 +619,7 @@ function EditarGrupos() {
             <div className="form-actions">
               <button 
                 type="button" 
-                className="btn-cancelar" 
+                className="btn-grupo-cancelar" 
                 onClick={handleCancel}
                 disabled={submitting}
               >
@@ -623,7 +627,7 @@ function EditarGrupos() {
               </button>
               <button 
                 type="submit" 
-                className={`btn-guardar ${submitting ? 'loading' : ''}`}
+                className={`btn-grupo-guardar ${submitting ? 'loading' : ''}`}
                 disabled={submitting || Object.values(validFields).some(valid => !valid)}
               >
                 {submitting ? 'Guardando...' : 'Guardar Cambios'}

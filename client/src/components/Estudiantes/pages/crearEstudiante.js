@@ -223,7 +223,7 @@ function CrearEstudiante() {
               </div>
               
               <div className={`form-group ${getFieldClass('unidad_educativa')}`}>
-                <label htmlFor="unidad_educativa">Unidad Educativa:</label>
+                <label htmlFor="unidad_educativa">Unidad Academica:</label>
                 <input
                   type="text"
                   id="unidad_educativa"

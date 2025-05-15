@@ -26,9 +26,190 @@ async function actualizarEstudiante(id, estudiante) {
   return result.rows[0];
 }
 
+/**
+ * Verifica si un estudiante tiene dependencias (asignaciones, calificaciones, informes, etc.)
+ * @param {number} id - ID del estudiante
+ * @returns {Promise<Object>} - Objeto con información sobre las dependencias
+ */
+async function verificarDependenciasEstudiante(id) {
+  // Se utiliza un objeto para almacenar toda la información de las consultas
+  const dependencias = {
+    asignaciones: {
+      cantidad: 0,
+      detalle: []
+    },
+    informes: {
+      cantidad: 0,
+      detalle: []
+    },
+    calificaciones: {
+      cantidad: 0,
+      detalle: []
+    }
+  };
+
+  // Buscar asignaciones a grupos
+  const asignacionesQuery = await pool.query(`
+    SELECT eg.id, g.nombre_proyecto, g.carrera, g.semestre, g.materia
+    FROM estudiante_grupo eg
+    JOIN grupos g ON eg.grupo_id = g.id
+    WHERE eg.estudiante_id = $1 AND eg.activo = true
+  `, [id]);
+  
+  dependencias.asignaciones.cantidad = asignacionesQuery.rows.length;
+  dependencias.asignaciones.detalle = asignacionesQuery.rows;
+
+  // Buscar informes
+  const informesQuery = await pool.query(`
+    SELECT i.id, i.grupo_id, i.rubrica_id, i.calificacion_id, g.nombre_proyecto 
+    FROM informes i
+    LEFT JOIN grupos g ON i.grupo_id = g.id
+    WHERE i.estudiante_id = $1
+  `, [id]);
+  
+  dependencias.informes.cantidad = informesQuery.rows.length;
+  dependencias.informes.detalle = informesQuery.rows;
+
+  // Buscar calificaciones
+  const calificacionesQuery = await pool.query(`
+    SELECT id, gestion, periodo, asignatura, rubrica_id
+    FROM calificaciones 
+    WHERE estudiante_id = $1
+  `, [id]);
+  
+  dependencias.calificaciones.cantidad = calificacionesQuery.rows.length;
+  dependencias.calificaciones.detalle = calificacionesQuery.rows;
+
+  // Calcular si tiene dependencias o no
+  dependencias.tieneDependencias = (
+    dependencias.asignaciones.cantidad > 0 || 
+    dependencias.informes.cantidad > 0 || 
+    dependencias.calificaciones.cantidad > 0
+  );
+
+  return dependencias;
+}
+
+/**
+ * Actualiza un estudiante con limpieza de dependencias cuando hay cambios en carrera o semestre
+ * @param {number} id - ID del estudiante
+ * @param {Object} estudianteData - Nuevos datos del estudiante
+ * @returns {Promise<Object>} - Estudiante actualizado e información de las dependencias eliminadas
+ */
+async function actualizarEstudianteConLimpieza(id, estudianteData) {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Guardar información sobre las dependencias para el informe final
+    const dependenciasAntes = await verificarDependenciasEstudiante(id);
+    
+    // 1. Eliminar informes
+    await client.query('DELETE FROM informes WHERE estudiante_id = $1', [id]);
+    
+    // 2. Eliminar calificaciones
+    await client.query('DELETE FROM calificaciones WHERE estudiante_id = $1', [id]);
+    
+    // 3. Desasignar de grupos (actualizar, no eliminar)
+    await client.query(`
+      DELETE FROM estudiante_grupo
+      WHERE estudiante_id = $1
+    `, [id]);
+    
+    // 4. Actualizar datos del estudiante
+    const { nombre, apellido, codigo, carrera, semestre, unidad_educativa } = estudianteData;
+    const query = `
+      UPDATE estudiantes 
+      SET nombre = $1, apellido = $2, codigo = $3, carrera = $4, semestre = $5, unidad_educativa = $6 
+      WHERE id = $7 
+      RETURNING *
+    `;
+    const values = [nombre, apellido, codigo, carrera, semestre, unidad_educativa, id];
+    const result = await client.query(query, values);
+    
+    await client.query('COMMIT');
+    
+    return {
+      estudiante: result.rows[0],
+      dependenciasEliminadas: {
+        asignaciones: dependenciasAntes.asignaciones.cantidad,
+        informes: dependenciasAntes.informes.cantidad,
+        calificaciones: dependenciasAntes.calificaciones.cantidad
+      },
+      mensaje: `Se eliminaron dependencias debido al cambio de carrera/semestre: ${dependenciasAntes.asignaciones.cantidad} asignaciones, ${dependenciasAntes.informes.cantidad} informes y ${dependenciasAntes.calificaciones.cantidad} calificaciones.`
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error en actualizarEstudianteConLimpieza:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Elimina un estudiante y todas sus dependencias de forma segura
+ * @param {number} id - ID del estudiante
+ * @returns {Promise<Object>} - Resultado de la eliminación con detalles
+ */
+async function eliminarEstudianteSeguro(id) {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Obtener dependencias para informar al usuario
+    const dependencias = await verificarDependenciasEstudiante(id);
+    
+    // 2. Eliminar informes primero (porque dependen de calificaciones y estudiantes)
+    if (dependencias.informes.cantidad > 0) {
+      await client.query('DELETE FROM informes WHERE estudiante_id = $1', [id]);
+    }
+    
+    // 3. Eliminar calificaciones
+    if (dependencias.calificaciones.cantidad > 0) {
+      await client.query('DELETE FROM calificaciones WHERE estudiante_id = $1', [id]);
+    }
+    
+    // 4. Eliminar asignaciones a grupos
+    if (dependencias.asignaciones.cantidad > 0) {
+      await client.query('DELETE FROM estudiante_grupo WHERE estudiante_id = $1', [id]);
+    }
+    
+    // 5. Finalmente eliminar el estudiante
+    const result = await client.query('DELETE FROM estudiantes WHERE id = $1 RETURNING *', [id]);
+    
+    // Si no se encontró estudiante para eliminar
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    
+    await client.query('COMMIT');
+    
+    return {
+      estudiante: result.rows[0],
+      dependenciasEliminadas: {
+        asignaciones: dependencias.asignaciones.cantidad,
+        informes: dependencias.informes.cantidad,
+        calificaciones: dependencias.calificaciones.cantidad
+      }
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error en eliminarEstudianteSeguro:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function eliminarEstudiante(id) {
-  const result = await pool.query('DELETE FROM estudiantes WHERE id = $1 RETURNING *', [id]);
-  return result.rows[0];
+  // Esta función se mantiene para compatibilidad, pero internamente usa la versión segura
+  const resultado = await eliminarEstudianteSeguro(id);
+  // Devolvemos solo el estudiante para mantener compatibilidad con el código existente
+  return resultado ? resultado.estudiante : null;
 }
 
 async function obtenerEstudiantesPorGrupoId(grupoId) {
@@ -51,6 +232,7 @@ async function obtenerEstudiantesPorSemestre(semestre) {
   const result = await pool.query('SELECT * FROM estudiantes WHERE semestre = $1', [semestre]);
   return result.rows;
 }
+
 async function asignarEstudianteAGrupo(estudianteId, grupoId) {
   const query = `
     INSERT INTO estudiante_grupo (estudiante_id, grupo_id) 
@@ -86,18 +268,7 @@ async function estudianteYaAsignadoAMateria(estudianteId, materia) {
   const result = await pool.query(query, [estudianteId, materia]);
   return result.rows[0].count > 0;
 }
-async function estudianteYaAsignadoAMateria(estudianteId, materia) {
-  const query = `
-    SELECT COUNT(*) as count
-    FROM estudiante_grupo eg
-    INNER JOIN grupos g ON eg.grupo_id = g.id
-    WHERE eg.estudiante_id = $1 
-    AND g.materia = $2 
-    AND eg.activo = true
-  `;
-  const result = await pool.query(query, [estudianteId, materia]);
-  return result.rows[0].count > 0;
-}
+
 async function obtenerEstudiantesConEstadoGrupo(docenteId) {
   const query = `
     SELECT 
@@ -124,12 +295,14 @@ async function obtenerEstudiantesConEstadoGrupo(docenteId) {
     throw error;
   }
 }
+
 async function obtenerEstudiantesPorSemestreYCarrera(semestre, carrera) {
   // Esta consulta filtra estudiantes que coincidan con el semestre Y la carrera
   const query = 'SELECT * FROM estudiantes WHERE semestre = $1 AND carrera = $2';
   const result = await pool.query(query, [semestre, carrera]);
   return result.rows;
 }
+
 async function obtenerEstudiantesPorMateriaConEstado(materia) {
   const query = `
     WITH estudiantes_grupo AS (
@@ -170,7 +343,7 @@ async function obtenerEstudiantesPorMateriaConEstado(materia) {
   const result = await pool.query(query, [materia]);
   return result.rows;
 }
-// En estudiantes_model.js
+
 async function obtenerEstudiantesUnicosPorSemestreYCarreraConEstado(semestre, carrera) {
   const query = `
     WITH estudiantes_base AS (
@@ -216,6 +389,7 @@ async function obtenerEstudiantesUnicosPorSemestreYCarreraConEstado(semestre, ca
   const result = await pool.query(query, [semestre, carrera]);
   return result.rows;
 }
+
 module.exports = {
   crearEstudiante,
   obtenerEstudiantes,
@@ -225,10 +399,15 @@ module.exports = {
   obtenerEstudiantesPorGrupoId,
   obtenerEstudiantesPorCarrera,
   obtenerEstudiantesPorSemestre,
-  asignarEstudianteAGrupo,         // NUEVO
-  desasignarEstudianteDeGrupo,     // NUEVO
+  asignarEstudianteAGrupo,
+  desasignarEstudianteDeGrupo,
   estudianteYaAsignadoAMateria,
   obtenerEstudiantesConEstadoGrupo,
   obtenerEstudiantesPorSemestreYCarrera,
-  obtenerEstudiantesUnicosPorSemestreYCarreraConEstado
+  obtenerEstudiantesPorMateriaConEstado,
+  obtenerEstudiantesUnicosPorSemestreYCarreraConEstado,
+  // Nuevas funciones:
+  eliminarEstudianteSeguro,
+  actualizarEstudianteConLimpieza,
+  verificarDependenciasEstudiante
 };

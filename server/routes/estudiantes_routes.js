@@ -15,6 +15,7 @@ const validarEstudiante = async (req, res, next) => {
   next();
 };
 
+// Rutas existentes
 router.post('/create', authService.createAuthMiddleware(),
   validarEstudiante, estudiantesController.crearEstudiante);
 
@@ -39,7 +40,7 @@ router.get('/carrera/:carrera', authService.createAuthMiddleware(),
 router.get('/semestre/:semestre', authService.createAuthMiddleware(),
   estudiantesController.obtenerEstudiantesPorSemestre);
 
-  router.post('/asignar-grupo', authService.createAuthMiddleware(),
+router.post('/asignar-grupo', authService.createAuthMiddleware(),
   estudiantesController.asignarEstudianteAGrupo);
 
 router.post('/desasignar-grupo', authService.createAuthMiddleware(),
@@ -49,14 +50,22 @@ router.get('/verificar-materia/:estudianteId/:materia',
   authService.createAuthMiddleware(),
   estudiantesController.verificarMateria
 );
+
 router.get('/con-estado-grupo', 
   authService.createAuthMiddleware(),
   estudiantesController.obtenerEstudiantesConEstadoGrupo
 );
+
 router.get('/semestre-carrera/:semestre/:carrera', 
   authService.createAuthMiddleware(),
   estudiantesController.obtenerEstudiantesPorSemestreYCarrera
 );
+
 router.get('/materia/:materia', authService.createAuthMiddleware(),
   estudiantesController.obtenerEstudiantesPorMateria);
-module.exports = router; 
+
+// Nueva ruta para verificar dependencias de un estudiante
+router.get('/verificar-dependencias/:id', authService.createAuthMiddleware(),
+  estudiantesController.verificarDependencias);
+
+module.exports = router;

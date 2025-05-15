@@ -1,11 +1,11 @@
-// src/components/Estudiantes/pages/listarEstudiantes.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/listarEstudiantes.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getEstudiantes, getEstudiantesConEstadoGrupo } from '../../../service/estudianteService';
+import { getEstudiantesConEstadoGrupo } from '../../../service/estudianteService';
+import EliminarEstudianteModal from './eliminarEstudiante';
 
 function ListarEstudiantes() {
   const navigate = useNavigate();
@@ -22,6 +22,10 @@ function ListarEstudiantes() {
   const [paginaActual, setPaginaActual] = useState(1);
   const estudiantesPorPagina = 25;
   
+  // Estado para modal de eliminación
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
+  const [estudianteSeleccionado, setEstudianteSeleccionado] = useState(null);
+  
   // Opciones para los filtros
   const carreras = [
     'Ingeniería de Sistemas',
@@ -34,23 +38,23 @@ function ListarEstudiantes() {
 
   // Cargar estudiantes al iniciar
   useEffect(() => {
-    const cargarEstudiantes = async () => {
-      try {
-        setLoading(true);
-        // Usar el nuevo método en lugar del original
-        const data = await getEstudiantesConEstadoGrupo();
-        setEstudiantes(data);
-        setEstudiantesFiltrados(data);
-      } catch (error) {
-        console.error('Error al cargar estudiantes:', error);
-        toast.error('Error al cargar la lista de estudiantes');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     cargarEstudiantes();
   }, []);
+  
+  const cargarEstudiantes = async () => {
+    try {
+      setLoading(true);
+      // Usar el nuevo método en lugar del original
+      const data = await getEstudiantesConEstadoGrupo();
+      setEstudiantes(data);
+      setEstudiantesFiltrados(data);
+    } catch (error) {
+      console.error('Error al cargar estudiantes:', error);
+      toast.error('Error al cargar la lista de estudiantes');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Aplicar filtros cuando cambian
   useEffect(() => {
@@ -138,6 +142,31 @@ function ListarEstudiantes() {
   const irACrearEstudiante = () => {
     navigate('/estudiantes/crear');
   };
+  
+  // Redirigir a página de editar estudiante
+  const irAEditarEstudiante = (id) => {
+    navigate(`/estudiantes/editar/${id}`);
+  };
+  
+  // Abrir modal de confirmación para eliminar estudiante
+  const mostrarConfirmacionEliminar = (estudiante) => {
+    setEstudianteSeleccionado(estudiante);
+    setMostrarModalEliminar(true);
+  };
+  
+  // Cerrar modal de confirmación
+  const cerrarModalEliminar = () => {
+    setMostrarModalEliminar(false);
+    setEstudianteSeleccionado(null);
+  };
+  
+  // Manejar eliminación exitosa
+  const manejarEliminacionExitosa = () => {
+    // Recargar lista de estudiantes
+    cargarEstudiantes();
+    // Mostrar mensaje de éxito
+    toast.success('Estudiante eliminado con éxito');
+  };
 
   // Función para ir a la página anterior
   const irPaginaAnterior = () => {
@@ -217,7 +246,36 @@ function ListarEstudiantes() {
     );
   };
 
-  // Lo envolvemos en un div con width: 100% para asegurar que ocupe todo el ancho disponible
+  // Renderizar la fila de acciones para cada estudiante con SVG
+  const renderAccionesEstudiante = (estudiante) => {
+    return (
+      <div className="acciones-estudiante">
+        <button 
+          className="btn-accion btn-editar" 
+          onClick={() => irAEditarEstudiante(estudiante.id)}
+          title="Editar estudiante"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+        </button>
+        <button 
+          className="btn-accion btn-eliminar" 
+          onClick={() => mostrarConfirmacionEliminar(estudiante)}
+          title="Eliminar estudiante"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <Layout>
       <div className="estudiante-list-styles" style={{width: '100%'}}>
@@ -303,6 +361,7 @@ function ListarEstudiantes() {
                         <th className="col-carrera">Carrera</th>
                         <th className="col-semestre">Semestre</th>
                         <th className="col-grupo">Grupo</th>
+                        <th className="col-acciones">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -319,6 +378,9 @@ function ListarEstudiantes() {
                             ) : (
                               <span className="badge badge-warning">Sin grupo</span>
                             )}
+                          </td>
+                          <td className="col-acciones">
+                            {renderAccionesEstudiante(estudiante)}
                           </td>
                         </tr>
                       ))}
@@ -343,6 +405,15 @@ function ListarEstudiantes() {
           </div>
         </div>
       </div>
+      
+      {/* Modal de eliminación */}
+      {mostrarModalEliminar && (
+        <EliminarEstudianteModal 
+          estudiante={estudianteSeleccionado}
+          onClose={cerrarModalEliminar}
+          onEliminar={manejarEliminacionExitosa}
+        />
+      )}
     </Layout>
   );
 }

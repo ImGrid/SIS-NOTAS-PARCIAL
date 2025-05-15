@@ -1,0 +1,305 @@
+/* src/components/Estudiantes/style/editarEstudianteForm.css */
+
+/* Namespace para aislar todos los estilos de edición */
+.estudiante-editar-styles {
+  box-sizing: border-box;
+}
+
+.estudiante-editar-styles *,
+.estudiante-editar-styles *::before,
+.estudiante-editar-styles *::after {
+  box-sizing: border-box;
+}
+
+.estudiante-editar-styles .editar-estudiante-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 0 2rem 0;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(44, 62, 80, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.estudiante-editar-styles .editar-estudiante-container h1 {
+  margin: 0 0 2rem 0;
+  color: #ffffff;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  position: relative;
+  padding: 1rem 0;
+  background-color: #2c3e50;
+  border-radius: 10px 10px 0 0;
+}
+
+.estudiante-editar-styles .editar-estudiante-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 2rem;
+}
+
+.estudiante-editar-styles .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  position: relative;
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+}
+
+.estudiante-editar-styles .form-group:focus-within label {
+  color: #2c3e50;
+}
+
+.estudiante-editar-styles label {
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 0.25rem;
+  transition: color 0.3s ease;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.estudiante-editar-styles input, 
+.estudiante-editar-styles select {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background-color: #f9f9f9;
+  color: #2c3e50;
+  width: 100%;
+  max-width: 100%;
+}
+
+.estudiante-editar-styles input:hover, 
+.estudiante-editar-styles select:hover {
+  border-color: #bbb;
+}
+
+.estudiante-editar-styles input:focus, 
+.estudiante-editar-styles select:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+  background-color: #fff;
+}
+
+.estudiante-editar-styles select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.estudiante-editar-styles .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.estudiante-editar-styles .btn-editar-cancelar {
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  background-color: #eef2f7;
+  color: #2c3e50;
+  border: 1px solid #e0e0e0;
+}
+
+.estudiante-editar-styles .btn-editar-guardar {
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  background-color: #2c3e50;
+  color: white;
+  box-shadow: 0 4px 6px rgba(44, 62, 80, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+}
+
+.estudiante-editar-styles .btn-editar-cancelar:hover {
+  background-color: #e4e9f0;
+  border-color: #ccc;
+}
+
+.estudiante-editar-styles .btn-editar-guardar:hover {
+  background-color: #34495e;
+  box-shadow: 0 6px 8px rgba(44, 62, 80, 0.15);
+  transform: translateY(-1px);
+}
+
+.estudiante-editar-styles .btn-editar-guardar:active {
+  transform: translateY(0);
+}
+
+.estudiante-editar-styles .btn-editar-guardar:disabled,
+.estudiante-editar-styles .btn-editar-cancelar:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  opacity: 0.7;
+}
+
+.estudiante-editar-styles .btn-editar-guardar.loading {
+  position: relative;
+  color: transparent;
+}
+
+.estudiante-editar-styles .btn-editar-guardar.loading::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: editar-spin 1s linear infinite;
+}
+
+.estudiante-editar-styles .loading-indicator {
+  text-align: center;
+  padding: 2rem;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* Alerta para dependencias */
+.estudiante-editar-styles .alerta-dependencias {
+  background-color: #fcf8e3;
+  border-left: 4px solid #f39c12;
+  padding: 1rem;
+  margin: 0 2rem 1.5rem;
+  border-radius: 6px;
+  animation: editar-fadeIn 0.5s ease-out;
+}
+
+.estudiante-editar-styles .alerta-dependencias h3 {
+  color: #e67e22;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.estudiante-editar-styles .alerta-dependencias p {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.estudiante-editar-styles .dependencias-detalle {
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
+.estudiante-editar-styles .advertencia-fuerte {
+  font-weight: bold;
+  color: #c0392b;
+}
+
+/* Marcador de cambios críticos */
+.estudiante-editar-styles .form-group.cambio-critico input,
+.estudiante-editar-styles .form-group.cambio-critico select {
+  border-color: #f39c12;
+}
+
+.estudiante-editar-styles .badge-cambio-critico {
+  background-color: #f39c12;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+/* Botón de confirmación */
+.estudiante-editar-styles .btn-editar-guardar.confirmar {
+  background-color: #e74c3c;
+}
+
+.estudiante-editar-styles .btn-editar-guardar.confirmar:hover {
+  background-color: #c0392b;
+}
+
+/* Animaciones con prefijo para aislarlas */
+@keyframes editar-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes editar-fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes editar-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Estilos para campos válidos */
+.estudiante-editar-styles .form-group.valid input,
+.estudiante-editar-styles .form-group.valid select {
+  border-color: #2ecc71;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232ecc71' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .estudiante-editar-styles .editar-estudiante-form {
+    padding: 0 1.5rem;
+  }
+  
+  .estudiante-editar-styles .alerta-dependencias {
+    margin: 0 1.5rem 1.5rem;
+  }
+  
+  .estudiante-editar-styles .form-actions {
+    flex-direction: column;
+  }
+  
+  .estudiante-editar-styles .btn-editar-cancelar, 
+  .estudiante-editar-styles .btn-editar-guardar {
+    width: 100%;
+  }
+}

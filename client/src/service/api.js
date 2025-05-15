@@ -15,7 +15,7 @@ function determinaBaseUrl() {
   const currentHost = window.location.hostname;
   
   if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-    return 'http://localhost:5000';
+    return 'http://localhost:4000';
   } 
   else {
     return `http://${currentHost}:5000`;
