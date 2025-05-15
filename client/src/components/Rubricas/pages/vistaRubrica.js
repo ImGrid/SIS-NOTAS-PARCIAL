@@ -279,7 +279,7 @@ const VistaRubrica = () => {
           nombre: 'INGENIERÍA DEL PROYECTO 20%',
           subcriterios: [
             {
-              nombre: 'METODOLOGÍA DE DESARROLLO 20%',
+              nombre: 'INGENIERÍA DEL PROYECTO 20%',
               color: 'bg-blue-light',
               niveles: [
                 {
@@ -344,6 +344,19 @@ const VistaRubrica = () => {
       ]
     }
   };
+
+  // Función para manejar la descarga de la rúbrica
+  const handleDownloadRubrica = () => {
+    const fileUrl = '/rubrica.xlsx';
+    
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.setAttribute('download', 'rubrica.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderNivel = (nivel, index) => (
     <div key={index} className="nivel-column">
       <div className="nivel-container">
@@ -407,7 +420,17 @@ const VistaRubrica = () => {
       <div className="main-container">
         <Sidebar />
         <div className="content-container">
-          <h1 className="main-title">Rúbrica de Evaluación</h1>
+          <div className="header-container">
+            <h1 className="main-title">Rúbrica de Evaluación</h1>
+            <button className="download-button" onClick={handleDownloadRubrica}>
+              <svg className="download-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Descargar
+            </button>
+          </div>
           <div className="escala-calificacion-container"></div>
             {/* Escala de Calificación */}
             <div className="escala-calificacion-container">

@@ -13,7 +13,7 @@ function determinaBaseUrl() {
     return process.env.REACT_APP_API_URL;
   }
   const currentHost = window.location.hostname;
-  
+  //http://186.121.253.251/ cambiar en produccion
   if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
     return 'http://localhost:4000';
   } 

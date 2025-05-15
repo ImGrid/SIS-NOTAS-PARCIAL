@@ -564,16 +564,12 @@ async function obtenerHistorialHabilitacionesGrupo(req, res) {
 async function desactivarHabilitacion(req, res) {
   try {
     const { habilitacionId } = req.params;
-    const supervisorId = req.user.id;
     
     if (!habilitacionId) {
       return res.status(400).json({ error: 'ID de habilitación es requerido' });
     }
     
-    const resultado = await supervisorModel.desactivarHabilitacion(
-      habilitacionId,
-      supervisorId
-    );
+    const resultado = await supervisorModel.desactivarHabilitacion(habilitacionId);
     
     if (!resultado) {
       return res.status(404).json({ error: 'Habilitación no encontrada o ya desactivada' });

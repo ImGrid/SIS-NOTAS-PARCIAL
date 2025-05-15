@@ -264,19 +264,23 @@ async function obtenerHistorialHabilitaciones(grupoId) {
  * @param {number} supervisorId - ID del supervisor que realiza la acción
  * @returns {Promise<Object>} - Habilitación actualizada
  */
-async function desactivarHabilitacion(habilitacionId, supervisorId) {
-  const query = `
-    UPDATE habilitaciones_rubricas 
-    SET 
-      activa = false,
-      fecha_desactivacion = NOW(),
-      supervisor_desactivacion_id = $2
-    WHERE id = $1
-    RETURNING *
-  `;
-  
-  const result = await pool.query(query, [habilitacionId, supervisorId]);
-  return result.rows[0];
+async function desactivarHabilitacion(habilitacionId) {
+  try {
+    const query = `
+      UPDATE habilitaciones_rubricas 
+      SET 
+        activa = false,
+        fecha_desactivacion = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [habilitacionId]);
+    return result.rows[0];
+  } catch (error) {
+    console.error("Error en desactivarHabilitacion:", error);
+    throw error;
+  }
 }
 
 module.exports = {
