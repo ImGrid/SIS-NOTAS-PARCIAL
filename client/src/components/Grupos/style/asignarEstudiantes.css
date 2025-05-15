@@ -15,11 +15,15 @@
 .asignar-estudiantes-styles .asignar-estudiantes-container {
   width: 100%;
   margin: 0 auto;
-  padding: 0 0 2rem 0;
+  padding: 0 0 2rem 0; /* Quitamos el padding lateral */
   background-color: #f5f7fa;
   position: relative;
 }
-
+@media (max-width: 768px) {
+  .asignar-estudiantes-styles .asignar-estudiantes-container {
+    padding: 0 1rem 2rem 1rem; /* Padding más pequeño en móviles */
+  }
+}
 /* Estilo para el encabezado con fondo azul oscuro */
 .asignar-estudiantes-styles .asignar-header {
   background-color: #2c3e50;
@@ -31,6 +35,9 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
 }
 
 .asignar-estudiantes-styles .asignar-header h1 {
@@ -39,7 +46,11 @@
   font-weight: 700;
   color: #ffffff;
 }
-
+.asignar-estudiantes-styles .contenido-interno {
+  padding: 0 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
 /* Información del grupo */
 .asignar-estudiantes-styles .grupo-info {
   background-color: white;
@@ -49,6 +60,7 @@
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e6ebf5;
   animation: asignar-fadeIn 0.5s ease-out;
+  width: 100%; /* Aseguramos que ocupe el ancho disponible */
 }
 
 .asignar-estudiantes-styles .grupo-info h2 {
@@ -585,5 +597,16 @@
   .asignar-estudiantes-styles .btn-cancelar,
   .asignar-estudiantes-styles .btn-guardar {
     width: 100%;
+  }
+}
+.asignar-estudiantes-styles .grupo-info,
+.asignar-estudiantes-styles .estudiantes-container,
+.asignar-estudiantes-styles .form-actions {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .asignar-estudiantes-styles .contenido-interno {
+    padding: 0 1rem; /* Padding más pequeño en móviles */
   }
 }

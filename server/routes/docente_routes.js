@@ -9,7 +9,7 @@ const authService = createAuthService();
 // Limitador para intentos de verificación de código (prevenir ataques de fuerza bruta)
 const codigoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // limitar a 5 intentos por ventana
+  max: 10, // limitar a 10 intentos por ventana
   message: 'Demasiados intentos fallidos. Por favor intente más tarde.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -17,7 +17,7 @@ const codigoLimiter = rateLimit({
 
 const solicitudLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
-  max: 10, // máximo 5 solicitudes por hora
+  max: 10, // máximo 10 solicitudes por hora
   message: 'Demasiadas solicitudes de código. Por favor intente más tarde.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -35,6 +35,7 @@ const validarDocente = (req, res, next) => {
 router.post('/login', solicitudLimiter, docenteController.loginDocente);
 router.post('/verificar-codigo', codigoLimiter, docenteController.verificarCodigo);
 router.post('/verificar-codigo-existente', docenteController.verificarCodigoExistente);
+
 // Rutas protegidas que requieren autenticación
 router.post('/create', 
   authService.createAuthMiddleware(), 
@@ -61,6 +62,12 @@ router.put('/update/:id',
 router.delete('/delete/:id', 
   authService.createAuthMiddleware(), 
   docenteController.eliminarDocente
+);
+
+// Nueva ruta para verificar dependencias
+router.get('/verificar-dependencias/:id',
+  authService.createAuthMiddleware(),
+  docenteController.verificarDependencias
 );
 
 module.exports = router;

@@ -141,14 +141,106 @@ async function actualizarDocente(req, res) {
   }
 }
 
+/**
+ * Elimina un docente con todas sus dependencias, con opciones para manejar grupos
+ */
 async function eliminarDocente(req, res) {
   try {
-    const docente = await docenteModel.eliminarDocente(req.params.id);
+    const id = req.params.id;
+    
+    // 1. Verificar existencia del docente
+    const docente = await docenteModel.obtenerDocentePorId(id);
     if (!docente) {
       return res.status(404).json({ error: 'Docente no encontrado' });
     }
-    res.json({ message: 'Docente eliminado', docente });
+    
+    // 2. Verificar si tiene dependencias antes de eliminar
+    const dependencias = await docenteModel.verificarDependenciasDocente(id);
+    
+    // 3. Verificar si se ha confirmado la eliminación con dependencias
+    const confirmarEliminacion = req.query.confirmar === 'true';
+    
+    // 4. Obtener opciones para manejo de grupos
+    const docenteNuevoId = req.query.reasignar_a ? parseInt(req.query.reasignar_a) : null;
+    const borrarGrupos = req.query.borrar_grupos === 'true';
+    
+    // 5. Si tiene dependencias y no se ha confirmado, mostrar advertencia
+    if (dependencias.tieneDependencias && !confirmarEliminacion) {
+      return res.status(409).json({
+        error: 'El docente tiene elementos relacionados que serán afectados',
+        dependencias,
+        mensaje: 'Para confirmar la eliminación, use ?confirmar=true en la URL',
+        opciones: {
+          reasignar: 'Para reasignar grupos a otro docente: ?confirmar=true&reasignar_a=ID',
+          borrar: 'Para eliminar grupos: ?confirmar=true&borrar_grupos=true'
+        }
+      });
+    }
+    
+    // 6. Proceder con la eliminación segura
+    const resultado = await docenteModel.eliminarDocenteSeguro(id, docenteNuevoId, borrarGrupos);
+    
+    if (!resultado) {
+      return res.status(404).json({ error: 'Docente no encontrado o ya eliminado' });
+    }
+    
+    let mensajeGrupos = '';
+    if (dependencias.grupos.cantidad > 0) {
+      if (borrarGrupos) {
+        mensajeGrupos = `Se eliminaron ${dependencias.grupos.cantidad} grupos.`;
+      } else if (docenteNuevoId) {
+        mensajeGrupos = `Se reasignaron ${dependencias.grupos.cantidad} grupos al docente con ID ${docenteNuevoId}.`;
+      } else {
+        mensajeGrupos = `${dependencias.grupos.cantidad} grupos quedaron sin docente asignado.`;
+      }
+    }
+    
+    res.json({ 
+      mensaje: `Docente "${docente.nombre_completo}" eliminado correctamente. ${mensajeGrupos}`,
+      docente: resultado.docente,
+      dependenciasEliminadas: resultado.dependenciasEliminadas,
+      accionGrupos: resultado.accionGrupos
+    });
   } catch (error) {
+    console.error('Error en eliminarDocente:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Verifica las dependencias de un docente sin realizar cambios
+ */
+async function verificarDependencias(req, res) {
+  try {
+    const id = req.params.id;
+    
+    // Verificar que exista el docente
+    const docente = await docenteModel.obtenerDocentePorId(id);
+    if (!docente) {
+      return res.status(404).json({ error: 'Docente no encontrado' });
+    }
+    
+    // Obtener dependencias
+    const dependencias = await docenteModel.verificarDependenciasDocente(id);
+    
+    // Obtener lista de docentes disponibles para reasignación
+    const docentes = await docenteModel.obtenerDocentes();
+    const docentesDisponibles = docentes
+      .filter(d => d.id !== parseInt(id)) // Excluir el docente actual
+      .map(d => ({
+        id: d.id,
+        nombre_completo: d.nombre_completo,
+        correo_electronico: d.correo_electronico
+      }));
+    
+    res.json({
+      docente,
+      dependencias,
+      tieneDependencias: dependencias.tieneDependencias,
+      docentesDisponibles: docentesDisponibles
+    });
+  } catch (error) {
+    console.error('Error al verificar dependencias:', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -206,5 +298,7 @@ module.exports = {
   eliminarDocente,
   loginDocente,
   verificarCodigo,
-  verificarCodigoExistente
+  verificarCodigoExistente,
+  // Nueva función:
+  verificarDependencias
 };

@@ -137,19 +137,80 @@ export const updateDocente = async (id, docenteData) => {
   }
 };
 
-// Función para eliminar un docente por su ID con validación adicional
-export const deleteDocente = async (id) => {
+/**
+ * Verifica las dependencias de un docente
+ * @param {number|string} id - ID del docente
+ * @returns {Promise<Object>} - Objeto con información sobre las dependencias y docentes disponibles
+ */
+export const verificarDependenciasDocente = async (id) => {
   try {
     validateId(id);
     
-    // Añadir confirmación o validación adicional si es necesario
-    const response = await api.delete(`/api/docentes/delete/${id}`);
+    const response = await api.get(`/api/docentes/verificar-dependencias/${id}`);
     return response.data;
   } catch (error) {
-    console.error('Error en deleteDocente:', error);
+    console.error('Error al verificar dependencias del docente:', error);
     throw error;
   }
 };
+
+/**
+ * Elimina un docente con manejo de dependencias
+ * @param {number|string} id - ID del docente
+ * @param {Object} options - Opciones para manejar dependencias
+ * @param {boolean} options.confirmar - Confirmar la eliminación con dependencias
+ * @param {number|null} options.reasignarA - ID del docente al que reasignar grupos
+ * @param {boolean} options.borrarGrupos - Si es true, eliminar grupos en lugar de reasignarlos
+ * @returns {Promise<Object>} - Resultado de la eliminación
+ */
+export const deleteDocente = async (id, options = {}) => {
+  try {
+    validateId(id);
+    
+    const { confirmar = false, reasignarA = null, borrarGrupos = false } = options;
+    
+    let url = `/api/docentes/delete/${id}`;
+    
+    // Construir URL con parámetros según las opciones
+    const params = [];
+    
+    if (confirmar) {
+      params.push('confirmar=true');
+    }
+    
+    if (reasignarA !== null) {
+      params.push(`reasignar_a=${reasignarA}`);
+    }
+    
+    if (borrarGrupos) {
+      params.push('borrar_grupos=true');
+    }
+    
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+    
+    const response = await api.delete(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error en deleteDocente:', error);
+    
+    // Si es un error de conflicto (409) y no se ha confirmado la eliminación,
+    // propagamos la información sobre las dependencias
+    if (error.response && error.response.status === 409) {
+      throw {
+        ...error,
+        requiereConfirmacion: true,
+        dependencias: error.response.data.dependencias,
+        mensaje: error.response.data.mensaje,
+        opciones: error.response.data.opciones
+      };
+    }
+    
+    throw error;
+  }
+};
+
 export const verificarCodigoExistente = async (correo_electronico) => {
   try {
     validateEmail(correo_electronico);
@@ -178,6 +239,47 @@ export const verificarCodigoExistente = async (correo_electronico) => {
     }
   }
 };
+
+/**
+ * Función de ayuda para obtener un resumen de las dependencias en texto amigable
+ * @param {Object} dependencias - Objeto con información de dependencias
+ * @returns {string} - Resumen en formato de texto
+ */
+export const obtenerResumenDependenciasDocente = (dependencias) => {
+  if (!dependencias) return "No hay información sobre dependencias";
+  
+  let resumen = [];
+  
+  if (dependencias.grupos && dependencias.grupos.cantidad > 0) {
+    const gruposStr = dependencias.grupos.detalle
+      .map(g => `${g.nombre_proyecto} (${g.materia})`)
+      .join(", ");
+    resumen.push(`${dependencias.grupos.cantidad} grupos: ${gruposStr}`);
+  }
+  
+  if (dependencias.rubricas && dependencias.rubricas.cantidad > 0) {
+    resumen.push(`${dependencias.rubricas.cantidad} rúbricas`);
+  }
+  
+  if (dependencias.calificaciones && dependencias.calificaciones.cantidad > 0) {
+    resumen.push(`${dependencias.calificaciones.cantidad} calificaciones`);
+  }
+  
+  if (dependencias.informes && dependencias.informes.cantidad > 0) {
+    resumen.push(`${dependencias.informes.cantidad} informes`);
+  }
+  
+  if (dependencias.borradores && dependencias.borradores.cantidad > 0) {
+    resumen.push(`${dependencias.borradores.cantidad} borradores`);
+  }
+  
+  if (resumen.length === 0) {
+    return "El docente no tiene ninguna dependencia y puede eliminarse sin problemas.";
+  }
+  
+  return `El docente tiene: ${resumen.join(", ")}`;
+};
+
 export default {
   loginDocente,
   verificarCodigo,
@@ -188,5 +290,8 @@ export default {
   deleteDocente,
   validateEmail,
   validateCodigo,
-  verificarCodigoExistente
+  verificarCodigoExistente,
+  // Nuevas funciones:
+  verificarDependenciasDocente,
+  obtenerResumenDependenciasDocente
 };

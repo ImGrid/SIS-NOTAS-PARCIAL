@@ -18,7 +18,7 @@ function determinaBaseUrl() {
     return 'http://localhost:4000';
   } 
   else {
-    return `http://${currentHost}:5000`;
+    return `http://${currentHost}:4000`;
   }
 }
 

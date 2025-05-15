@@ -26,6 +26,7 @@ import SupervisorInformes from './components/Supervisor/pages/supInformes';
 import CrearDocenteAdmin from './components/Docentes/pages/crearDocenteSup';
 import ListarDocentesAdmin from './components/Docentes/pages/listarDocenteSup';
 import SupervisorEstadisticas from './components/Supervisor/pages/supEstadisticas';
+import EditarDocente from './components/Docentes/pages/editarDocenteSup';
 
 function App() {
   return (
@@ -180,6 +181,14 @@ function App() {
           element={
             <AdminProtectedRoute>
               <CrearDocenteAdmin />
+            </AdminProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/adm/personal/editar/:id" 
+          element={
+            <AdminProtectedRoute>
+              <EditarDocente />
             </AdminProtectedRoute>
           } 
         />

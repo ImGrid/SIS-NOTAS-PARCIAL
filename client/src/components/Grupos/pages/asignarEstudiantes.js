@@ -314,149 +314,152 @@ function AsignarEstudiantes() {
               <h1>Asignar Estudiantes al Grupo</h1>
             </div>
             
-            {grupo && (
-              <div className="grupo-info">
-                <h2>{grupo.nombre_proyecto}</h2>
-                <p><strong>Carrera:</strong> {grupo.carrera}</p>
-                <p><strong>Semestre:</strong> {grupo.semestre}</p>
-                <p><strong>Materia:</strong> {grupo.materia}</p>
-              </div>
-            )}
-            
-            <div className="estudiantes-container">
-              <div className="estudiantes-disponibles-container">
-                <h3>Estudiantes Disponibles ({filteredDisponibles.length})</h3>
-                
-                <div className="filtro-container">
-                  <div className="search-box">
-                    <input
-                      type="text"
-                      placeholder="Buscar estudiante..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="search-input"
-                    />
+            {/* Nuevo div contenedor interno para agregar el padding lateral */}
+            <div className="contenido-interno">
+              {grupo && (
+                <div className="grupo-info">
+                  <h2>{grupo.nombre_proyecto}</h2>
+                  <p><strong>Carrera:</strong> {grupo.carrera}</p>
+                  <p><strong>Semestre:</strong> {grupo.semestre}</p>
+                  <p><strong>Materia:</strong> {grupo.materia}</p>
+                </div>
+              )}
+              
+              <div className="estudiantes-container">
+                <div className="estudiantes-disponibles-container">
+                  <h3>Estudiantes Disponibles ({filteredDisponibles.length})</h3>
+                  
+                  <div className="filtro-container">
+                    <div className="search-box">
+                      <input
+                        type="text"
+                        placeholder="Buscar estudiante..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-input"
+                      />
+                    </div>
+                    <div className="sort-buttons">
+                      <button 
+                        className={`sort-button ${sortConfig.key === 'nombre' ? 'active-' + sortConfig.direction : ''}`}
+                        onClick={() => requestSort('nombre')}
+                      >
+                        Ordenar por Nombre
+                        {sortConfig.key === 'nombre' && (
+                          <span className="sort-icon">
+                            {sortConfig.direction === 'ascending' ? ' ↑' : ' ↓'}
+                          </span>
+                        )}
+                      </button>
+                      <button 
+                        className={`sort-button ${sortConfig.key === 'codigo' ? 'active-' + sortConfig.direction : ''}`}
+                        onClick={() => requestSort('codigo')}
+                      >
+                        Ordenar por Código
+                        {sortConfig.key === 'codigo' && (
+                          <span className="sort-icon">
+                            {sortConfig.direction === 'ascending' ? ' ↑' : ' ↓'}
+                          </span>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <div className="sort-buttons">
-                    <button 
-                      className={`sort-button ${sortConfig.key === 'nombre' ? 'active-' + sortConfig.direction : ''}`}
-                      onClick={() => requestSort('nombre')}
-                    >
-                      Ordenar por Nombre
-                      {sortConfig.key === 'nombre' && (
-                        <span className="sort-icon">
-                          {sortConfig.direction === 'ascending' ? ' ↑' : ' ↓'}
-                        </span>
-                      )}
-                    </button>
-                    <button 
-                      className={`sort-button ${sortConfig.key === 'codigo' ? 'active-' + sortConfig.direction : ''}`}
-                      onClick={() => requestSort('codigo')}
-                    >
-                      Ordenar por Código
-                      {sortConfig.key === 'codigo' && (
-                        <span className="sort-icon">
-                          {sortConfig.direction === 'ascending' ? ' ↑' : ' ↓'}
-                        </span>
-                      )}
-                    </button>
+                  
+                  <div className="estudiantes-list">
+                    <table className="estudiantes-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '50px' }}>#</th>
+                          <th>Código</th>
+                          <th>Nombre Completo</th>
+                          <th>Semestre</th>
+                          <th>Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedDisponibles.map((estudiante, index) => (
+                          <tr
+                            key={`disponible-${estudiante.id}`}
+                            className="estudiante-item disponible"
+                            onClick={() => handleClickEstudianteDisponible(estudiante)}
+                          >
+                            <td className="numero-fila">{index + 1}</td>
+                            <td>{estudiante.codigo}</td>
+                            <td>{`${estudiante.nombre} ${estudiante.apellido}`}</td>
+                            <td>{estudiante.semestre}</td>
+                            <td>
+                              <span className="estado-disponible">Disponible</span>
+                            </td>
+                          </tr>
+                        ))}
+                        
+                        {/* Mostrar estudiantes con grupo pero separados y no clickeables */}
+                        {sortedOcupados.map((estudiante, index) => (
+                          <tr
+                            key={`ocupado-${estudiante.id}`}
+                            className="estudiante-item ocupado"
+                          >
+                            <td className="numero-fila">{sortedDisponibles.length + index + 1}</td>
+                            <td>{estudiante.codigo}</td>
+                            <td>{`${estudiante.nombre} ${estudiante.apellido}`}</td>
+                            <td>{estudiante.semestre}</td>
+                            <td>
+                              <span className="estado-ocupado">Asignado a otro grupo</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
                 
-                <div className="estudiantes-list">
-                  <table className="estudiantes-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '50px' }}>#</th>
-                        <th>Código</th>
-                        <th>Nombre Completo</th>
-                        <th>Semestre</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedDisponibles.map((estudiante, index) => (
-                        <tr
-                          key={`disponible-${estudiante.id}`}
-                          className="estudiante-item disponible"
-                          onClick={() => handleClickEstudianteDisponible(estudiante)}
+                <div className="estudiantes-seleccionados-container">
+                  <h3>Estudiantes en este Grupo ({estudiantesSeleccionados.length}/5)</h3>
+                  <div className="estudiantes-selected-list">
+                    {estudiantesSeleccionados.length === 0 ? (
+                      <div className="empty-seleccionados">
+                        <p>Haz clic en los estudiantes disponibles para asignarlos al grupo</p>
+                      </div>
+                    ) : (
+                      estudiantesSeleccionados.map((estudiante, index) => (
+                        <div
+                          key={`seleccionado-${estudiante.id}`}
+                          className="estudiante-selected-item"
                         >
-                          <td className="numero-fila">{index + 1}</td>
-                          <td>{estudiante.codigo}</td>
-                          <td>{`${estudiante.nombre} ${estudiante.apellido}`}</td>
-                          <td>{estudiante.semestre}</td>
-                          <td>
-                            <span className="estado-disponible">Disponible</span>
-                          </td>
-                        </tr>
-                      ))}
-                      
-                      {/* Mostrar estudiantes con grupo pero separados y no clickeables */}
-                      {sortedOcupados.map((estudiante, index) => (
-                        <tr
-                          key={`ocupado-${estudiante.id}`}
-                          className="estudiante-item ocupado"
-                        >
-                          <td className="numero-fila">{sortedDisponibles.length + index + 1}</td>
-                          <td>{estudiante.codigo}</td>
-                          <td>{`${estudiante.nombre} ${estudiante.apellido}`}</td>
-                          <td>{estudiante.semestre}</td>
-                          <td>
-                            <span className="estado-ocupado">Asignado a otro grupo</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          <div className="estudiante-info">
+                            <span className="estudiante-numero">{index + 1}</span>
+                            <span className="estudiante-codigo">{estudiante.codigo}</span>
+                            <span className="estudiante-nombre">
+                              {`${estudiante.nombre} ${estudiante.apellido}`}
+                            </span>
+                          </div>
+                          <button
+                            className="btn-eliminar-estudiante"
+                            onClick={() => handleRemoveEstudiante(estudiante)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
               
-              <div className="estudiantes-seleccionados-container">
-                <h3>Estudiantes en este Grupo ({estudiantesSeleccionados.length}/5)</h3>
-                <div className="estudiantes-selected-list">
-                  {estudiantesSeleccionados.length === 0 ? (
-                    <div className="empty-seleccionados">
-                      <p>Haz clic en los estudiantes disponibles para asignarlos al grupo</p>
-                    </div>
-                  ) : (
-                    estudiantesSeleccionados.map((estudiante, index) => (
-                      <div
-                        key={`seleccionado-${estudiante.id}`}
-                        className="estudiante-selected-item"
-                      >
-                        <div className="estudiante-info">
-                          <span className="estudiante-numero">{index + 1}</span>
-                          <span className="estudiante-codigo">{estudiante.codigo}</span>
-                          <span className="estudiante-nombre">
-                            {`${estudiante.nombre} ${estudiante.apellido}`}
-                          </span>
-                        </div>
-                        <button
-                          className="btn-eliminar-estudiante"
-                          onClick={() => handleRemoveEstudiante(estudiante)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
+              <div className="form-actions">
+                <button
+                  className="btn-cancelar"
+                  onClick={handleCancel}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="btn-guardar"
+                  onClick={handleFinish}
+                >
+                  Finalizar Asignación
+                </button>
               </div>
-            </div>
-            
-            <div className="form-actions">
-              <button
-                className="btn-cancelar"
-                onClick={handleCancel}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn-guardar"
-                onClick={handleFinish}
-              >
-                Finalizar Asignación
-              </button>
             </div>
           </div>
         </div>
