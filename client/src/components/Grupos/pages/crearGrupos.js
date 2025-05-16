@@ -35,7 +35,7 @@ function CrearGrupos() {
   // Mapa de carreras disponibles
   const CARRERAS = [
     { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
-    { value: 'Ingeniería de Sistemas Electronicos', label: 'Sistemas Electronicos' },
+    { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
     { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
     { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
     { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
