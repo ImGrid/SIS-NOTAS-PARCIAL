@@ -63,7 +63,7 @@ const SupervisorInformes = () => {
         // 1. Configurar catálogos de materias
         const catalogoCompleto = {
           'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
+          'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
           'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
           'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
           'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,

@@ -29,12 +29,35 @@ function ListarEstudiantes() {
   // Opciones para los filtros
   const carreras = [
     'Ingeniería de Sistemas',
-    'Sistemas Electronicos'
+    'Ingeniería de Sistemas Electronicos',
+    'Ingeniería Agroindustrial',
+    'Ciencias Básicas',
+    'Ingeniería Comercial',
+    'Ingeniería Civil'
   ];
   
-  const semestres = [
-    '3', '4', '5', '6', '7', '8', '9', '10'
-  ];
+  // Obtener semestres disponibles según la carrera
+  const getSemestresDisponibles = (carrera) => {
+    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Ciencias Básicas') {
+      return [
+        { value: '1', label: '1º Semestre' },
+        { value: '2', label: '2º Semestre' }
+      ];
+    }
+    
+    // Para el resto de carreras (3ro a 10mo)
+    return [
+      { value: '3', label: '3º Semestre' },
+      { value: '4', label: '4º Semestre' },
+      { value: '5', label: '5º Semestre' },
+      { value: '6', label: '6º Semestre' },
+      { value: '7', label: '7º Semestre' },
+      { value: '8', label: '8º Semestre' },
+      { value: '9', label: '9º Semestre' },
+      { value: '10', label: '10º Semestre' }
+    ];
+  };
 
   // Cargar estudiantes al iniciar
   useEffect(() => {
@@ -119,6 +142,8 @@ function ListarEstudiantes() {
   // Manejar cambio en filtro de carrera
   const handleCarreraChange = (e) => {
     setCarreraSeleccionada(e.target.value);
+    // Resetear el semestre seleccionado cuando se cambia la carrera
+    setSemestreSeleccionado('');
   };
 
   // Manejar cambio en filtro de semestre
@@ -276,6 +301,13 @@ function ListarEstudiantes() {
     );
   };
 
+  // Obtener semestres disponibles para filtro según carrera seleccionada
+  const semestresDisponibles = carreraSeleccionada 
+    ? getSemestresDisponibles(carreraSeleccionada)
+    : [...getSemestresDisponibles('Ingeniería de Sistemas'), ...getSemestresDisponibles('Ciencias Básicas')].filter((v, i, a) => 
+        a.findIndex(t => t.value === v.value) === i
+      );
+
   return (
     <Layout>
       <div className="estudiante-list-styles" style={{width: '100%'}}>
@@ -316,9 +348,9 @@ function ListarEstudiantes() {
                     onChange={handleSemestreChange}
                   >
                     <option value="">Todos los semestres</option>
-                    {semestres.map((semestre, index) => (
-                      <option key={index} value={semestre}>
-                        {semestre}º Semestre
+                    {semestresDisponibles.map((semestre) => (
+                      <option key={semestre.value} value={semestre.value}>
+                        {semestre.label}
                       </option>
                     ))}
                   </select>

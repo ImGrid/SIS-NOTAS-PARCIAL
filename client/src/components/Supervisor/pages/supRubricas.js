@@ -60,7 +60,7 @@ const SupervisorRubricas = () => {
         // Asegurar que el nombre de carrera coincida exactamente con el de la base de datos (sin tilde)
         const catalogoCompleto = {
           'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN, // Sin tilde, según datos de DB
+          'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN, // Sin tilde, según datos de DB
           'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
           'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
           'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
