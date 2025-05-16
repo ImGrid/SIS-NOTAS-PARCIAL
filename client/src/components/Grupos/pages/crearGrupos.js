@@ -70,7 +70,7 @@ function CrearGrupos() {
     switch (carrera) {
       case 'Ingeniería de Sistemas':
         return MATERIAS_POR_SEMESTRE;
-      case 'Sistemas Electronicos':
+      case 'Ingeniería de Sistemas Electronicos':
         return MATERIAS_POR_SEMESTRE_ETN;
       case 'Ingeniería Agroindustrial':
         return MATERIAS_POR_SEMESTRE_AGRO;
