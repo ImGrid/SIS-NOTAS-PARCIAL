@@ -13,7 +13,7 @@ function determinaBaseUrl() {
     return process.env.REACT_APP_API_URL;
   }
   const currentHost = window.location.hostname;
-  //http://ip_publica cambiar en produccion
+  //cambiar en produccion por la ip publica localhost=ip_publica o dominio
   if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
     return 'http://localhost:4000';
   } 

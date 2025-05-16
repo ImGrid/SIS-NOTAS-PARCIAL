@@ -7,8 +7,12 @@ import { getGrupoPorId, updateGrupo } from '../../../service/grupoService';
 import { getEstudiantesByGrupoId, desasignarEstudianteDeGrupo, asignarEstudianteAGrupo } from '../../../service/estudianteService';
 import informeService from '../../../service/informeService';
 import borradorService from '../../../service/borradorService';
-import MATERIAS_POR_SEMESTRE from '../../../util/materias';
-import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias_etn';
+import MATERIAS_POR_SEMESTRE from '../../../util/materias/materias_sis';
+import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias/materias_etn';
+import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
+import MATERIAS_POR_SEMESTRE_BASICAS from '../../../util/materias/materias_basic';
+import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
+import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -61,6 +65,59 @@ function EditarGrupos() {
   
   const formRef = useRef(null);
 
+  // Mapa de carreras disponibles
+  const CARRERAS = [
+    { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
+    { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
+    { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
+    { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
+    { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
+    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
+  ];
+
+  // Función para obtener semestres disponibles según la carrera
+  const getSemestresDisponibles = (carrera) => {
+    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Ciencias Básicas') {
+      return [
+        { value: '1', label: 'Primer Semestre' },
+        { value: '2', label: 'Segundo Semestre' }
+      ];
+    }
+    
+    // Para el resto de carreras (3ro a 10mo)
+    return [
+      { value: '3', label: 'Tercer Semestre' },
+      { value: '4', label: 'Cuarto Semestre' },
+      { value: '5', label: 'Quinto Semestre' },
+      { value: '6', label: 'Sexto Semestre' },
+      { value: '7', label: 'Séptimo Semestre' },
+      { value: '8', label: 'Octavo Semestre' },
+      { value: '9', label: 'Noveno Semestre' },
+      { value: '10', label: 'Décimo Semestre' }
+    ];
+  };
+
+  // Función para obtener el objeto de materias según la carrera
+  const getMateriasCarrera = (carrera) => {
+    switch (carrera) {
+      case 'Ingeniería de Sistemas':
+        return MATERIAS_POR_SEMESTRE;
+      case 'Ingeniería de Sistemas Electronicos':
+        return MATERIAS_POR_SEMESTRE_ETN;
+      case 'Ingeniería Agroindustrial':
+        return MATERIAS_POR_SEMESTRE_AGRO;
+      case 'Ciencias Básicas':
+        return MATERIAS_POR_SEMESTRE_BASICAS;
+      case 'Ingeniería Comercial':
+        return MATERIAS_POR_SEMESTRE_COM;
+      case 'Ingeniería Civil':
+        return MATERIAS_POR_SEMESTRE_CIVIL;
+      default:
+        return {};
+    }
+  };
+
   // Cargamos los datos del grupo cuando el componente se monta
   useEffect(() => {
     const fetchGrupo = async () => {
@@ -86,10 +143,7 @@ function EditarGrupos() {
         
         // Cargar las materias correspondientes a la carrera y semestre
         if (data.semestre && data.carrera) {
-          const materiasCarrera = data.carrera === 'Ingeniería de Sistemas' 
-            ? MATERIAS_POR_SEMESTRE 
-            : MATERIAS_POR_SEMESTRE_ETN;
-          
+          const materiasCarrera = getMateriasCarrera(data.carrera);
           setMaterias(materiasCarrera[data.semestre] || []);
         }
         
@@ -120,10 +174,8 @@ function EditarGrupos() {
   // Actualizar la lista de materias cuando cambia el semestre o la carrera
   useEffect(() => {
     if (formData.semestre && formData.carrera) {
-      // Seleccionar el objeto de materias según la carrera
-      const materiasCarrera = formData.carrera === 'Ingeniería de Sistemas' 
-        ? MATERIAS_POR_SEMESTRE 
-        : MATERIAS_POR_SEMESTRE_ETN;
+      // Obtener el objeto de materias según la carrera
+      const materiasCarrera = getMateriasCarrera(formData.carrera);
       
       const nuevasMaterias = materiasCarrera[formData.semestre] || [];
       setMaterias(nuevasMaterias);
@@ -296,7 +348,9 @@ function EditarGrupos() {
       // Aplicar el cambio pendiente
       setFormData(prev => ({
         ...prev,
-        [pendingChange.name]: pendingChange.value
+        [pendingChange.name]: pendingChange.value,
+        // Si cambiamos la carrera, resetear también el semestre y la materia
+        ...(pendingChange.name === 'carrera' ? { semestre: '', materia: '' } : {})
       }));
       
       // Limpiar cambio pendiente
@@ -411,6 +465,9 @@ function EditarGrupos() {
       </Layout>
     );
   }
+
+  // Obtener los semestres disponibles según la carrera seleccionada
+  const semestresDisponibles = getSemestresDisponibles(formData.carrera);
 
   return (
     <Layout>
@@ -545,8 +602,11 @@ function EditarGrupos() {
                 required
               >
                 <option value="">Seleccione una carrera</option>
-                <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                <option value="Ingeniería de Sistemas Electronicos">Ingeniería de Sistemas Electronicos</option>
+                {CARRERAS.map((carrera, index) => (
+                  <option key={index} value={carrera.value}>
+                    {carrera.label}
+                  </option>
+                ))}
               </select>
               {formData.carrera !== originalData.carrera && (
                 <p className="warning-text">Atención: Cambiar la carrera desasignará a todos los estudiantes.</p>
@@ -567,14 +627,11 @@ function EditarGrupos() {
                 disabled={!formData.carrera}
               >
                 <option value="">Seleccione un semestre</option>
-                <option value="3">Tercer Semestre</option>
-                <option value="4">Cuarto Semestre</option>
-                <option value="5">Quinto Semestre</option>
-                <option value="6">Sexto Semestre</option>
-                <option value="7">Séptimo Semestre</option>
-                <option value="8">Octavo Semestre</option>
-                <option value="9">Noveno Semestre</option>
-                <option value="10">Décimo Semestre</option>
+                {semestresDisponibles.map((semestre, index) => (
+                  <option key={index} value={semestre.value}>
+                    {semestre.label}
+                  </option>
+                ))}
               </select>
               {!formData.carrera && (
                 <p className="help-text">Seleccione primero una carrera.</p>

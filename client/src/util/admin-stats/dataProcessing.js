@@ -15,8 +15,12 @@ import { getInformesPorGrupoId } from '../../service/informeService';
 import { getRubricaPorId } from '../../service/rubricaService';
 
 // Importar catálogos de materias
-import MATERIAS_POR_SEMESTRE from '../materias';
-import MATERIAS_POR_SEMESTRE_ETN from '../materias_etn';
+import MATERIAS_POR_SEMESTRE from '../../util/materias/materias_sis';
+import MATERIAS_POR_SEMESTRE_ETN from '../../util/materias/materias_etn';
+import MATERIAS_POR_SEMESTRE_AGRO from '../../util/materias/materias_agro';
+import MATERIAS_POR_SEMESTRE_BASICAS from '../../util/materias/materias_basic';
+import MATERIAS_POR_SEMESTRE_COM from '../../util/materias/materias_com';
+import MATERIAS_POR_SEMESTRE_CIVIL from '../../util/materias/materias_cvil';
 
 // Importar constantes
 import { ESTADOS } from './constants';
@@ -37,7 +41,11 @@ export const cargarDatosCompletos = async () => {
     // 2. Configurar catálogo completo de materias
     const catalogoMaterias = {
       'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-      'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN
+      'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
+      'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
+      'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
+      'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
+      'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
     };
     
     // 3. Cargar datos de evaluación para cada grupo

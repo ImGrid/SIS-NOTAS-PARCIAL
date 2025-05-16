@@ -569,19 +569,51 @@ async function desactivarHabilitacion(req, res) {
       return res.status(400).json({ error: 'ID de habilitación es requerido' });
     }
     
+    console.log(`[PRODUCCION] Intentando desactivar habilitación: ${habilitacionId}`);
+    
+    // Primero verificar si la habilitación existe y está activa
+    const verificacion = await pool.query(
+      'SELECT * FROM habilitaciones_rubricas WHERE id = $1',
+      [habilitacionId]
+    );
+    
+    if (verificacion.rows.length === 0) {
+      console.log(`[PRODUCCION] Habilitación no encontrada: ${habilitacionId}`);
+      return res.status(404).json({ error: 'Habilitación no encontrada' });
+    }
+    
+    const habilitacion = verificacion.rows[0];
+    
+    if (!habilitacion.activa) {
+      console.log(`[PRODUCCION] Habilitación ${habilitacionId} ya está desactivada`);
+      return res.status(400).json({ error: 'Esta habilitación ya está desactivada' });
+    }
+    
+    // Ahora intentar la desactivación
     const resultado = await supervisorModel.desactivarHabilitacion(habilitacionId);
     
     if (!resultado) {
-      return res.status(404).json({ error: 'Habilitación no encontrada o ya desactivada' });
+      console.log(`[PRODUCCION] Fallo al desactivar, resultado nulo`);
+      return res.status(500).json({ error: 'Error al procesar la desactivación' });
     }
+    
+    console.log(`[PRODUCCION] Habilitación desactivada exitosamente: ${habilitacionId}`);
     
     res.json({
       message: 'Habilitación desactivada con éxito',
       habilitacion: resultado
     });
   } catch (error) {
-    console.error('Error al desactivar habilitación:', error);
-    res.status(500).json({ error: 'Error al desactivar habilitación' });
+    console.error('[PRODUCCION] Error completo al desactivar:', {
+      mensaje: error.message,
+      codigo: error.code,
+      stack: error.stack,
+      params: req.params
+    });
+    res.status(500).json({ 
+      error: 'Error al desactivar habilitación',
+      detalle: error.message
+    });
   }
 }
 

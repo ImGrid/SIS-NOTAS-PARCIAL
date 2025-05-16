@@ -11,8 +11,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import '../style/supRubrica.css';
 
 // Importar catálogos de materias
-import MATERIAS_POR_SEMESTRE from '../../../util/materias';
-import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias_etn';
+import MATERIAS_POR_SEMESTRE from '../../../util/materias/materias_sis';
+import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias/materias_etn';
+import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
+import MATERIAS_POR_SEMESTRE_BASICAS from '../../../util/materias/materias_basic';
+import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
+import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
 
 const SupervisorRubricas = () => {
   // Estados para los catálogos
@@ -56,7 +60,11 @@ const SupervisorRubricas = () => {
         // Asegurar que el nombre de carrera coincida exactamente con el de la base de datos (sin tilde)
         const catalogoCompleto = {
           'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN // Sin tilde, según datos de DB
+          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN, // Sin tilde, según datos de DB
+          'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
+          'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
+          'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
+          'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
         };
         setCatalogoMaterias(catalogoCompleto);
         

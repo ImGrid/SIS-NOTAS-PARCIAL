@@ -4,8 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/crearGrupos.css';
 import { createGrupo } from '../../../service/grupoService';
-import MATERIAS_POR_SEMESTRE from '../../../util/materias';
-import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias_etn';
+import MATERIAS_POR_SEMESTRE from '../../../util/materias/materias_sis';
+import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias/materias_etn';
+import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
+import MATERIAS_POR_SEMESTRE_BASICAS from '../../../util/materias/materias_basic';
+import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
+import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -28,15 +32,68 @@ function CrearGrupos() {
     materia: false
   });
 
+  // Mapa de carreras disponibles
+  const CARRERAS = [
+    { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
+    { value: 'Sistemas Electronicos', label: 'Sistemas Electronicos' },
+    { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
+    { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
+    { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
+    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
+  ];
+
+  // Función para obtener semestres disponibles según la carrera
+  const getSemestresDisponibles = (carrera) => {
+    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Ciencias Básicas') {
+      return [
+        { value: '1', label: 'Primer Semestre' },
+        { value: '2', label: 'Segundo Semestre' }
+      ];
+    }
+    
+    // Para el resto de carreras (3ro a 10mo)
+    return [
+      { value: '3', label: 'Tercer Semestre' },
+      { value: '4', label: 'Cuarto Semestre' },
+      { value: '5', label: 'Quinto Semestre' },
+      { value: '6', label: 'Sexto Semestre' },
+      { value: '7', label: 'Séptimo Semestre' },
+      { value: '8', label: 'Octavo Semestre' },
+      { value: '9', label: 'Noveno Semestre' },
+      { value: '10', label: 'Décimo Semestre' }
+    ];
+  };
+
+  // Función para obtener el objeto de materias según la carrera
+  const getMateriasCarrera = (carrera) => {
+    switch (carrera) {
+      case 'Ingeniería de Sistemas':
+        return MATERIAS_POR_SEMESTRE;
+      case 'Sistemas Electronicos':
+        return MATERIAS_POR_SEMESTRE_ETN;
+      case 'Ingeniería Agroindustrial':
+        return MATERIAS_POR_SEMESTRE_AGRO;
+      case 'Ciencias Básicas':
+        return MATERIAS_POR_SEMESTRE_BASICAS;
+      case 'Ingeniería Comercial':
+        return MATERIAS_POR_SEMESTRE_COM;
+      case 'Ingeniería Civil':
+        return MATERIAS_POR_SEMESTRE_CIVIL;
+      default:
+        return {};
+    }
+  };
+
   // Actualizar la lista de materias cuando cambia el semestre o la carrera
   useEffect(() => {
     if (formData.semestre && formData.carrera) {
-      // Seleccionar el objeto de materias según la carrera
-      const materiasCarrera = formData.carrera === 'Ingeniería de Sistemas' 
-        ? MATERIAS_POR_SEMESTRE 
-        : MATERIAS_POR_SEMESTRE_ETN;
+      // Obtener el objeto de materias según la carrera
+      const materiasCarrera = getMateriasCarrera(formData.carrera);
       
-      setMaterias(materiasCarrera[formData.semestre] || []);
+      // Verificar si existen materias para ese semestre
+      const materiasDelSemestre = materiasCarrera[formData.semestre] || [];
+      setMaterias(materiasDelSemestre);
       
       // Resetear la materia seleccionada al cambiar semestre o carrera
       setFormData(prevData => ({
@@ -60,10 +117,21 @@ function CrearGrupos() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    
+    // Si cambia la carrera, resetear también el semestre
+    if (name === 'carrera') {
+      setFormData({
+        ...formData,
+        [name]: value,
+        semestre: '',
+        materia: ''
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -117,6 +185,9 @@ function CrearGrupos() {
     return '';
   };
 
+  // Obtener los semestres disponibles según la carrera seleccionada
+  const semestresDisponibles = getSemestresDisponibles(formData.carrera);
+
   return (
     <Layout>
       <ToastContainer position="top-right" autoClose={3000} />
@@ -149,8 +220,11 @@ function CrearGrupos() {
                 required
               >
                 <option value="">Seleccione una carrera</option>
-                <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                <option value="Sistemas Electronicos">Sistemas Electronicos</option>
+                {CARRERAS.map((carrera, index) => (
+                  <option key={index} value={carrera.value}>
+                    {carrera.label}
+                  </option>
+                ))}
               </select>
             </div>
             
@@ -165,14 +239,11 @@ function CrearGrupos() {
                 disabled={!formData.carrera}
               >
                 <option value="">Seleccione un semestre</option>
-                <option value="3">Tercer Semestre</option>
-                <option value="4">Cuarto Semestre</option>
-                <option value="5">Quinto Semestre</option>
-                <option value="6">Sexto Semestre</option>
-                <option value="7">Séptimo Semestre</option>
-                <option value="8">Octavo Semestre</option>
-                <option value="9">Noveno Semestre</option>
-                <option value="10">Décimo Semestre</option>
+                {semestresDisponibles.map((semestre, index) => (
+                  <option key={index} value={semestre.value}>
+                    {semestre.label}
+                  </option>
+                ))}
               </select>
               {!formData.carrera && (
                 <p className="help-text">Seleccione primero una carrera.</p>

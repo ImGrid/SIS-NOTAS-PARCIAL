@@ -30,6 +30,39 @@ function CrearEstudiante() {
     unidad_educativa: true // Inicialmente verdadero ya que tiene valor predeterminado
   });
 
+  // Lista de carreras disponibles
+  const CARRERAS = [
+    { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
+    { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
+    { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
+    { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
+    { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
+    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
+  ];
+
+  // Obtener semestres disponibles según la carrera
+  const getSemestresDisponibles = (carrera) => {
+    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Ciencias Básicas') {
+      return [
+        { value: '1', label: 'Primer Semestre' },
+        { value: '2', label: 'Segundo Semestre' }
+      ];
+    }
+    
+    // Para el resto de carreras (3ro a 10mo)
+    return [
+      { value: '3', label: 'Tercer Semestre' },
+      { value: '4', label: 'Cuarto Semestre' },
+      { value: '5', label: 'Quinto Semestre' },
+      { value: '6', label: 'Sexto Semestre' },
+      { value: '7', label: 'Séptimo Semestre' },
+      { value: '8', label: 'Octavo Semestre' },
+      { value: '9', label: 'Noveno Semestre' },
+      { value: '10', label: 'Décimo Semestre' }
+    ];
+  };
+
   // Efecto para verificar si todos los campos requeridos están llenos
   useEffect(() => {
     const { nombre, apellido, codigo, carrera, semestre, unidad_educativa } = formData;
@@ -46,10 +79,26 @@ function CrearEstudiante() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    
+    if (name === 'carrera') {
+      // Si cambia la carrera, resetear el semestre
+      setFormData({
+        ...formData,
+        [name]: value,
+        semestre: '' // Resetear semestre cuando cambia la carrera
+      });
+    } else if (name === 'codigo') {
+      // Convertir el código a mayúsculas automáticamente
+      setFormData({
+        ...formData,
+        [name]: value.toUpperCase()
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -69,8 +118,10 @@ function CrearEstudiante() {
       }
       
       // Usamos api directamente para tener más control
+      // Aseguramos que el código siempre se envíe en mayúsculas
       const response = await api.post('/api/estudiantes/create', {
         ...formData,
+        codigo: formData.codigo.toUpperCase(), // Garantizar que siempre sea mayúsculas
         grupo_id: null // El estudiante se crea sin grupo
       });
       
@@ -126,6 +177,9 @@ function CrearEstudiante() {
     }
     return '';
   };
+
+  // Obtener los semestres disponibles según la carrera seleccionada
+  const semestresDisponibles = getSemestresDisponibles(formData.carrera);
 
   return (
     <div className="docentes-container">
@@ -186,6 +240,7 @@ function CrearEstudiante() {
                   onChange={handleChange}
                   required
                   placeholder="Ingrese el código único del estudiante"
+                  style={{textTransform: 'uppercase'}}
                 />
               </div>
               
@@ -199,8 +254,11 @@ function CrearEstudiante() {
                   required
                 >
                   <option value="">Seleccione una carrera</option>
-                  <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                  <option value="Ingeniería de Sistemas Electronicos">Ingeniería de Sistemas Electronicos</option>
+                  {CARRERAS.map((carrera, index) => (
+                    <option key={index} value={carrera.value}>
+                      {carrera.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -212,17 +270,18 @@ function CrearEstudiante() {
                   value={formData.semestre}
                   onChange={handleChange}
                   required
+                  disabled={!formData.carrera}
                 >
                   <option value="">Seleccione un semestre</option>
-                  <option value="3">Tercer Semestre</option>
-                  <option value="4">Cuarto Semestre</option>
-                  <option value="5">Quinto Semestre</option>
-                  <option value="6">Sexto Semestre</option>
-                  <option value="7">Séptimo Semestre</option>
-                  <option value="8">Octavo Semestre</option>
-                  <option value="9">Noveno Semestre</option>
-                  <option value="10">Décimo Semestre</option>
+                  {semestresDisponibles.map((semestre, index) => (
+                    <option key={index} value={semestre.value}>
+                      {semestre.label}
+                    </option>
+                  ))}
                 </select>
+                {!formData.carrera && (
+                  <p className="help-text">Seleccione primero una carrera.</p>
+                )}
               </div>
               
               <div className={`form-group ${getFieldClass('unidad_educativa')}`}>

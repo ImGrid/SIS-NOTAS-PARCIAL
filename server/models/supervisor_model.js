@@ -266,6 +266,8 @@ async function obtenerHistorialHabilitaciones(grupoId) {
  */
 async function desactivarHabilitacion(habilitacionId) {
   try {
+    console.log(`[PRODUCCION] Ejecutando SQL para desactivar: ${habilitacionId}`);
+    
     const query = `
       UPDATE habilitaciones_rubricas 
       SET 
@@ -276,9 +278,16 @@ async function desactivarHabilitacion(habilitacionId) {
     `;
     
     const result = await pool.query(query, [habilitacionId]);
+    
+    console.log(`[PRODUCCION] Filas afectadas: ${result.rowCount}`);
+    
     return result.rows[0];
   } catch (error) {
-    console.error("Error en desactivarHabilitacion:", error);
+    console.error(`[PRODUCCION] Error en SQL:`, {
+      mensaje: error.message,
+      codigo: error.code,
+      habilitacionId
+    });
     throw error;
   }
 }

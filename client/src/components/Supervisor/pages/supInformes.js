@@ -18,8 +18,12 @@ import { formatearNota, formatearFecha, obtenerFechaActual } from '../../../util
 import { generarInformeNotasPDF } from '../../../util/pdf/informesNotasPdf';
 
 // Importar catálogos de materias
-import MATERIAS_POR_SEMESTRE from '../../../util/materias';
-import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias_etn';
+import MATERIAS_POR_SEMESTRE from '../../../util/materias/materias_sis';
+import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias/materias_etn';
+import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
+import MATERIAS_POR_SEMESTRE_BASICAS from '../../../util/materias/materias_basic';
+import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
+import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
 
 const SupervisorInformes = () => {
   // Estados para almacenar datos cargados
@@ -59,7 +63,11 @@ const SupervisorInformes = () => {
         // 1. Configurar catálogos de materias
         const catalogoCompleto = {
           'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN
+          'Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
+          'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
+          'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
+          'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
+          'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
         };
         setCatalogoMaterias(catalogoCompleto);
         
