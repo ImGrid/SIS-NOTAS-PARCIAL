@@ -46,6 +46,39 @@ function EditarEstudiante() {
     carrera: false,
     semestre: false
   });
+
+  // Lista de carreras disponibles
+  const CARRERAS = [
+    { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
+    { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
+    { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
+    { value: 'Materias Básicas', label: 'Materias Básicas' },
+    { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
+    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
+  ];
+
+  // Obtener semestres disponibles según la carrera
+  const getSemestresDisponibles = (carrera) => {
+    // Caso especial para Materias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Materias Básicas') {
+      return [
+        { value: '1', label: 'Primer Semestre' },
+        { value: '2', label: 'Segundo Semestre' }
+      ];
+    }
+    
+    // Para el resto de carreras (3ro a 10mo)
+    return [
+      { value: '3', label: 'Tercer Semestre' },
+      { value: '4', label: 'Cuarto Semestre' },
+      { value: '5', label: 'Quinto Semestre' },
+      { value: '6', label: 'Sexto Semestre' },
+      { value: '7', label: 'Séptimo Semestre' },
+      { value: '8', label: 'Octavo Semestre' },
+      { value: '9', label: 'Noveno Semestre' },
+      { value: '10', label: 'Décimo Semestre' }
+    ];
+  };
   
   // Cargar datos del estudiante
   useEffect(() => {
@@ -111,12 +144,29 @@ function EditarEstudiante() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    
+    if (name === 'carrera') {
+      // Si cambia la carrera, resetear el semestre
+      setFormData({
+        ...formData,
+        [name]: value,
+        semestre: '' // Resetear semestre cuando cambia la carrera
+      });
+    } else if (name === 'codigo') {
+      // Convertir el código a mayúsculas automáticamente
+      setFormData({
+        ...formData,
+        [name]: value.toUpperCase()
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
+  // CORRECCIÓN: Función mejorada para manejar el envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -133,11 +183,16 @@ function EditarEstudiante() {
       
       // Determinar si necesitamos confirmación para cambios críticos
       const hayCambiosCriticos = cambiosCriticos.carrera || cambiosCriticos.semestre;
-      const confirmarLimpieza = requiereConfirmacion;
       
       try {
-        // Intentar actualizar el estudiante
-        const resultado = await updateEstudiante(id, formData, confirmarLimpieza);
+        // Preparar datos a enviar
+        const datosActualizados = {
+          ...formData,
+          codigo: formData.codigo.toUpperCase()
+        };
+        
+        // IMPORTANTE: Enviar el parámetro de confirmación si ya se ha solicitado confirmación
+        const resultado = await updateEstudiante(id, datosActualizados, requiereConfirmacion);
         
         // Notificación de éxito
         toast.success('Estudiante actualizado exitosamente');
@@ -155,23 +210,41 @@ function EditarEstudiante() {
         }, 3000);
         
       } catch (error) {
-        // Si se requiere confirmación, mostrarla
+        console.error("Error completo:", error);
+        
+        // CORRECCIÓN: Mejorado el manejo del error 409 y la confirmación
         if (error.requiereConfirmacion) {
-          setDependencias(error.dependencias);
+          // Guardar las dependencias y activar el modo de confirmación
+          setDependencias(error.dependencias || {});
           setRequiereConfirmacion(true);
-          toast.warning(error.mensaje, { autoClose: 8000 });
-        } else {
-          // Otros errores
-          if (error.response && error.response.data && error.response.data.error) {
-            toast.error(error.response.data.error);
-          } else {
-            toast.error('Error al actualizar el estudiante');
+          
+          // Mostrar mensaje de advertencia
+          const mensaje = error.mensaje || 'Esta acción eliminará datos relacionados. ¿Desea continuar?';
+          toast.warning(mensaje, { autoClose: 8000 });
+        } else if (error.response && error.response.data) {
+          // Error de API con respuesta
+          const errorMsg = error.response.data.error || 'Error en la actualización';
+          toast.error(errorMsg);
+          
+          // Si es error 409 pero no se procesó correctamente
+          if (error.response.status === 409) {
+            // Intentamos recuperar la información manualmente
+            try {
+              setDependencias(error.response.data.dependencias || {});
+              setRequiereConfirmacion(true);
+              toast.warning(error.response.data.mensaje || 'Se requiere confirmación para continuar', { autoClose: 8000 });
+            } catch (innerError) {
+              console.error("Error al procesar confirmación:", innerError);
+            }
           }
+        } else {
+          // Error genérico
+          toast.error(error.message || 'Error al actualizar el estudiante');
         }
       }
       
     } catch (err) {
-      console.error("Error al actualizar el estudiante:", err);
+      console.error("Error general al actualizar el estudiante:", err);
       toast.error("Error al actualizar el estudiante");
     } finally {
       setSaving(false);
@@ -193,6 +266,9 @@ function EditarEstudiante() {
   
   // Determina si hay cambios críticos de carrera o semestre
   const hayCambiosCriticos = cambiosCriticos.carrera || cambiosCriticos.semestre;
+  
+  // Obtener los semestres disponibles según la carrera seleccionada
+  const semestresDisponibles = getSemestresDisponibles(formData.carrera);
 
   return (
     <Layout>
@@ -216,19 +292,32 @@ function EditarEstudiante() {
             <div className="loading-indicator">Cargando datos del estudiante...</div>
           ) : (
             <>
-              {/* Alerta de dependencias si aplica */}
-              {tieneDependencias && hayCambiosCriticos && (
-                <div className="alerta-dependencias">
-                  <h3>⚠️ Cambios con Impacto</h3>
-                  <p>Este estudiante tiene datos asociados que se verán afectados si cambia la carrera o semestre:</p>
-                  <p className="dependencias-detalle">{obtenerResumenDependencias(dependencias)}</p>
-                  <p className="advertencia-fuerte">
-                    {requiereConfirmacion
-                      ? "Al guardar estos cambios, se eliminarán todas las asignaciones, calificaciones e informes asociados."
-                      : "Si modifica la carrera o semestre, se le pedirá confirmación adicional."}
-                  </p>
+              {/* CORRECCIÓN: Alerta de dependencias mejorada */}
+              {(tieneDependencias && hayCambiosCriticos) || requiereConfirmacion ? (
+                <div className={`alerta-dependencias ${requiereConfirmacion ? 'confirmacion-activa' : ''}`}>
+                  <h3>⚠️ {requiereConfirmacion ? 'Confirmación Requerida' : 'Cambios con Impacto'}</h3>
+                  
+                  {requiereConfirmacion ? (
+                    <>
+                      <p className="advertencia-fuerte">
+                        ATENCIÓN: Si continúa, se eliminarán todos estos elementos asociados al estudiante:
+                      </p>
+                      <p className="dependencias-detalle">{obtenerResumenDependencias(dependencias)}</p>
+                      <p className="advertencia-final">
+                        Esta acción no se puede deshacer. Pulse "Confirmar Cambios" si está seguro.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Este estudiante tiene datos asociados que se verán afectados si cambia la carrera o semestre:</p>
+                      <p className="dependencias-detalle">{obtenerResumenDependencias(dependencias)}</p>
+                      <p className="advertencia-media">
+                        Si modifica la carrera o semestre, se le pedirá confirmación adicional.
+                      </p>
+                    </>
+                  )}
                 </div>
-              )}
+              ): null}
             
               <form className="editar-estudiante-form" onSubmit={handleSubmit}>
                 <div className={`form-group ${getFieldClass('nombre')}`}>
@@ -267,7 +356,9 @@ function EditarEstudiante() {
                     onChange={handleChange}
                     required
                     placeholder="Ingrese el código único del estudiante"
+                    style={{textTransform: 'uppercase'}}
                   />
+                  <p className="help-text">El código se convertirá automáticamente a mayúsculas.</p>
                 </div>
                 
                 <div className={`form-group ${getFieldClass('carrera')} ${cambiosCriticos.carrera ? 'cambio-critico' : ''}`}>
@@ -283,8 +374,11 @@ function EditarEstudiante() {
                     required
                   >
                     <option value="">Seleccione una carrera</option>
-                    <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                    <option value="Sistemas Electronicos">Sistemas Electronicos</option>
+                    {CARRERAS.map((carrera, index) => (
+                      <option key={index} value={carrera.value}>
+                        {carrera.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -299,17 +393,18 @@ function EditarEstudiante() {
                     value={formData.semestre}
                     onChange={handleChange}
                     required
+                    disabled={!formData.carrera}
                   >
                     <option value="">Seleccione un semestre</option>
-                    <option value="3">Tercer Semestre</option>
-                    <option value="4">Cuarto Semestre</option>
-                    <option value="5">Quinto Semestre</option>
-                    <option value="6">Sexto Semestre</option>
-                    <option value="7">Séptimo Semestre</option>
-                    <option value="8">Octavo Semestre</option>
-                    <option value="9">Noveno Semestre</option>
-                    <option value="10">Décimo Semestre</option>
+                    {semestresDisponibles.map((semestre, index) => (
+                      <option key={index} value={semestre.value}>
+                        {semestre.label}
+                      </option>
+                    ))}
                   </select>
+                  {!formData.carrera && (
+                    <p className="help-text">Seleccione primero una carrera.</p>
+                  )}
                 </div>
                 
                 <div className={`form-group ${getFieldClass('unidad_educativa')}`}>
@@ -333,14 +428,28 @@ function EditarEstudiante() {
                   >
                     Cancelar
                   </button>
+                  
+                  {/* CORRECCIÓN: Botón claramente diferenciado cuando se requiere confirmación */}
                   <button 
                     type="submit" 
                     className={`btn-editar-guardar ${saving ? 'loading' : ''} ${requiereConfirmacion ? 'confirmar' : ''}`}
                     disabled={saving || Object.values(validFields).some(valid => !valid)}
                   >
-                    {saving ? 'Guardando...' : requiereConfirmacion ? 'Confirmar Cambios' : 'Guardar Cambios'}
+                    {saving ? 'Guardando...' : requiereConfirmacion 
+                      ? '⚠️ Confirmar Eliminación de Datos ⚠️' 
+                      : 'Guardar Cambios'
+                    }
                   </button>
                 </div>
+                
+                {/* CORRECCIÓN: Explicación adicional cuando se requiere confirmación */}
+                {requiereConfirmacion && (
+                  <div className="confirmacion-explicacion">
+                    <p>Al hacer clic en el botón de confirmación, acepta que se eliminarán todos los informes, 
+                    rúbricas, calificaciones y asignaciones actuales del estudiante. Esta acción es necesaria 
+                    porque los datos académicos están vinculados a la carrera y semestre actual.</p>
+                  </div>
+                )}
               </form>
             </>
           )}
