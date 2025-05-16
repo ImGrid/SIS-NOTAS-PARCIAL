@@ -52,15 +52,15 @@ function EditarEstudiante() {
     { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
     { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
     { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
-    { value: 'Materias Básicas', label: 'Materias Básicas' },
+    { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
     { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
     { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
   ];
 
   // Obtener semestres disponibles según la carrera
   const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Materias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Materias Básicas') {
+    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Ciencias Básicas') {
       return [
         { value: '1', label: 'Primer Semestre' },
         { value: '2', label: 'Segundo Semestre' }
@@ -181,71 +181,56 @@ function EditarEstudiante() {
         return;
       }
       
-      // Determinar si necesitamos confirmación para cambios críticos
-      const hayCambiosCriticos = cambiosCriticos.carrera || cambiosCriticos.semestre;
+      // Preparar datos a enviar
+      const datosActualizados = {
+        ...formData,
+        codigo: formData.codigo.toUpperCase()
+      };
       
-      try {
-        // Preparar datos a enviar
-        const datosActualizados = {
-          ...formData,
-          codigo: formData.codigo.toUpperCase()
-        };
-        
-        // IMPORTANTE: Enviar el parámetro de confirmación si ya se ha solicitado confirmación
-        const resultado = await updateEstudiante(id, datosActualizados, requiereConfirmacion);
-        
-        // Notificación de éxito
-        toast.success('Estudiante actualizado exitosamente');
-        
-        // Si se eliminaron dependencias, mostrar mensaje adicional
-        if (resultado.dependenciasEliminadas) {
-          setTimeout(() => {
-            toast.info(resultado.mensaje, { autoClose: 8000 });
-          }, 1000);
-        }
-        
-        // Volver a la lista después de un breve retraso
+      // IMPORTANTE: Enviar el parámetro de confirmación si ya se ha solicitado confirmación
+      const resultado = await updateEstudiante(id, datosActualizados, requiereConfirmacion);
+      
+      // Notificación de éxito
+      toast.success('Estudiante actualizado exitosamente');
+      
+      // Si se eliminaron dependencias, mostrar mensaje adicional
+      if (resultado.dependenciasEliminadas) {
         setTimeout(() => {
-          navigate('/estudiantes/listar');
-        }, 3000);
-        
-      } catch (error) {
-        console.error("Error completo:", error);
-        
-        // CORRECCIÓN: Mejorado el manejo del error 409 y la confirmación
-        if (error.requiereConfirmacion) {
-          // Guardar las dependencias y activar el modo de confirmación
-          setDependencias(error.dependencias || {});
-          setRequiereConfirmacion(true);
-          
-          // Mostrar mensaje de advertencia
-          const mensaje = error.mensaje || 'Esta acción eliminará datos relacionados. ¿Desea continuar?';
-          toast.warning(mensaje, { autoClose: 8000 });
-        } else if (error.response && error.response.data) {
-          // Error de API con respuesta
-          const errorMsg = error.response.data.error || 'Error en la actualización';
-          toast.error(errorMsg);
-          
-          // Si es error 409 pero no se procesó correctamente
-          if (error.response.status === 409) {
-            // Intentamos recuperar la información manualmente
-            try {
-              setDependencias(error.response.data.dependencias || {});
-              setRequiereConfirmacion(true);
-              toast.warning(error.response.data.mensaje || 'Se requiere confirmación para continuar', { autoClose: 8000 });
-            } catch (innerError) {
-              console.error("Error al procesar confirmación:", innerError);
-            }
-          }
-        } else {
-          // Error genérico
-          toast.error(error.message || 'Error al actualizar el estudiante');
-        }
+          toast.info(resultado.mensaje, { autoClose: 8000 });
+        }, 1000);
       }
       
-    } catch (err) {
-      console.error("Error general al actualizar el estudiante:", err);
-      toast.error("Error al actualizar el estudiante");
+      // Volver a la lista después de un breve retraso
+      setTimeout(() => {
+        navigate('/estudiantes/listar');
+      }, 3000);
+      
+    } catch (error) {
+      console.error("Error completo:", error);
+      
+      // Verificamos si el error es un 409 directamente
+      if (error.response && error.response.status === 409) {
+        // Si es un 409, siempre activamos el modo de confirmación
+        setRequiereConfirmacion(true);
+        setDependencias(error.response.data.dependencias || {});
+        
+        // Mostrar mensaje de advertencia
+        toast.warning(error.response.data.mensaje || 
+          'Esta acción eliminará datos relacionados. ¿Confirmar?', 
+          { autoClose: 8000 });
+      } 
+      // Verificamos si el error tiene la propiedad requiereConfirmacion
+      else if (error.requiereConfirmacion) {
+        setRequiereConfirmacion(true);
+        setDependencias(error.dependencias || {});
+        toast.warning(error.mensaje || 
+          'Esta acción eliminará datos relacionados. ¿Confirmar?', 
+          { autoClose: 8000 });
+      }
+      else {
+        // Cualquier otro error
+        toast.error(error.message || 'Error al actualizar el estudiante');
+      }
     } finally {
       setSaving(false);
     }

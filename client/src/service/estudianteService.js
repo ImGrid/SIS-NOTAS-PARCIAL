@@ -90,13 +90,7 @@ export const createEstudiante = async (estudianteData) => {
 };
 
 // Función para actualizar un estudiante existente con validación
-// Función para actualizar un estudiante existente con validación
 export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = false) => {
-  // Declarar variables para cambios críticos fuera del try-catch para que 
-  // estén disponibles en todo el ámbito de la función
-  let cambioSemestreLocal = false;
-  let cambioCarreraLocal = false;
-  
   try {
     validateId(id);
     
@@ -111,12 +105,12 @@ export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = f
     
     // Obtener el estudiante actual para detectar cambios críticos
     const estudianteActual = await getEstudianteById(id);
-    cambioSemestreLocal = estudianteData.semestre && estudianteData.semestre.toString() !== estudianteActual.semestre.toString();
-    cambioCarreraLocal = estudianteData.carrera && estudianteData.carrera !== estudianteActual.carrera;
+    const cambioSemestre = estudianteData.semestre && estudianteData.semestre.toString() !== estudianteActual.semestre.toString();
+    const cambioCarrera = estudianteData.carrera && estudianteData.carrera !== estudianteActual.carrera;
     
     // Si hay cambios críticos, añadir parámetro de confirmación
     let url = `/api/estudiantes/update/${id}`;
-    if ((cambioSemestreLocal || cambioCarreraLocal) && confirmarLimpieza) {
+    if ((cambioSemestre || cambioCarrera) && confirmarLimpieza) {
       url += `?confirmar_limpieza=true`;
     }
     
@@ -129,29 +123,15 @@ export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = f
   } catch (error) {
     console.error('Error en updateEstudiante:', error);
     
-    // CORRECCIÓN: Mejorado el manejo del error 409
+    // Manejo mejorado del error 409
     if (error.response && error.response.status === 409) {
-      // Crear un objeto de error mejorado que preserve la estructura original
-      const errorMejorado = new Error(error.response.data.error || 'Error de conflicto');
+      // En lugar de crear un nuevo objeto de error, simplemente 
+      // añadimos propiedades al objeto existente y lo relanzamos
+      error.requiereConfirmacion = true;
+      error.dependencias = error.response.data.dependencias;
+      error.mensaje = error.response.data.mensaje;
       
-      // Añadir propiedades importantes que necesita el componente
-      errorMejorado.requiereConfirmacion = true;
-      errorMejorado.dependencias = error.response.data.dependencias;
-      errorMejorado.mensaje = error.response.data.mensaje;
-      errorMejorado.status = 409;
-      
-      // Preservar la respuesta original completa
-      errorMejorado.response = error.response;
-      
-      // Añadir información adicional sobre los cambios críticos
-      // Ahora usamos las variables locales que sí están en este scope
-      errorMejorado.cambiosCriticos = {
-        carrera: cambioCarreraLocal,
-        semestre: cambioSemestreLocal
-      };
-      
-      // Lanzar el error mejorado
-      throw errorMejorado;
+      throw error; // Relanzar el mismo objeto de error modificado
     }
     
     throw error;
