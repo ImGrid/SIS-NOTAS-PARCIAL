@@ -2,12 +2,7 @@
 
 import { 
   CHART_COLORS, 
-  CHART_CONFIGS, 
-  MESSAGES, 
   THRESHOLDS, 
-  CATEGORIAS,
-  FORMATS,
-  ESTADOS
 } from './constants';
 
 /**

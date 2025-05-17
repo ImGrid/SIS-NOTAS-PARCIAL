@@ -8,7 +8,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { 
-  getEstudiantesBySemestre, 
   asignarEstudianteAGrupo,      
   desasignarEstudianteDeGrupo,  
   getEstudiantesByGrupoId,
@@ -25,7 +24,6 @@ function AsignarEstudiantes() {
   
   // Estados para almacenar datos
   const [grupo, setGrupo] = useState(null);
-  const [estudiantes, setEstudiantes] = useState([]);
   const [estudiantesDisponibles, setEstudiantesDisponibles] = useState([]);
   const [estudiantesSeleccionados, setEstudiantesSeleccionados] = useState([]);
   const [estudiantesOriginales, setEstudiantesOriginales] = useState([]); // Guarda los estudiantes originalmente asignados

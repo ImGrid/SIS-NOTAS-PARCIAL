@@ -1,5 +1,3 @@
-// src/util/export/formatService.js
-import { ESTRUCTURA_RUBRICA } from '../calculo';
 
 /**
  * Convierte un valor de calificación textual a su equivalente numérico

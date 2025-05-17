@@ -1,7 +1,7 @@
 // utils/pdf/informesNotasPdf.js (Corrección Final)
 import html2pdf from 'html2pdf.js';
 import { estilosPDF, aplicarEstilos, configurarAnchoColumnas } from './pdfStyles';
-import { formatearFecha, obtenerFechaActual, formatearNota, calcularPorcentajeAprobacion } from '../helpers/formatHelper';
+import { obtenerFechaActual } from '../helpers/formatHelper';
 
 /**
  * Genera un PDF con el informe de notas

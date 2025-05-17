@@ -338,14 +338,8 @@ const generarArchivoExcel = async (datosExcel, nombreArchivo) => {
       fgColor: { argb: 'FFE699' } // Amarillo claro
     };
     
-    // Encabezados de secciones (Fila 4)
-    const filaSeccion = filas[3]; // Índice 3 corresponde a la fila 4
     const totalColumnas = datosFormateados.datos[0].length;
-    
-    // Combinar celdas para cada sección
-    let seccionActual = '';
-    let inicioSeccion = 0;
-    let finSeccion = 0;
+
     const seccionesInfo = {};
     
     // Identificar secciones primero
