@@ -27,7 +27,7 @@ class AuthenticationService {
 
     this.secretKey = secretKey;
     this.defaultTokenOptions = {
-      expiresIn: '1h', // Default expiration
+      expiresIn: '2h', // Default expiration
       algorithm: 'HS256', // Recommended secure algorithm
       ...tokenOptions
     };

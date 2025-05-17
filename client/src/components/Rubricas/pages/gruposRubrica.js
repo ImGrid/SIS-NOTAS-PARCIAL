@@ -6,6 +6,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import OrientationDetector from '../../OrientationDetector';
 import supRubricaService from '../../../service/supRubricaService';
+import WarningModal from './Advertencia';
 
 import { getGrupoPorId } from '../../../service/grupoService';
 import { getEstudiantesByGrupoId } from '../../../service/estudianteService';
@@ -174,6 +175,9 @@ function GruposRubrica() {
   const [isPortrait, setIsPortrait] = useState(false);
   // Estado para mostrar indicador de orientación
   const [showOrientationIndicator, setShowOrientationIndicator] = useState(false);
+  
+  // Nuevo estado para el modal de advertencia
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -526,6 +530,7 @@ function GruposRubrica() {
     return errores.length === 0;
   };
 
+  // Función modificada para usar el modal personalizado
   const guardarEvaluacion = async (finalizar = false) => {
     if (finalizar) {
       if (!validarCalificaciones()) {
@@ -533,16 +538,9 @@ function GruposRubrica() {
         return;
       }
       
-      // Mostrar advertencia clara sobre la finalización
-      const confirmarFinalizacion = window.confirm(
-        'ADVERTENCIA: Una vez finalizada la evaluación, NO PODRÁ MODIFICARLA posteriormente. ' +
-        '¿Está seguro que desea finalizar y guardar permanentemente esta evaluación?'
-      );
-      
-      if (!confirmarFinalizacion) {
-        toast.info('Operación cancelada. Puede seguir editando la evaluación.');
-        return;
-      }
+      // Mostrar el modal de advertencia en lugar de window.confirm
+      setWarningModalOpen(true);
+      return; // Detener la ejecución aquí, el resto se manejará en confirmFinalizacion
     }
     
     try {
@@ -561,6 +559,53 @@ function GruposRubrica() {
       if (!docenteId) {
         toast.error('No se pudo obtener la información del docente');
         setGuardando(false);
+        return;
+      }
+      
+      // Usar la función remota en lugar de local
+      const guardadoExitoso = await guardarBorradorRemoto(grupoId, calificaciones, observaciones, progresoEvaluacion);
+      
+      if (guardadoExitoso) {
+        toast.success('Borrador guardado correctamente');
+      } else {
+        toast.error('Error al guardar el borrador');
+      }
+      
+      setGuardando(false);
+    } catch (error) {
+      console.error('Error al guardar evaluación:', error);
+      let mensajeError = 'Error al guardar la evaluación';
+      
+      if (error.message) {
+        mensajeError = error.message;
+      } else if (error.response && error.response.data && error.response.data.error) {
+        mensajeError = error.response.data.error;
+      }
+      
+      toast.error(mensajeError);
+      setGuardando(false);
+    }
+  };
+
+  // Nueva función para manejar la confirmación de finalización
+  const confirmFinalizacion = async () => {
+    try {
+      setGuardando(true);      
+      let docenteId;
+      const usuarioString = sessionStorage.getItem('usuario');
+      if (usuarioString) {
+        try {
+          const usuario = JSON.parse(usuarioString);
+          docenteId = usuario.id;
+        } catch (error) {
+          console.error('Error al obtener datos del usuario:', error);
+        }
+      }
+      
+      if (!docenteId) {
+        toast.error('No se pudo obtener la información del docente');
+        setGuardando(false);
+        setWarningModalOpen(false);
         return;
       }
       
@@ -588,19 +633,6 @@ function GruposRubrica() {
       
       const asignatura = grupo?.materia || 'Proyecto';
       
-      if (!finalizar) {
-        // Usar la función remota en lugar de local
-        const guardadoExitoso = await guardarBorradorRemoto(grupoId, calificaciones, observaciones, progresoEvaluacion);
-        
-        if (guardadoExitoso) {
-          toast.success('Borrador guardado correctamente');
-        } else {
-          toast.error('Error al guardar el borrador');
-        }
-        
-        setGuardando(false);
-        return;
-      }
       const resultado = await evaluarGrupo(
         grupoId,
         docenteId,
@@ -613,7 +645,7 @@ function GruposRubrica() {
         throw new Error('No se recibió respuesta del servidor al evaluar el grupo');
       }
       await guardarBorradorRemoto(grupoId, calificaciones, observaciones, 100);
-      if (finalizar && habilitadoPorSupervisor) {
+      if (habilitadoPorSupervisor) {
         try {
           // Obtener los detalles del grupo para encontrar el ID de la habilitación
           const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupoId);
@@ -636,6 +668,7 @@ function GruposRubrica() {
         }
       } // 100% completado
       setGuardando(false);
+      setWarningModalOpen(false);
       
       if (modoEdicion) {
         toast.success('Evaluación actualizada correctamente. Recuerde que no podrá modificarla nuevamente.');
@@ -658,7 +691,14 @@ function GruposRubrica() {
       
       toast.error(mensajeError);
       setGuardando(false);
+      setWarningModalOpen(false);
     }
+  };
+
+  // Nueva función para manejar la cancelación de finalización
+  const cancelFinalizacion = () => {
+    setWarningModalOpen(false);
+    toast.info('Operación cancelada. Puede seguir editando la evaluación.');
   };
 
   // Componente para mostrar el indicador de giro de dispositivo
@@ -958,6 +998,17 @@ function GruposRubrica() {
             </p>
           </div>
         </div>
+
+        {/* Modal de advertencia para finalizar evaluación */}
+        <WarningModal
+          isOpen={warningModalOpen}
+          title="Finalizar Evaluación"
+          message="ADVERTENCIA: Una vez finalizada la evaluación, NO PODRÁ MODIFICARLA posteriormente. ¿Está seguro que desea finalizar y guardar permanentemente esta evaluación?"
+          confirmText="Finalizar"
+          cancelText="Cancelar"
+          onConfirm={confirmFinalizacion}
+          onCancel={cancelFinalizacion}
+        />
       </main>
     </div>
   );

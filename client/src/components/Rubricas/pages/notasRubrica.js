@@ -33,6 +33,9 @@ function NotasRubrica() {
   const [datosEvaluacion, setDatosEvaluacion] = useState([]);
   const [docenteActual, setDocenteActual] = useState(null);
   const [generandoPDF, setGenerandoPDF] = useState(false);
+  // Estados para fecha y comentarios
+  const [fechaEvaluacion, setFechaEvaluacion] = useState('');
+  const [comentariosGrupo, setComentariosGrupo] = useState('');
 
   // Ref para el contenedor del PDF
   const pdfRef = useRef(null);
@@ -60,19 +63,15 @@ function NotasRubrica() {
       try {
         setLoading(true);
 
-        // 1. Cargar información del grupo
         const grupoData = await getGrupoPorId(id);
         setGrupo(grupoData);
 
-        // 2. Cargar estudiantes del grupo
         const estudiantesData = await getEstudiantesByGrupoId(id);
         setEstudiantes(estudiantesData);
 
-        // 3. Cargar informes del grupo
         const informesData = await getInformesPorGrupoId(id);
         setInformes(informesData);
 
-        // 4. Obtener información del docente desde sessionStorage y luego obtener sus datos completos
         const usuarioString = sessionStorage.getItem('usuario');
         if (usuarioString) {
           try {
@@ -90,6 +89,8 @@ function NotasRubrica() {
         const rubricasObj = {};
         const calificacionesObj = {};
         const datosEvaluacionArr = [];
+        let fechaCalificacion = null;
+        let comentarios = '';
 
         for (const informe of informesData) {
           // Buscar estudiante correspondiente
@@ -103,6 +104,10 @@ function NotasRubrica() {
             try {
               rubrica = await getRubricaPorId(informe.rubrica_id);
               rubricasObj[informe.rubrica_id] = rubrica;
+              
+              if (!comentarios && rubrica && rubrica.comentarios) {
+                comentarios = rubrica.comentarios;
+              }
             } catch (error) {
               console.error(`Error al cargar rúbrica ${informe.rubrica_id}:`, error);
             }
@@ -114,6 +119,10 @@ function NotasRubrica() {
             try {
               calificacion = await getCalificacionPorId(informe.calificacion_id);
               calificacionesObj[informe.calificacion_id] = calificacion;
+              
+              if (!fechaCalificacion && calificacion && calificacion.fecha) {
+                fechaCalificacion = calificacion.fecha;
+              }
             } catch (error) {
               console.error(`Error al cargar calificación ${informe.calificacion_id}:`, error);
             }
@@ -127,6 +136,16 @@ function NotasRubrica() {
             calificacion
           });
         }
+
+        if (fechaCalificacion) {
+          const fecha = new Date(fechaCalificacion);
+          const fechaFormateada = `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1).toString().padStart(2, '0')}/${fecha.getFullYear()}`;
+          setFechaEvaluacion(fechaFormateada);
+        } else {
+          setFechaEvaluacion(obtenerFechaActual());
+        }
+
+        setComentariosGrupo(comentarios || '');
 
         setRubricas(rubricasObj);
         setCalificaciones(calificacionesObj);
@@ -142,7 +161,6 @@ function NotasRubrica() {
     cargarDatos();
   }, [id, navigate]);
 
-  // Función para formatear notas con dos decimales
   const formatearNota = (nota) => {
     if (nota === null || nota === undefined) return '-';
     if (typeof nota === 'number') return nota.toFixed(2);
@@ -150,13 +168,11 @@ function NotasRubrica() {
     return nota || '-';
   };
 
-  // Obtener la fecha actual en formato DD/MM/YYYY
   const obtenerFechaActual = () => {
     const fecha = new Date();
     return `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1).toString().padStart(2, '0')}/${fecha.getFullYear()}`;
   };
 
-  // Función para manejar la descarga del PDF
   const handleDescargarPDF = async () => {
     if (!pdfRef.current) {
       toast.error('No se pudo encontrar el contenido para generar el PDF');
@@ -167,14 +183,12 @@ function NotasRubrica() {
       setGenerandoPDF(true);
       toast.info('Generando PDF...', { autoClose: 2000 });
 
-      // Generar nombre de archivo
       const nombreArchivo = generarNombreArchivoPDF(
         'evaluacion-grupal',
         grupo?.nombre_proyecto || '',
-        obtenerFechaActual()
+        fechaEvaluacion // Usamos la fecha de evaluación obtenida de las calificaciones
       );
 
-      // Configuración personalizada para el PDF
       const opciones = {
         margin: [15, 15, 20, 15],
         filename: `${nombreArchivo}.pdf`,
@@ -195,7 +209,6 @@ function NotasRubrica() {
         }
       };
 
-      // Generar el PDF
       const exito = await generarPDFEvaluacion(pdfRef.current, nombreArchivo, opciones);
       
       if (exito) {
@@ -211,6 +224,16 @@ function NotasRubrica() {
     }
   };
 
+  const obtenerPeriodoYGestion = () => {
+    if (datosEvaluacion.length > 0 && datosEvaluacion[0].calificacion) {
+      const calificacion = datosEvaluacion[0].calificacion;
+      const periodo = calificacion.periodo || (new Date().getMonth() < 6 ? 'I' : 'II');
+      const gestion = calificacion.gestion || new Date().getFullYear();
+      return `${periodo}/${gestion}`;
+    }
+    return `${new Date().getMonth() < 6 ? 'I' : 'II'}/${new Date().getFullYear()}`;
+  };
+
   // Renderizado para estado de carga
   if (loading) {
     return (
@@ -220,7 +243,7 @@ function NotasRubrica() {
         <main className="content content-with-sidebar notas-evaluacion">
           <div className="evaluacion-header">
             <h1>EVALUACIÓN GRUPAL</h1>
-            <h2>GESTION - {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+            <h2>GESTION - {obtenerPeriodoYGestion()}</h2>
           </div>
           <div className="evaluacion-container">
             <div className="loading-indicator">Cargando datos de evaluación...</div>
@@ -239,7 +262,7 @@ function NotasRubrica() {
         <main className="content content-with-sidebar notas-evaluacion">
           <div className="evaluacion-header">
             <h1>EVALUACIÓN GRUPAL</h1>
-            <h2>GESTION - {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+            <h2>GESTION - {obtenerPeriodoYGestion()}</h2>
           </div>
           <div className="evaluacion-container">
             <div className="error-message">{error}</div>
@@ -267,7 +290,7 @@ function NotasRubrica() {
         <div ref={pdfRef} className="pdf-container">
           <div className="evaluacion-header">
             <h1>EVALUACIÓN GRUPAL</h1>
-            <h2>GESTION - {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
+            <h2>GESTION - {obtenerPeriodoYGestion()}</h2>
           </div>
 
           <div className="evaluacion-container">
@@ -292,7 +315,7 @@ function NotasRubrica() {
                 </div>
                 <div className="proyecto-info-item">
                   <div className="proyecto-info-label">Fecha de evaluación:</div>
-                  <div className="proyecto-info-value">{obtenerFechaActual()}</div>
+                  <div className="proyecto-info-value">{fechaEvaluacion}</div>
                 </div>
                 <div className="proyecto-info-item">
                   <div className="proyecto-info-label">Docente evaluador:</div>
@@ -346,6 +369,14 @@ function NotasRubrica() {
                 ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Nueva sección para mostrar los comentarios del grupo */}
+            <div className="comentarios-container">
+              <h3>Comentarios generales</h3>
+              <div className="comentarios-content">
+                {comentariosGrupo ? comentariosGrupo : 'Ninguno'}
+              </div>
             </div>
           </div>
         </div>

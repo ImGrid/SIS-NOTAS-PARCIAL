@@ -12,6 +12,7 @@ import informeService from '../../../service/informeService';
 import borradorService from '../../../service/borradorService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import ConfirmationModal from '../pages/Confirmar';
 
 // SVG Icons
 const icons = {
@@ -71,6 +72,10 @@ function GestionGrupos() {
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const gruposPorPagina = 5; // Puedes ajustar este valor según tus necesidades
+
+  // Estados para el modal de confirmación
+  const [modalOpen, setModalOpen] = useState(false);
+  const [grupoToDelete, setGrupoToDelete] = useState(null);
 
   // Función para cargar los grupos
   const cargarGrupos = async () => {
@@ -267,45 +272,59 @@ function GestionGrupos() {
     }
   };
 
-  // Función modificada para eliminar un grupo y todos sus datos relacionados
-  const handleEliminarGrupo = async (grupoId) => {
-    if (window.confirm('¿Está seguro que desea eliminar este grupo? Se eliminarán TODAS las evaluaciones, informes, rúbricas y calificaciones asociadas, y los estudiantes quedarán sin grupo.')) {
-      try {
-        setLoading(true);
-        toast.info('Eliminando grupo y sus datos asociados...');
+  // Función para abrir el modal de confirmación
+  const handleEliminarGrupo = (grupoId) => {
+    setGrupoToDelete(grupoId);
+    setModalOpen(true);
+  };
+
+  // Función para procesar la confirmación de eliminación
+  const confirmDelete = async () => {
+    if (!grupoToDelete) return;
     
-        // Eliminar rúbricas si es necesario - Mantener esto si es una operación separada
-        await informeService.eliminarRubricasGrupo(grupoId);
-        
-        // Eliminar borradores si existen - Mantener esto si es una operación separada
-        try {
-          const docenteId = sessionStorage.getItem('usuario') ? 
-            JSON.parse(sessionStorage.getItem('usuario')).id : null;
-            
-          if (docenteId) {
-            await borradorService.eliminarBorradorPorDocenteYGrupo(docenteId, grupoId);
-          }
-        } catch (error) {
-          // Solo registrar errores graves que no sean "no encontrado"
-          if (!error.message?.includes('no encontrado') && !error.message?.includes('404')) {
-            console.error('Error al eliminar borradores:', error);
-          }
+    try {
+      setLoading(true);
+  
+      // Eliminar rúbricas si es necesario
+      await informeService.eliminarRubricasGrupo(grupoToDelete);
+      
+      // Eliminar borradores si existen
+      try {
+        const docenteId = sessionStorage.getItem('usuario') ? 
+          JSON.parse(sessionStorage.getItem('usuario')).id : null;
+          
+        if (docenteId) {
+          await borradorService.eliminarBorradorPorDocenteYGrupo(docenteId, grupoToDelete);
         }
-        
-        // Eliminar el grupo - Ahora el backend manejará la desasignación de estudiantes automáticamente
-        await deleteGrupo(grupoId);
-        
-        toast.success('Grupo y todos sus datos relacionados eliminados correctamente');
-        
-        // Actualizar la lista de grupos después de eliminar
-        cargarGrupos();
-      } catch (err) {
-        console.error("Error al eliminar el grupo:", err);
-        toast.error("No se pudo eliminar el grupo: " + (err.message || "Error desconocido"));
-      } finally {
-        setLoading(false);
+      } catch (error) {
+        // Solo registrar errores graves que no sean "no encontrado"
+        if (!error.message?.includes('no encontrado') && !error.message?.includes('404')) {
+          console.error('Error al eliminar borradores:', error);
+        }
       }
+      
+      // Eliminar el grupo
+      await deleteGrupo(grupoToDelete);
+      
+      toast.success('Grupo Eliminado');
+      
+      // Actualizar la lista de grupos después de eliminar
+      cargarGrupos();
+    } catch (err) {
+      console.error("Error al eliminar el grupo:", err);
+      toast.error("No se pudo eliminar el grupo: " + (err.message || "Error desconocido"));
+    } finally {
+      setLoading(false);
+      // Cerrar el modal y limpiar el estado
+      setModalOpen(false);
+      setGrupoToDelete(null);
     }
+  };
+
+  // Función para cancelar la eliminación
+  const cancelDelete = () => {
+    setModalOpen(false);
+    setGrupoToDelete(null);
   };
 
   return (
@@ -535,6 +554,18 @@ function GestionGrupos() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmationModal
+        isOpen={modalOpen}
+        title="Eliminar Grupo"
+        message="¿Está seguro que desea eliminar este grupo? Se eliminarán TODAS las evaluaciones, informes, rúbricas y calificaciones asociadas, y los estudiantes quedarán sin grupo."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        type="danger"
+      />
     </Layout>
   );
 }

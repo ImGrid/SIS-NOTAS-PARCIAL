@@ -32,7 +32,6 @@ class ApiError extends Error {
   }
 }
 
-// Create axios instance with enhanced configuration
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
@@ -41,10 +40,8 @@ const api = axios.create({
   },
 });
 
-// Log the base URL for debugging purposes
 console.log('API Base URL:', API_CONFIG.BASE_URL);
 
-// Request interceptor with advanced token management
 api.interceptors.request.use(
   (config) => {
     // Retrieve and validate token
@@ -52,22 +49,17 @@ api.interceptors.request.use(
     
     if (token) {
       try {
-        // Decode token to check expiration
         const decodedToken = jwtDecode(token);
         const currentTime = Date.now() / 1000;
         
-        // Check if token is expired
         if (decodedToken.exp < currentTime) {
-          // Token expired, clear session and redirect to login
           sessionStorage.removeItem('token');
           window.location.href = '/login'; // Adjust redirect path as needed
           return Promise.reject(new ApiError('Token expired', 401));
         }
         
-        // Add token to Authorization header
         config.headers.Authorization = `Bearer ${token}`;
       } catch (error) {
-        // Invalid token format
         sessionStorage.removeItem('token');
         return Promise.reject(new ApiError('Invalid token', 401, error));
       }
@@ -78,29 +70,23 @@ api.interceptors.request.use(
   (error) => Promise.reject(new ApiError('Request setup failed', 500, error))
 );
 
-// Response interceptor for global error handling
 api.interceptors.response.use(
   (response) => response, // Simply return successful responses
   (error) => {
-    // Check if we should silently handle this error
     const config = error.config || {};
     const silentErrors = config.silentErrors || false;
     const silentErrorCodes = config.silentErrorCodes || [];
     
-    // If this is a silent error or a specifically silenced error code, don't log it
     const shouldSilence = silentErrors || 
                          (error.response && silentErrorCodes.includes(error.response.status));
     
-    // Centralized error handling
     if (error.response) {
-      // The request was made and the server responded with a status code
       if (!shouldSilence) {
         switch (error.response.status) {
           case 400:
             console.error('Bad Request:', error.response.data);
             break;
           case 401:
-            // Unauthorized - potentially redirect to login
             window.location.href = '/login';
             break;
           case 403:
@@ -125,13 +111,11 @@ api.interceptors.response.use(
         )
       );
     } else if (error.request) {
-      // The request was made but no response was received
       if (!shouldSilence) {
         console.error('No response received:', error.request);
       }
       return Promise.reject(new ApiError('No server response', 0, error));
     } else {
-      // Something happened in setting up the request
       if (!shouldSilence) {
         console.error('Error setting up request:', error.message);
       }

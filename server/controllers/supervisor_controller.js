@@ -5,7 +5,7 @@ const emailService = require('../utils/email');
 require('dotenv').config();
 const grupoModel = require('../models/grupos_model');
 const authService = createAuthService();
-
+const pool = require('../database/db');
 async function loginSupervisor(req, res) {
   try {
     const { correo_electronico } = req.body;
