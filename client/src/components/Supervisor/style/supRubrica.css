@@ -214,6 +214,7 @@
    ================= */
 .sup-grupos-tabla {
   width: 100%;
+  min-width: 800px; /* Asegura que la tabla tenga un ancho mínimo */
 }
 
 .sup-tabla-header {
@@ -450,6 +451,87 @@
   background-color: #d4af37;
   color: #2c3e50;
   min-width: 140px;
+}
+
+/* =================
+   Sección de estudiantes expandible
+   ================= */
+.sup-estudiantes-seccion {
+  margin-top: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+}
+
+.sup-estudiantes-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.sup-estudiantes-encabezado:hover {
+  background-color: #f1f3f5;
+}
+
+.sup-estudiantes-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.sup-estudiantes-titulo svg {
+  color: #4a5568;
+}
+
+.sup-estudiantes-contenido {
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: white;
+  transition: max-height 0.3s ease;
+}
+
+.sup-estudiantes-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sup-estudiantes-tabla th {
+  background-color: #f8f9fa;
+  color: #4a5568;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sup-estudiantes-tabla td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+.sup-estudiantes-tabla tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.sup-estudiantes-tabla tr:hover {
+  background-color: #edf2f7;
+}
+
+.sup-estudiantes-tabla tr:last-child td {
+  border-bottom: none;
 }
 
 /* Habilitación activa en modal */
@@ -768,10 +850,7 @@
   .sup-filtro-label {
     text-align: center;
   }
-  .sup-grupos-tabla {
-  width: 100%;
-  min-width: 800px; /* Asegura que la tabla tenga un ancho mínimo */
-}
+  
   .sup-btn-limpiar-filtros {
     width: 100%;
     margin-top: 8px;

@@ -4,11 +4,15 @@ import LayoutSup from './LayoutSup';
 import supRubricaService from '../../../service/supRubricaService';
 import { getEstudiantesByGrupoId } from '../../../service/estudianteService';
 import { getInformesPorGrupoId } from '../../../service/informeService';
-import { getGrupos } from '../../../service/grupoService'; // Cambiado a getGrupos para obtener TODOS los grupos
+import { getGrupos } from '../../../service/grupoService'; 
 import { getBorradorPorDocenteYGrupo } from '../../../service/borradorService';
+import { getDocenteById } from '../../../service/docenteService'; // Importamos el servicio de docente
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../style/supRubrica.css';
+
+// Iconos para el detalle de estudiantes
+import { ChevronDown, ChevronUp, Users } from 'react-feather';
 
 // Importar catálogos de materias
 import MATERIAS_POR_SEMESTRE from '../../../util/materias/materias_sis';
@@ -34,6 +38,9 @@ const SupervisorRubricas = () => {
   const [modalDetallesVisible, setModalDetallesVisible] = useState(false);
   const [historialVisible, setHistorialVisible] = useState(false);
   const [historial, setHistorial] = useState([]);
+  
+  // Estado para mostrar/ocultar lista de estudiantes
+  const [mostrarEstudiantes, setMostrarEstudiantes] = useState(false);
   
   // Estados para formularios
   const [motivo, setMotivo] = useState('');
@@ -128,6 +135,17 @@ const SupervisorRubricas = () => {
           // Obtener informes del grupo
           const informes = await getInformesPorGrupoId(grupo.id);
           
+          // NUEVO: Obtener datos del docente si existe docente_id
+          let docente_nombre = "-";
+          if (grupo.docente_id) {
+            try {
+              const docente = await getDocenteById(grupo.docente_id);
+              docente_nombre = docente ? docente.nombre_completo : "-";
+            } catch (errorDocente) {
+              console.error(`Error al obtener docente ${grupo.docente_id}:`, errorDocente);
+            }
+          }
+          
           // Determinar estado del grupo
           let estadoGrupo = determinarEstadoGrupo(estudiantes, informes);
           
@@ -158,6 +176,7 @@ const SupervisorRubricas = () => {
           
           return {
             ...grupo,
+            docente_nombre, // AÑADIR EL NOMBRE DEL DOCENTE AQUÍ
             total_estudiantes: estudiantes.length,
             total_informes: informes.filter((inf, index, self) => 
               index === self.findIndex(i => i.estudiante_id === inf.estudiante_id)
@@ -275,6 +294,7 @@ const SupervisorRubricas = () => {
   const verDetalles = async (grupo) => {
     try {
       setLoading(true);
+      setMostrarEstudiantes(false); // Resetear el estado del desplegable de estudiantes
       
       // Verificar si el grupo tiene rúbricas registradas
       if (grupo.estado === 'sin_rubrica') {
@@ -429,7 +449,7 @@ const SupervisorRubricas = () => {
           </div>
           
           <div className="sup-modal-body">
-            <div className="sup-detalles-info">
+                          <div className="sup-detalles-info">
               <h3>{grupoSeleccionado.nombre_proyecto}</h3>
               <div className="sup-info-row">
                 <span><strong>Carrera:</strong> {grupoSeleccionado.carrera}</span>
@@ -437,19 +457,49 @@ const SupervisorRubricas = () => {
                 <span><strong>Materia:</strong> {grupoSeleccionado.materia || 'No especificada'}</span>
               </div>
               <div className="sup-info-row">
-                <span><strong>Docente:</strong> {grupoSeleccionado.docente_nombre}</span>
-                <span><strong>Estudiantes:</strong> {grupoSeleccionado.total_estudiantes}</span>
+                <span><strong>Docente:</strong> {grupoSeleccionado.docente_nombre || '-'}</span>
                 <span><strong>Informes:</strong> {grupoSeleccionado.total_informes}</span>
-              </div>
-              <div className="sup-info-row">
-                <span>
-                  <strong>Estado:</strong> 
+                <span><strong>Estado:</strong> 
                   <span className={`sup-badge ${getEstadoColor(grupoSeleccionado.estado)}`}>
                     {grupoSeleccionado.texto_estado}
                   </span>
                 </span>
-                {grupoSeleccionado.habilitacion_activa && (
-                  <span className="sup-badge sup-estado-habilitado">Habilitado para edición</span>
+              </div>
+              
+              {/* Sección de estudiantes con diseño expandible */}
+              <div className="sup-estudiantes-seccion">
+                <div 
+                  className="sup-estudiantes-encabezado" 
+                  onClick={() => setMostrarEstudiantes(!mostrarEstudiantes)}
+                >
+                  <div className="sup-estudiantes-titulo">
+                    <Users size={16} />
+                    <span>Estudiantes ({grupoSeleccionado.total_estudiantes})</span>
+                  </div>
+                  {mostrarEstudiantes ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </div>
+                
+                {mostrarEstudiantes && grupoSeleccionado._estudiantes && grupoSeleccionado._estudiantes.length > 0 && (
+                  <div className="sup-estudiantes-contenido">
+                    <table className="sup-estudiantes-tabla">
+                      <thead>
+                        <tr>
+                          <th>Nombre</th>
+                          <th>Apellido</th>
+                          <th>Código</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {grupoSeleccionado._estudiantes.map(estudiante => (
+                          <tr key={estudiante.id}>
+                            <td>{estudiante.nombre}</td>
+                            <td>{estudiante.apellido}</td>
+                            <td>{estudiante.codigo}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
               
@@ -459,6 +509,13 @@ const SupervisorRubricas = () => {
                   <span style={{ color: '#f39c12', fontStyle: 'italic' }}>
                     El docente aún no ha registrado ninguna rúbrica para este grupo.
                   </span>
+                </div>
+              )}
+              
+              {/* Si existe una habilitación activa, mostrar badge */}
+              {grupoSeleccionado.habilitacion_activa && (
+                <div className="sup-info-row">
+                  <span className="sup-badge sup-estado-habilitado">Habilitado para edición</span>
                 </div>
               )}
             </div>
