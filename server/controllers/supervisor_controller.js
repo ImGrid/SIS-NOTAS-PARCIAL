@@ -564,33 +564,41 @@ async function obtenerHistorialHabilitacionesGrupo(req, res) {
 async function desactivarHabilitacion(req, res) {
   try {
     const { habilitacionId } = req.params;
-    // Obtener el ID del usuario autenticado (puede ser docente o supervisor)
-    const usuarioId = req.user?.id;
-    // Verificar si el usuario es un supervisor
+    // Inicialmente definimos supervisor_id como NULL
     let supervisorId = null;
     
-    try {
-      // Solo intentar buscar el supervisor si hay un usuario autenticado
-      if (usuarioId) {
-        const supervisorModel = require('../models/supervisor_model');
-        const supervisor = await supervisorModel.obtenerSupervisorPorId(usuarioId);
-        // Si es un supervisor, usamos su ID
-        if (supervisor) {
-          supervisorId = supervisor.id;
+    // Solo intentamos asignar un ID de supervisor si el usuario es un supervisor
+    if (req.user) {
+      const usuarioId = req.user.id;
+      
+      try {
+        // Verificamos EXPLÍCITAMENTE si el usuario es un supervisor
+        const supervisor = await pool.query(
+          'SELECT id FROM supervisores WHERE id = $1',
+          [usuarioId]
+        );
+        
+        // Solo asignamos el ID si realmente encontramos un supervisor
+        if (supervisor.rows.length > 0) {
+          supervisorId = usuarioId;
+          console.log(`[PRODUCCION] Usuario ${usuarioId} es supervisor, usando su ID`);
+        } else {
+          console.log(`[PRODUCCION] Usuario ${usuarioId} NO es supervisor, usando NULL`);
         }
+      } catch (error) {
+        console.log(`[PRODUCCION] Error al verificar si es supervisor:`, error.message);
+        // Si hay error, garantizamos que no se asigne un ID
+        supervisorId = null;
       }
-    } catch (error) {
-      // Si hay error, asumimos que no es un supervisor
-      console.log(`[PRODUCCION] Usuario ${usuarioId} no es supervisor, error:`, error.message);
     }
     
     if (!habilitacionId) {
       return res.status(400).json({ error: 'ID de habilitación es requerido' });
     }
     
-    console.log(`[PRODUCCION] Intentando desactivar habilitación: ${habilitacionId}`);
+    console.log(`[PRODUCCION] Intentando desactivar habilitación: ${habilitacionId}, supervisor_id: ${supervisorId || 'NULL'}`);
     
-    // Primero verificar si la habilitación existe y está activa
+    // Verificaciones existentes...
     const verificacion = await pool.query(
       'SELECT * FROM habilitaciones_rubricas WHERE id = $1',
       [habilitacionId]
@@ -608,13 +616,27 @@ async function desactivarHabilitacion(req, res) {
       return res.status(400).json({ error: 'Esta habilitación ya está desactivada' });
     }
     
-    // Ahora intentar la desactivación, pasando el ID de supervisor si existe
-    const resultado = await supervisorModel.desactivarHabilitacion(habilitacionId, supervisorId);
+    // Ahora intentar la desactivación con el valor correcto de supervisorId (NULL o un ID válido)
+    const query = `
+      UPDATE habilitaciones_rubricas 
+      SET 
+        activa = false,
+        fecha_desactivacion = NOW(),
+        supervisor_desactivacion_id = $2
+      WHERE id = $1
+      RETURNING *
+    `;
     
-    if (!resultado) {
-      console.log(`[PRODUCCION] Fallo al desactivar, resultado nulo`);
+    console.log(`[PRODUCCION] Ejecutando query con params: [${habilitacionId}, ${supervisorId || 'NULL'}]`);
+    
+    const result = await pool.query(query, [habilitacionId, supervisorId]);
+    
+    if (result.rows.length === 0) {
+      console.log(`[PRODUCCION] Fallo al desactivar, resultado vacío`);
       return res.status(500).json({ error: 'Error al procesar la desactivación' });
     }
+    
+    const resultado = result.rows[0];
     
     console.log(`[PRODUCCION] Habilitación desactivada exitosamente: ${habilitacionId}`);
     
