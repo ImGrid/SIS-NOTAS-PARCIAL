@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginDocente, verificarCodigo, validateEmail, verificarCodigoExistente } from '../service/docenteService';
-import './login.css'; // Importamos los nuevos estilos aislados
+import './login.css'; // Importamos los estilos
 
 const Login = () => {
   const navigate = useNavigate();

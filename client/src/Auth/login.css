@@ -1,9 +1,30 @@
-/* Estilos específicos para login de docentes */
+/* Estilos específicos para login de docentes - Versión mejorada */
+:root {
+  --primary-color: #1e40af;
+  --primary-hover: #1e3a8a;
+  --secondary-color: #3b82f6;
+  --accent-color: #fbbf24;
+  --error-color: #dc2626;
+  --success-color: #059669;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --bg-light: #f3f4f6;
+  --bg-white: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --transition: all 0.3s ease;
+}
+
 .login-docente-container {
   display: flex;
   min-height: 100vh;
   width: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 /* Panel izquierdo - Login */
@@ -12,8 +33,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f3f4f6;
+  background-color: var(--bg-light);
   z-index: 2;
+  position: relative;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
 }
 
 .login-docente-image {
@@ -22,16 +45,47 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efecto de overlay en la imagen para mejor contraste */
+.login-docente-image::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.4), rgba(251, 191, 36, 0.3));
+  z-index: 1;
 }
 
 /* Tarjeta de login */
 .login-docente-card {
-  background-color: #fff;
+  background-color: var(--bg-white);
   padding: 2.5rem;
   width: 100%;
   max-width: 400px;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  transition: var(--transition);
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Línea de color en la parte superior - para todas las vistas */
+.login-docente-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(to right, #1e40af, #3b82f6, var(--accent-color));
 }
 
 .login-docente-card h2 {
@@ -39,13 +93,27 @@
   line-height: 2rem;
   font-weight: 600;
   text-align: center;
-  color: #1e3a8a;
-  margin-bottom: 1.5rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+/* Subrayado decorativo para el título */
+.login-docente-card h2::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 3px;
+  background-color: var(--accent-color);
+  border-radius: 3px;
 }
 
 .login-docente-subtitle {
   text-align: center;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
   font-size: 1rem;
 }
@@ -61,52 +129,63 @@
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 
 .login-docente-form-group input {
   outline: none;
   border: 1px solid #d1d5db;
-  background-color: #fff;
+  background-color: var(--bg-white);
   padding: 0.75rem 1rem;
   font-size: 1rem;
   width: 92%;
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: border-color 0.2s;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
 }
 
 .login-docente-form-group input:focus {
-  border-color: #3b82f6;
+  border-color: var(--secondary-color);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Efecto de foco en el label */
+.login-docente-form-group input:focus + label {
+  color: var(--secondary-color);
 }
 
 .login-docente-form-group small {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 /* Mensajes */
 .login-docente-error-message {
-  color: #dc2626;
+  color: var(--error-color);
   background-color: #fee2e2;
-  border: 1px solid #fca5a5;
+  border-left: 3px solid var(--error-color);
   padding: 0.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   margin-bottom: 1.5rem;
   font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+  animation: slideIn 0.3s ease-out;
 }
 
 .login-docente-success-message {
-  color: #065f46;
+  color: var(--success-color);
   background-color: #d1fae5;
-  border: 1px solid #6ee7b7;
+  border-left: 3px solid var(--success-color);
   padding: 0.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   margin-bottom: 1.5rem;
   font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.1);
+  animation: slideIn 0.3s ease-out;
 }
 
 /* Botones */
@@ -119,48 +198,87 @@
 .login-docente-submit-button {
   display: block;
   padding: 0.75rem 1.25rem;
-  background-color: #1e40af;
-  color: #ffffff;
+  background-color: var(--primary-color);
+  color: var(--bg-white);
   font-size: 0.875rem;
   font-weight: 500;
   width: 100%;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   text-transform: uppercase;
   border: none;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: var(--transition);
+  box-shadow: var(--shadow-md);
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efecto de onda al hacer clic */
+.login-docente-submit-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.login-docente-submit-button:active::after {
+  animation: ripple 0.6s ease-out;
 }
 
 .login-docente-submit-button:hover {
-  background-color: #1e3a8a;
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-docente-submit-button:active {
+  transform: translateY(0);
 }
 
 .login-docente-submit-button:disabled {
   background-color: #93c5fd;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .login-docente-back-button {
   display: block;
   padding: 0.75rem 1.25rem;
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: var(--bg-light);
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: var(--transition);
+  letter-spacing: 0.5px;
 }
 
 .login-docente-back-button:hover {
   background-color: #e5e7eb;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.login-docente-back-button:active {
+  transform: translateY(0);
 }
 
 .login-docente-back-button:disabled {
-  background-color: #f3f4f6;
+  background-color: var(--bg-light);
   color: #9ca3af;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Opciones de código existente */
@@ -174,48 +292,104 @@
 .login-docente-usar-codigo {
   flex: 1;
   padding: 0.75rem 1rem;
-  background-color: #10b981;
-  color: #ffffff;
+  background-color: var(--success-color);
+  color: var(--bg-white);
   border: none;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.3s;
+  transition: var(--transition);
   font-size: 0.875rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-docente-usar-codigo::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.login-docente-usar-codigo:active::after {
+  animation: ripple 0.6s ease-out;
 }
 
 .login-docente-usar-codigo:hover {
-  background-color: #059669;
+  background-color: #047857;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.login-docente-usar-codigo:active {
+  transform: translateY(0);
 }
 
 .login-docente-nuevo-codigo {
   flex: 1;
   padding: 0.75rem 1rem;
-  background-color: #3b82f6;
-  color: #ffffff;
+  background-color: var(--secondary-color);
+  color: var(--bg-white);
   border: none;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.3s;
+  transition: var(--transition);
   font-size: 0.875rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-docente-nuevo-codigo::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.login-docente-nuevo-codigo:active::after {
+  animation: ripple 0.6s ease-out;
 }
 
 .login-docente-nuevo-codigo:hover {
   background-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.login-docente-nuevo-codigo:active {
+  transform: translateY(0);
 }
 
 .login-docente-usar-codigo:disabled,
 .login-docente-nuevo-codigo:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Botón oculto para acceso administrativo */
 .login-docente-admin-button {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 5px;
+  left: 5px;
   width: 30px;
   height: 30px;
   background-color: transparent;
@@ -225,7 +399,7 @@
   opacity: 0;
 }
 
-/* Estilos responsivos */
+/* Estilos responsivos mejorados */
 @media (max-width: 768px) {
   .login-docente-container {
     flex-direction: column;
@@ -234,7 +408,9 @@
   .login-docente-panel {
     width: 100%;
     min-height: 100vh;
-    background-color: rgba(243, 244, 246, 0.9);
+    background-color: transparent;
+    /* Añadimos un gradiente para mejorar la visibilidad del contenido */
+    background-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(30, 64, 175, 0.4));
   }
   
   .login-docente-image {
@@ -243,11 +419,52 @@
     left: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.15;
+    opacity: 0.6; /* Aumentamos la opacidad para que se vea mejor */
+    background-position: top center; /* Ajustamos la posición para mostrar una parte más relevante */
+    filter: contrast(1.1) brightness(0.9); /* Mejoramos el contraste */
   }
   
   .login-docente-card {
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(5px);
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-lg);
+    margin: 2rem 1rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
+  
+  .login-docente-form-group input {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+.login-docente-card {
+  animation: fadeIn 0.5s ease-out;
 }

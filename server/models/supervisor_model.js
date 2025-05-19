@@ -264,7 +264,7 @@ async function obtenerHistorialHabilitaciones(grupoId) {
  * @param {number} supervisorId - ID del supervisor que realiza la acción
  * @returns {Promise<Object>} - Habilitación actualizada
  */
-async function desactivarHabilitacion(habilitacionId) {
+async function desactivarHabilitacion(habilitacionId, supervisorDesactivacionId = null) {
   try {
     console.log(`[PRODUCCION] Ejecutando SQL para desactivar: ${habilitacionId}`);
     
@@ -272,12 +272,13 @@ async function desactivarHabilitacion(habilitacionId) {
       UPDATE habilitaciones_rubricas 
       SET 
         activa = false,
-        fecha_desactivacion = NOW()
+        fecha_desactivacion = NOW(),
+        supervisor_desactivacion_id = $2
       WHERE id = $1
       RETURNING *
     `;
     
-    const result = await pool.query(query, [habilitacionId]);
+    const result = await pool.query(query, [habilitacionId, supervisorDesactivacionId]);
     
     console.log(`[PRODUCCION] Filas afectadas: ${result.rowCount}`);
     

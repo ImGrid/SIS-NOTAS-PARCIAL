@@ -90,9 +90,9 @@ export const obtenerHistorialHabilitaciones = async (grupoId) => {
 };
 
 /**
- * Desactiva una habilitación existente
+ * Desactiva una habilitación específica
  * @param {number|string} habilitacionId - ID de la habilitación
- * @returns {Promise<Object>} - Resultado de la desactivación
+ * @returns {Promise<Object>} - Habilitación actualizada
  */
 export const desactivarHabilitacion = async (habilitacionId) => {
   try {
@@ -100,14 +100,22 @@ export const desactivarHabilitacion = async (habilitacionId) => {
       throw new Error('ID de habilitación es requerido');
     }
     
+    console.log(`[Frontend] Solicitando desactivación de habilitación: ${habilitacionId}`);
+    
     const response = await api.put(`/api/supervisores/rubricas/desactivar/${habilitacionId}`);
+    
     return response.data;
   } catch (error) {
+    // Manejar específicamente errores conocidos
+    if (error.response && error.response.data && error.response.data.error) {
+      console.error(`Error al desactivar habilitación ${habilitacionId}:`, error.response.data.error);
+      throw new Error(error.response.data.error);
+    }
+    
     console.error(`Error al desactivar habilitación ${habilitacionId}:`, error);
     throw error;
   }
 };
-
 /**
  * Verifica si un grupo puede ser habilitado
  * Esta función no hace una llamada API, solo valida según la lógica del frontend

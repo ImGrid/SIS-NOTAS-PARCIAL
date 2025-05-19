@@ -73,17 +73,6 @@
   padding-bottom: 0.75rem;
 }
 
-.asignar-estudiantes-styles .grupo-info h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 80px;
-  height: 3px;
-  background-color: #e6c350;
-  border-radius: 3px;
-}
-
 .asignar-estudiantes-styles .grupo-info p {
   margin: 0.5rem 0;
   font-size: 0.95rem;

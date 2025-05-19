@@ -7,7 +7,7 @@ import {
   validateEmail,
   verificarCodigoExistente
 } from '../service/supervisorService';
-import './loginadm.css'; // Importamos los nuevos estilos aislados
+import './loginadm.css';
 
 const SupervisorLogin = () => {
   const navigate = useNavigate();
@@ -52,13 +52,10 @@ const SupervisorLogin = () => {
       if (verificacion.codigo_existente) {
         // Ya hay un código vigente, preguntamos al usuario qué hacer
         setMensaje(`Ya tiene un código vigente (expira en ${verificacion.expiracion} minutos). ¿Desea continuar con ese código o solicitar uno nuevo?`);
-        // Mostrar botones adicionales para esta decisión
         setMostrarOpcionesCodigoExistente(true);
       } else {
-        // No hay código vigente, solicitamos uno nuevo como antes
         const data = await loginSupervisor(correoElectronico);
         
-        // Mostrar mensaje de éxito y avanzar al siguiente paso
         setMensaje(data.message || 'Se ha enviado un código de verificación a su correo.');
         setPaso(2);
       }
@@ -71,14 +68,12 @@ const SupervisorLogin = () => {
     }
   }, [correoElectronico]);
 
-  // Función para usar el código existente
   const usarCodigoExistente = () => {
     setMostrarOpcionesCodigoExistente(false);
     setMensaje('Por favor ingrese el código que recibió anteriormente.');
     setPaso(2);
   };
   
-  // Función para solicitar un nuevo código
   const solicitarNuevoCodigo = async () => {
     try {
       setIsLoading(true);
@@ -95,13 +90,11 @@ const SupervisorLogin = () => {
     }
   };
 
-  // Paso 2: Verificar código de verificación
   const handleVerificarCodigo = useCallback(async (e) => {
     e.preventDefault();
     setError(null);
     setMensaje('');
 
-    // Validación básica
     if (!codigo.trim() || codigo.length !== 6) {
       setError('El código debe tener 6 dígitos');
       return;
@@ -111,7 +104,6 @@ const SupervisorLogin = () => {
       setIsLoading(true);
       const data = await verificarCodigoSupervisor(correoElectronico, codigo);
       
-      // Mostrar mensaje de éxito y avanzar al siguiente paso
       setMensaje(data.message || 'Código verificado. Ingrese la clave secreta del sistema.');
       setPaso(3);
     } catch (error) {
@@ -123,13 +115,11 @@ const SupervisorLogin = () => {
     }
   }, [correoElectronico, codigo]);
 
-  // Paso 3: Autenticar con clave secreta
   const handleAutenticar = useCallback(async (e) => {
     e.preventDefault();
     setError(null);
     setMensaje('');
 
-    // Validación básica
     if (!claveSecreta.trim()) {
       setError('La clave secreta es requerida');
       return;

@@ -564,6 +564,25 @@ async function obtenerHistorialHabilitacionesGrupo(req, res) {
 async function desactivarHabilitacion(req, res) {
   try {
     const { habilitacionId } = req.params;
+    // Obtener el ID del usuario autenticado (puede ser docente o supervisor)
+    const usuarioId = req.user?.id;
+    // Verificar si el usuario es un supervisor
+    let supervisorId = null;
+    
+    try {
+      // Solo intentar buscar el supervisor si hay un usuario autenticado
+      if (usuarioId) {
+        const supervisorModel = require('../models/supervisor_model');
+        const supervisor = await supervisorModel.obtenerSupervisorPorId(usuarioId);
+        // Si es un supervisor, usamos su ID
+        if (supervisor) {
+          supervisorId = supervisor.id;
+        }
+      }
+    } catch (error) {
+      // Si hay error, asumimos que no es un supervisor
+      console.log(`[PRODUCCION] Usuario ${usuarioId} no es supervisor, error:`, error.message);
+    }
     
     if (!habilitacionId) {
       return res.status(400).json({ error: 'ID de habilitación es requerido' });
@@ -589,8 +608,8 @@ async function desactivarHabilitacion(req, res) {
       return res.status(400).json({ error: 'Esta habilitación ya está desactivada' });
     }
     
-    // Ahora intentar la desactivación
-    const resultado = await supervisorModel.desactivarHabilitacion(habilitacionId);
+    // Ahora intentar la desactivación, pasando el ID de supervisor si existe
+    const resultado = await supervisorModel.desactivarHabilitacion(habilitacionId, supervisorId);
     
     if (!resultado) {
       console.log(`[PRODUCCION] Fallo al desactivar, resultado nulo`);
