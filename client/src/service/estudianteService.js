@@ -123,20 +123,19 @@ export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = f
   } catch (error) {
     console.error('Error en updateEstudiante:', error);
     
-    // Manejo mejorado del error 409
+    // Mejor manejo del error 409
     if (error.response && error.response.status === 409) {
-      // En lugar de crear un nuevo objeto de error, simplemente 
-      // añadimos propiedades al objeto existente y lo relanzamos
-      error.requiereConfirmacion = true;
-      error.dependencias = error.response.data.dependencias;
-      error.mensaje = error.response.data.mensaje;
-      
-      throw error; // Relanzar el mismo objeto de error modificado
+      // NOTA: Aquí no modificamos el objeto error directamente,
+      // simplemente lo dejamos pasar para que el componente lo maneje
+      // Esto evita problemas con la estructura del objeto y mantiene
+      // la información original del backend
+      throw error;
     }
     
     throw error;
   }
 };
+
 
 // Función para eliminar un estudiante por su ID con validación y confirmación
 export const deleteEstudiante = async (id, confirmar = false) => {

@@ -166,7 +166,7 @@ function EditarEstudiante() {
     }
   };
 
-  // CORRECCIÓN: Función mejorada para manejar el envío del formulario
+  // FUNCIÓN CORREGIDA: Manejo mejorado del error 409 y la confirmación
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -187,7 +187,7 @@ function EditarEstudiante() {
         codigo: formData.codigo.toUpperCase()
       };
       
-      // IMPORTANTE: Enviar el parámetro de confirmación si ya se ha solicitado confirmación
+      // Si requiere confirmación, enviar flag confirmarLimpieza
       const resultado = await updateEstudiante(id, datosActualizados, requiereConfirmacion);
       
       // Notificación de éxito
@@ -208,27 +208,32 @@ function EditarEstudiante() {
     } catch (error) {
       console.error("Error completo:", error);
       
-      // Verificamos si el error es un 409 directamente
+      // BLOQUE CORREGIDO: Manejo mejorado del error 409
+      // Primero intentamos acceder al error directamente desde la respuesta
       if (error.response && error.response.status === 409) {
-        // Si es un 409, siempre activamos el modo de confirmación
+        // Estamos seguros de que es un 409 desde axios
         setRequiereConfirmacion(true);
-        setDependencias(error.response.data.dependencias || {});
         
-        // Mostrar mensaje de advertencia
-        toast.warning(error.response.data.mensaje || 
-          'Esta acción eliminará datos relacionados. ¿Confirmar?', 
+        // Accedemos a los datos del error desde la estructura correcta
+        const errorData = error.response.data;
+        setDependencias(errorData.dependencias || {});
+        
+        // Mostrar mensaje de advertencia usando el mensaje del servidor
+        toast.warning(errorData.mensaje || 
+          'Esta acción eliminará datos relacionados. ¿Desea continuar?', 
           { autoClose: 8000 });
       } 
-      // Verificamos si el error tiene la propiedad requiereConfirmacion
+      // Si el error ya fue procesado por estudianteService
       else if (error.requiereConfirmacion) {
         setRequiereConfirmacion(true);
         setDependencias(error.dependencias || {});
+        
         toast.warning(error.mensaje || 
-          'Esta acción eliminará datos relacionados. ¿Confirmar?', 
+          'Esta acción eliminará datos relacionados. ¿Desea continuar?', 
           { autoClose: 8000 });
       }
+      // Para cualquier otro tipo de error
       else {
-        // Cualquier otro error
         toast.error(error.message || 'Error al actualizar el estudiante');
       }
     } finally {
@@ -277,7 +282,7 @@ function EditarEstudiante() {
             <div className="loading-indicator">Cargando datos del estudiante...</div>
           ) : (
             <>
-              {/* CORRECCIÓN: Alerta de dependencias mejorada */}
+              {/* Alerta de dependencias mejorada */}
               {(tieneDependencias && hayCambiosCriticos) || requiereConfirmacion ? (
                 <div className={`alerta-dependencias ${requiereConfirmacion ? 'confirmacion-activa' : ''}`}>
                   <h3>⚠️ {requiereConfirmacion ? 'Confirmación Requerida' : 'Cambios con Impacto'}</h3>
@@ -414,7 +419,6 @@ function EditarEstudiante() {
                     Cancelar
                   </button>
                   
-                  {/* CORRECCIÓN: Botón claramente diferenciado cuando se requiere confirmación */}
                   <button 
                     type="submit" 
                     className={`btn-editar-guardar ${saving ? 'loading' : ''} ${requiereConfirmacion ? 'confirmar' : ''}`}
@@ -427,7 +431,6 @@ function EditarEstudiante() {
                   </button>
                 </div>
                 
-                {/* CORRECCIÓN: Explicación adicional cuando se requiere confirmación */}
                 {requiereConfirmacion && (
                   <div className="confirmacion-explicacion">
                     <p>Al hacer clic en el botón de confirmación, acepta que se eliminarán todos los informes, 
