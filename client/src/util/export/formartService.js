@@ -32,32 +32,13 @@ const safeNumberFormat = (value, decimals = 2) => {
       return '-';
     }
   };
-/**
- * Obtiene el color de fondo para una calificación
- * @param {string|number} calificacion - Calificación (textual o numérica)
- * @returns {string} - Color hexadecimal para Excel
- */
-const getColorCalificacion = (calificacion) => {
-  // Si es texto, convertir a número
-  let valor = typeof calificacion === 'string' 
-    ? calificacionANumero(calificacion) 
-    : Number(calificacion);
-  
-  // Aplicar escala de colores
-  if (valor >= 9) return '#D4EDDA'; // Verde claro
-  if (valor >= 7) return '#D1ECF1'; // Azul claro
-  if (valor >= 5) return '#FFF3CD'; // Amarillo claro
-  if (valor >= 3) return '#FBE5D6'; // Naranja claro
-  return '#F8D7DA'; // Rojo claro
-};
 
 /**
  * Formatea los datos para Excel, creando una matriz de arrays de filas
  * @param {Object} datosExcel - Datos estructurados de evaluaciones
  * @returns {Object} - Objeto con datos formateados y configuración de columnas
  */
-// Modificación a la función formatearDatosExcel en formatService.js
-// Modificación a la función formatearDatosExcel para garantizar que no haya objetos complejos
+
 export const formatearDatosExcel = (datosExcel) => {
   const { grupo, estudiantes, criterios, incluirDetalles } = datosExcel;
 

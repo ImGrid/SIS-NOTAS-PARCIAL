@@ -6,7 +6,6 @@ import { getInformesPorGrupoId } from '../../service/informeService';
 import { getRubricaPorId } from '../../service/rubricaService';
 import { getBorradorPorDocenteYGrupo } from '../../service/borradorService';
 import { ESTRUCTURA_RUBRICA } from '../calculo';
-import { formatearDatosExcel as formatearDatosOriginal } from './formartService';
 
 // Función auxiliar para formatear números de manera segura
 const safeNumberFormat = (value, decimals = 2) => {

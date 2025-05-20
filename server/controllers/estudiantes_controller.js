@@ -7,8 +7,20 @@ async function crearEstudiante(req, res) {
     res.status(201).json(estudiante);
   } catch (error) {
     if (error.code === '23505') { // Código de error de PostgreSQL para violación de restricción UNIQUE
-      return res.status(400).json({ error: 'El código de estudiante ya está en uso' });
+      // Verificar qué restricción específica se violó
+      if (error.detail && error.detail.includes('estudiantes_codigo_semestre_key')) {
+        // Violación de la restricción combinada código-semestre
+        return res.status(400).json({ 
+          error: 'Ya existe un estudiante con este código en el mismo semestre' 
+        });
+      } else {
+        // Otras violaciones de restricción unique (por si acaso hay otras)
+        return res.status(400).json({ error: 'El código de estudiante ya está en uso' });
+      }
     }
+    
+    // Otros tipos de errores
+    console.error('Error al crear estudiante:', error);
     res.status(500).json({ error: error.message });
   }
 }
