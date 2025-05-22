@@ -6,6 +6,7 @@ import '../style/listarDocente.css'; // Importamos el archivo CSS que ya hemos c
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getDocentes } from '../../../service/docenteService';
+import { getSupervisorById } from '../../../service/supervisorService';
 import EliminarDocenteModal from './eliminarDocenteSup';
 
 function ListarDocentesAdmin() {
@@ -17,6 +18,10 @@ function ListarDocentesAdmin() {
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   
+  // Estados para el supervisor y sus carreras
+  const [supervisor, setSupervisor] = useState(null);
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  
   // Estado para filtro de búsqueda
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   
@@ -24,17 +29,95 @@ function ListarDocentesAdmin() {
   const [paginaActual, setPaginaActual] = useState(1);
   const docentesPorPagina = 10;
 
-  // Cargar docentes al iniciar
+  // Cargar datos del supervisor y docentes al iniciar
   useEffect(() => {
-    cargarDocentes();
+    cargarDatosSupervisor();
   }, []);
-  
-  const cargarDocentes = async () => {
+
+  // Cargar datos del supervisor desde sessionStorage o servidor
+  const cargarDatosSupervisor = async () => {
     try {
       setLoading(true);
+      
+      // Obtener datos del supervisor desde sessionStorage
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        setSupervisor(usuario);
+        
+        // Obtener carreras asignadas desde el objeto de usuario
+        let carrerasDelSupervisor = [];
+        if (usuario.carreras && Array.isArray(usuario.carreras)) {
+          carrerasDelSupervisor = usuario.carreras;
+        } else if (usuario.id) {
+          // Si no hay carreras en el objeto de usuario, intentar obtenerlas desde el servidor
+          try {
+            const supervisorData = await getSupervisorById(usuario.id);
+            if (supervisorData && supervisorData.carreras) {
+              carrerasDelSupervisor = supervisorData.carreras;
+            } else {
+              toast.error('No se pudieron obtener las carreras asignadas al supervisor');
+              setLoading(false);
+              return;
+            }
+          } catch (error) {
+            console.error('Error al obtener datos del supervisor:', error);
+            toast.error('Error al cargar datos del supervisor');
+            setLoading(false);
+            return;
+          }
+        }
+        
+        setCarrerasAsignadas(carrerasDelSupervisor);
+        
+        // Cargar docentes después de obtener las carreras
+        await cargarDocentes(carrerasDelSupervisor);
+      } else {
+        toast.error('No se encontraron datos del supervisor. Por favor, inicie sesión nuevamente.');
+        navigate('/login');
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error al cargar datos del supervisor:', error);
+      toast.error('Error al cargar los datos. Por favor, intente de nuevo más tarde.');
+      setLoading(false);
+    }
+  };
+  
+  const cargarDocentes = async (carrerasDelSupervisor = carrerasAsignadas) => {
+    try {
+      setLoading(true);
+      
+      // Obtener todos los docentes (el backend ya filtra por carreras del supervisor autenticado)
       const data = await getDocentes();
-      setDocentes(data);
-      setDocentesFiltrados(data);
+      
+      // Filtro adicional en el frontend por seguridad
+      // Solo mostrar docentes que tengan al menos una carrera en común con el supervisor
+      let docentesFiltradosBackend = data;
+      
+      if (carrerasDelSupervisor && carrerasDelSupervisor.length > 0) {
+        docentesFiltradosBackend = data.filter(docente => {
+          // Si el docente no tiene carreras asignadas, no mostrarlo
+          if (!docente.carreras || !Array.isArray(docente.carreras) || docente.carreras.length === 0) {
+            return false;
+          }
+          
+          // Verificar si hay al menos una carrera en común
+          const tieneCarreraEnComun = docente.carreras.some(carreraDocente => 
+            carrerasDelSupervisor.includes(carreraDocente)
+          );
+          
+          return tieneCarreraEnComun;
+        });
+      }
+      
+      setDocentes(docentesFiltradosBackend);
+      setDocentesFiltrados(docentesFiltradosBackend);
+      
+      console.log(`Carreras del supervisor: ${carrerasDelSupervisor.join(', ')}`);
+      console.log(`Total de docentes filtrados: ${docentesFiltradosBackend.length}`);
+      
     } catch (error) {
       console.error('Error al cargar docentes:', error);
       toast.error('Error al cargar la lista de docentes');
@@ -50,7 +133,8 @@ function ListarDocentesAdmin() {
       const resultado = docentes.filter(d =>
         (d.nombre_completo && d.nombre_completo.toLowerCase().includes(termino)) ||
         (d.correo_electronico && d.correo_electronico.toLowerCase().includes(termino)) ||
-        (d.cargo && d.cargo.toLowerCase().includes(termino))
+        (d.cargo && d.cargo.toLowerCase().includes(termino)) ||
+        (d.carreras && d.carreras.some(carrera => carrera.toLowerCase().includes(termino)))
       );
       setDocentesFiltrados(resultado);
     } else {
@@ -118,6 +202,16 @@ function ListarDocentesAdmin() {
 
   // Abrir modal de confirmación para eliminar docente
   const mostrarConfirmacionEliminar = (docente) => {
+    // Verificar si el docente pertenece a alguna carrera del supervisor
+    const tieneAcceso = docente.carreras && docente.carreras.some(carrera => 
+      carrerasAsignadas.includes(carrera)
+    );
+    
+    if (!tieneAcceso) {
+      toast.error('No tiene permisos para eliminar este docente');
+      return;
+    }
+    
     setDocenteSeleccionado(docente);
     setMostrarModalEliminar(true);
   };
@@ -134,6 +228,18 @@ function ListarDocentesAdmin() {
     cargarDocentes();
     // Mostrar mensaje de éxito
     toast.success('Docente eliminado con éxito');
+  };
+
+  // Verificar si el supervisor tiene acceso a editar un docente
+  const puedeEditarDocente = (docente) => {
+    if (!carrerasAsignadas || carrerasAsignadas.length === 0) {
+      return true; // Si no hay restricciones, permitir edición
+    }
+    
+    // Verificar si hay al menos una carrera en común
+    return docente.carreras && docente.carreras.some(carrera => 
+      carrerasAsignadas.includes(carrera)
+    );
   };
 
   // Renderizar controles de paginación
@@ -202,12 +308,15 @@ function ListarDocentesAdmin() {
 
   // Renderizar la fila de acciones para cada docente con SVG
   const renderAccionesDocente = (docente) => {
+    const puedeEditar = puedeEditarDocente(docente);
+    
     return (
       <div className="acciones-docente">
         <button 
-          className="btn-accion btn-editar" 
-          onClick={() => irAEditarDocente(docente.id)}
-          title="Editar docente"
+          className={`btn-accion btn-editar ${!puedeEditar ? 'disabled' : ''}`}
+          onClick={() => puedeEditar ? irAEditarDocente(docente.id) : null}
+          title={puedeEditar ? "Editar docente" : "No tiene permisos para editar este docente"}
+          disabled={!puedeEditar}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -215,9 +324,10 @@ function ListarDocentesAdmin() {
           </svg>
         </button>
         <button 
-          className="btn-accion btn-eliminar" 
-          onClick={() => mostrarConfirmacionEliminar(docente)}
-          title="Eliminar docente"
+          className={`btn-accion btn-eliminar ${!puedeEditar ? 'disabled' : ''}`}
+          onClick={() => puedeEditar ? mostrarConfirmacionEliminar(docente) : null}
+          title={puedeEditar ? "Eliminar docente" : "No tiene permisos para eliminar este docente"}
+          disabled={!puedeEditar}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -229,6 +339,38 @@ function ListarDocentesAdmin() {
       </div>
     );
   };
+  
+  // Renderizar las carreras de un docente con indicador de acceso
+  const renderCarrerasDocente = (docente) => {
+    if (!docente.carreras || !Array.isArray(docente.carreras) || docente.carreras.length === 0) {
+      return <span className="sin-carreras">Sin carreras asignadas</span>;
+    }
+    
+    return (
+      <div className="carreras-lista">
+        {docente.carreras.map((carrera, index) => {
+          const tieneAcceso = carrerasAsignadas.includes(carrera);
+          return (
+            <span 
+              key={index} 
+              className={`carrera-item ${tieneAcceso ? 'carrera-acceso' : 'carrera-sin-acceso'}`}
+              title={tieneAcceso ? 'Carrera bajo su supervisión' : 'Carrera fuera de su supervisión'}
+            >
+              {carrera}
+              {tieneAcceso && <span className="indicador-acceso">✓</span>}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Renderizar información del supervisor
+  const renderInfoSupervisor = () => {
+    if (!supervisor || !carrerasAsignadas || carrerasAsignadas.length === 0) {
+      return null;
+    }
+  };
 
   return (
     <LayoutSup>
@@ -239,6 +381,7 @@ function ListarDocentesAdmin() {
           
           <div className="docentes-admin-header">
             <h1>Administración de Docentes</h1>
+            {renderInfoSupervisor()}
             <button className="btn-crear-docente" onClick={irACrearDocente}>
               + Registrar Nuevo Docente
             </button>
@@ -249,7 +392,7 @@ function ListarDocentesAdmin() {
               <div className="busqueda-container">
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o correo..."
+                  placeholder="Buscar por nombre, correo, cargo o carrera..."
                   value={terminoBusqueda}
                   onChange={handleSearchChange}
                   className="busqueda-input"
@@ -270,7 +413,12 @@ function ListarDocentesAdmin() {
                 <div className="tabla-header">
                   {renderPaginacion()}
                   <div className="resultados-info">
-                    Mostrando {docentesActuales.length} de {docentesFiltrados.length} docentes
+                    Mostrando {docentesActuales.length} de {docentesFiltrados.length} docentes 
+                    {carrerasAsignadas.length > 0 && (
+                      <span className="filtro-carreras">
+                        (filtrados por sus carreras asignadas)
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -282,6 +430,7 @@ function ListarDocentesAdmin() {
                         <th className="col-nombre">Nombre Completo</th>
                         <th className="col-correo">Correo Electrónico</th>
                         <th className="col-cargo">Cargo</th>
+                        <th className="col-carreras">Carreras</th>
                         <th className="col-acciones">Acciones</th>
                       </tr>
                     </thead>
@@ -292,6 +441,7 @@ function ListarDocentesAdmin() {
                           <td className="col-nombre">{docente.nombre_completo}</td>
                           <td className="col-correo">{docente.correo_electronico}</td>
                           <td className="col-cargo">{docente.cargo}</td>
+                          <td className="col-carreras">{renderCarrerasDocente(docente)}</td>
                           <td className="col-acciones">
                             {renderAccionesDocente(docente)}
                           </td>
@@ -307,7 +457,12 @@ function ListarDocentesAdmin() {
               </>
             ) : (
               <div className="empty-state">
-                <p>No se encontraron docentes con los criterios seleccionados.</p>
+                <p>
+                  {carrerasAsignadas.length > 0 
+                    ? `No se encontraron docentes de sus carreras asignadas (${carrerasAsignadas.join(', ')}) con los criterios seleccionados.`
+                    : 'No se encontraron docentes con los criterios seleccionados.'
+                  }
+                </p>
                 {terminoBusqueda && (
                   <button className="btn-limpiar-filtro" onClick={limpiarFiltro}>
                     Limpiar Filtro
@@ -327,6 +482,89 @@ function ListarDocentesAdmin() {
           onEliminar={manejarEliminacionExitosa}
         />
       )}
+      
+      <style jsx>{`
+        .supervisor-info {
+          margin-bottom: 1rem;
+          padding: 12px;
+          background-color: #f8f9fa;
+          border-radius: 6px;
+          border-left: 4px solid #007bff;
+        }
+        
+        .supervisor-carreras {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        
+        .supervisor-label {
+          font-weight: 600;
+          color: #495057;
+          font-size: 14px;
+        }
+        
+        .carreras-supervisor {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        
+        .carrera-supervisor {
+          background-color: #007bff;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        
+        .carrera-item {
+          position: relative;
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-size: 11px;
+          margin-right: 4px;
+          margin-bottom: 2px;
+          display: inline-block;
+        }
+        
+        .carrera-acceso {
+          background-color: #d4edda;
+          color: #155724;
+          border: 1px solid #c3e6cb;
+        }
+        
+        .carrera-sin-acceso {
+          background-color: #f8d7da;
+          color: #721c24;
+          border: 1px solid #f5c6cb;
+        }
+        
+        .indicador-acceso {
+          margin-left: 4px;
+          font-weight: bold;
+        }
+        
+        .btn-accion.disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+        
+        .filtro-carreras {
+          font-style: italic;
+          color: #6c757d;
+          font-size: 12px;
+        }
+        
+        .sin-carreras {
+          color: #6c757d;
+          font-style: italic;
+          font-size: 12px;
+        }
+      `}</style>
     </LayoutSup>
   );
 }

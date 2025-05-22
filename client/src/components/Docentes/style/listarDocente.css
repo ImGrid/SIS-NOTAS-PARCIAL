@@ -179,20 +179,52 @@
 }
 
 .docente-admin-list-styles .col-nombre {
-  width: 25%;
+  width: 20%;
 }
 
 .docente-admin-list-styles .col-correo {
-  width: 25%;
+  width: 20%;
 }
 
 .docente-admin-list-styles .col-cargo {
-  width: 20%;
+  width: 15%;
+}
+
+.docente-admin-list-styles .col-carreras {
+  width: 25%;
 }
 
 .docente-admin-list-styles .col-acciones {
   width: 120px;
   text-align: center;
+}
+
+/* Estilos para la columna de carreras */
+.docente-admin-list-styles .carreras-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-width: 100%;
+}
+
+.docente-admin-list-styles .carrera-item {
+  display: inline-block;
+  background-color: #f1f8ff;
+  border: 1px solid #c0d8f0;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: #2c3e50;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docente-admin-list-styles .sin-carreras {
+  color: #999;
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
 /* Botones de acción - Este es el estilo que debemos replicar */
@@ -400,6 +432,11 @@
     width: 16px;
     height: 16px;
   }
+  
+  .docente-admin-list-styles .carrera-item {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -454,6 +491,14 @@
     width: 15px;
     height: 15px;
   }
+  
+  .docente-admin-list-styles .carreras-lista {
+    gap: 0.2rem;
+  }
+  
+  .docente-admin-list-styles .carrera-item {
+    max-width: 120px;
+  }
 }
 
 @media (max-width: 576px) {
@@ -482,5 +527,11 @@
   .docente-admin-list-styles .btn-accion svg {
     width: 14px;
     height: 14px;
+  }
+  
+  .docente-admin-list-styles .carrera-item {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.65rem;
+    max-width: 100px;
   }
 }

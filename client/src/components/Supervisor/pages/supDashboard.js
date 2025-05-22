@@ -9,12 +9,13 @@ import {
 } from 'recharts';
 
 // Importar servicios necesarios
-import { getGrupos } from '../../../service/grupoService';
-import { getEstudiantes, getEstudiantesByGrupoId } from '../../../service/estudianteService';
+import { getGrupos, getGruposPorCarrera } from '../../../service/grupoService';
+import { getEstudiantes, getEstudiantesByGrupoId, getEstudiantesBySemestreYCarrera } from '../../../service/estudianteService';
 import { getInformes, getInformesPorGrupoId } from '../../../service/informeService';
 import { getRubricaPorId } from '../../../service/rubricaService';
 import { obtenerTodasRubricas } from '../../../service/supRubricaService';
-import { getDocentes } from '../../../service/docenteService';
+import { getDocentes, getDocentesPorCarrera } from '../../../service/docenteService';
+import { getSupervisorById } from '../../../service/supervisorService';
 
 // Importar estilos
 import '../style/supDashboard.css';
@@ -82,6 +83,7 @@ const SupervisorDashboard = () => {
   // Estados para los datos
   const [loading, setLoading] = useState(true);
   const [supervisor, setSupervisor] = useState(null);
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [gruposRecientes, setGruposRecientes] = useState([]);
   const [gruposPendientes, setGruposPendientes] = useState([]);
   const [alertas, setAlertas] = useState([]);
@@ -106,164 +108,226 @@ const SupervisorDashboard = () => {
   
   const navigate = useNavigate();
   
-  // Cargar datos reales
+  // Obtener datos del supervisor y sus carreras asignadas
   useEffect(() => {
-    const cargarDatos = async () => {
+    const obtenerDatosSupervisor = async () => {
       try {
-        setLoading(true);
-        
         // Obtener datos del supervisor del sessionStorage
         const usuarioStr = sessionStorage.getItem('usuario');
         if (usuarioStr) {
           try {
             const usuario = JSON.parse(usuarioStr);
             setSupervisor(usuario);
-          } catch (error) {
-            console.error('Error al parsear datos del supervisor:', error);
-          }
-        }
-        
-        // 1. Cargar TODOS los grupos
-        let gruposData = [];
-        try {
-          gruposData = await getGrupos();
-          setTotalGrupos(gruposData.length);
-        } catch (error) {
-          console.error('Error al cargar grupos:', error);
-          gruposData = [];
-        }
-        
-        // 2. Cargar TODOS los docentes
-        let docentesData = [];
-        try {
-          docentesData = await getDocentes();
-          setTotalDocentes(docentesData.length);
-        } catch (error) {
-          console.error('Error al cargar docentes:', error);
-          docentesData = [];
-        }
-        
-        // 3. Cargar TODOS los estudiantes
-        let estudiantesData = [];
-        try {
-          estudiantesData = await getEstudiantes();
-          setTotalEstudiantes(estudiantesData.length);
-        } catch (error) {
-          console.error('Error al cargar estudiantes:', error);
-          estudiantesData = [];
-        }
-        
-        // 4. Cargar datos de rúbricas
-        let rubricasData = { grupos: [] };
-        try {
-          rubricasData = await obtenerTodasRubricas();
-        } catch (error) {
-          console.error('Error al cargar rúbricas:', error);
-        }
-        
-        // 5. Cargar todos los informes disponibles
-        let informesGenerales = [];
-        try {
-          informesGenerales = await getInformes();
-        } catch (error) {
-          console.error('Error al cargar informes generales:', error);
-          informesGenerales = [];
-        }
-
-        // 6. Inicializar objetos para almacenar información detallada
-        const estudiantesPorGrupo = {};
-        const informesPorGrupo = {};
-        const rubricasPorInforme = {};
-        
-        // 7. Procesar cada grupo para obtener datos detallados
-        for (const grupo of gruposData) {
-          try {
-            // Obtener estudiantes del grupo
-            const estudiantes = await getEstudiantesByGrupoId(grupo.id);
-            estudiantesPorGrupo[grupo.id] = estudiantes;
             
-            // Obtener informes del grupo
-            const informes = await getInformesPorGrupoId(grupo.id);
-            informesPorGrupo[grupo.id] = informes;
-            
-            // Para cada informe, obtener su rúbrica
-            for (const informe of informes) {
-              if (informe && informe.rubrica_id) {
-                try {
-                  const rubrica = await getRubricaPorId(informe.rubrica_id);
-                  if (rubrica) {
-                    rubricasPorInforme[informe.id] = rubrica;
-                  }
-                } catch (error) {
-                  console.error(`Error al cargar rúbrica para informe ${informe.id}:`, error);
-                }
+            // Obtener carreras asignadas desde el objeto de usuario
+            if (usuario.carreras && Array.isArray(usuario.carreras)) {
+              setCarrerasAsignadas(usuario.carreras);
+            } else if (usuario.id) {
+              // Si no hay carreras en el objeto de usuario, intentar obtenerlas desde el servidor
+              const supervisorData = await getSupervisorById(usuario.id);
+              if (supervisorData && supervisorData.carreras) {
+                setCarrerasAsignadas(supervisorData.carreras);
+              } else {
+                toast.error('No se pudieron obtener las carreras asignadas');
               }
             }
           } catch (error) {
-            console.error(`Error al cargar datos para el grupo ${grupo.id}:`, error);
+            console.error('Error al parsear datos del supervisor:', error);
+            toast.error('Error al cargar datos del supervisor');
           }
         }
-        
-        // 8. Calcular estadísticas de estudiantes (aprobados, reprobados, pendientes)
-        const estadisticasEstudiantesTemp = calcularEstadisticasEstudiantes(
-          estudiantesData,
-          informesGenerales,
-          rubricasPorInforme
-        );
-        setEstadisticasEstudiantes(estadisticasEstudiantesTemp);
-        
-        // 9. Calcular promedios por secciones
-        const promediosSecciones = calcularPromediosPorSeccion(rubricasPorInforme);
-        setPromediosSecciones(promediosSecciones);
-        
-        // 10. Calcular estadísticas por carrera
-        const estadisticasPorCarrera = calcularEstadisticasPorCarrera(
-          estudiantesData,
-          gruposData,
-          estudiantesPorGrupo,
-          informesPorGrupo,
-          rubricasPorInforme
-        );
-        setEstadisticasPorCarrera(estadisticasPorCarrera);
-        
-        // 11. Procesar grupos para estados
-        const gruposConEstado = await procesarGrupos(gruposData, rubricasData, informesGenerales);
-        
-        // 12. Ordenar grupos por últimas actividades
-        const gruposOrdenados = [...gruposConEstado].sort((a, b) => {
-          return new Date(b.ultimaActividad || Date.now()) - 
-                 new Date(a.ultimaActividad || Date.now());
-        });
-        
-        // 13. Obtener grupos recientes y pendientes
-        setGruposRecientes(gruposOrdenados.slice(0, 5));
-        
-        const gruposPendientesTemp = gruposConEstado.filter(grupo => 
-          grupo.estado === 'pendiente' || grupo.estado === 'sin_rubrica'
-        );
-        setGruposPendientes(gruposPendientesTemp.slice(0, 5));
-        
-        // 14. Generar alertas
-        const alertasGeneradas = generarAlertas(
-          gruposData, 
-          rubricasData, 
-          estudiantesData, 
-          informesGenerales
-        );
-        setAlertas(alertasGeneradas);
-        
-        // Guardar timestamp de actualización
-        setUltimaActualizacion(new Date().toISOString());
-        setLoading(false);
       } catch (error) {
-        console.error('Error al cargar datos del dashboard:', error);
-        toast.error('Error al cargar datos del dashboard');
-        setLoading(false);
+        console.error('Error al obtener datos del supervisor:', error);
+        toast.error('Error al cargar datos del supervisor');
       }
     };
     
-    cargarDatos();
+    obtenerDatosSupervisor();
   }, []);
+  
+  // Cargar datos filtrados por carreras asignadas
+  useEffect(() => {
+    // Solo ejecutar cuando tengamos las carreras asignadas
+    if (carrerasAsignadas.length > 0) {
+      cargarDatosFiltrados();
+    }
+  }, [carrerasAsignadas]);
+  
+  // Función para cargar datos filtrados por carreras asignadas
+  const cargarDatosFiltrados = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Cargar grupos solo de las carreras asignadas
+      let gruposData = [];
+      for (const carrera of carrerasAsignadas) {
+        try {
+          const gruposCarrera = await getGruposPorCarrera(carrera);
+          gruposData = [...gruposData, ...gruposCarrera];
+        } catch (error) {
+          console.error(`Error al cargar grupos de la carrera ${carrera}:`, error);
+        }
+      }
+      
+      // Eliminar duplicados (si un grupo pertenece a más de una carrera)
+      gruposData = gruposData.filter((grupo, index, self) =>
+        index === self.findIndex((g) => g.id === grupo.id)
+      );
+      
+      setTotalGrupos(gruposData.length);
+      
+      // 2. Cargar docentes solo de las carreras asignadas
+      let docentesData = [];
+      for (const carrera of carrerasAsignadas) {
+        try {
+          const docentesCarrera = await getDocentesPorCarrera(carrera);
+          docentesData = [...docentesData, ...docentesCarrera];
+        } catch (error) {
+          console.error(`Error al cargar docentes de la carrera ${carrera}:`, error);
+        }
+      }
+      
+      // Eliminar duplicados (si un docente pertenece a más de una carrera)
+      docentesData = docentesData.filter((docente, index, self) =>
+        index === self.findIndex((d) => d.id === docente.id)
+      );
+      
+      setTotalDocentes(docentesData.length);
+      
+      // 3. Cargar estudiantes solo de las carreras asignadas
+      let estudiantesData = [];
+      for (const carrera of carrerasAsignadas) {
+        try {
+          // Obtener todos los semestres disponibles (1-10)
+          for (let semestre = 1; semestre <= 10; semestre++) {
+            const estudiantesSemestre = await getEstudiantesBySemestreYCarrera(semestre.toString(), carrera);
+            estudiantesData = [...estudiantesData, ...estudiantesSemestre];
+          }
+        } catch (error) {
+          console.error(`Error al cargar estudiantes de la carrera ${carrera}:`, error);
+        }
+      }
+      
+      // Eliminar duplicados (si un estudiante pertenece a más de una carrera)
+      estudiantesData = estudiantesData.filter((estudiante, index, self) =>
+        index === self.findIndex((e) => e.id === estudiante.id)
+      );
+      
+      setTotalEstudiantes(estudiantesData.length);
+      
+      // 4. Obtener datos de rúbricas para los grupos de las carreras asignadas
+      let rubricasData = { grupos: [] };
+      try {
+        // Este servicio debería ser mejorado para aceptar filtros por carrera
+        rubricasData = await obtenerTodasRubricas();
+        
+        // Filtrar solo los grupos de las carreras asignadas
+        if (rubricasData && rubricasData.grupos) {
+          rubricasData.grupos = rubricasData.grupos.filter(grupo => 
+            carrerasAsignadas.includes(grupo.carrera)
+          );
+        }
+      } catch (error) {
+        console.error('Error al cargar rúbricas:', error);
+      }
+      
+      // 5. Inicializar objetos para almacenar información detallada
+      const estudiantesPorGrupo = {};
+      const informesPorGrupo = {};
+      const rubricasPorInforme = {};
+      
+      // 6. Procesar cada grupo para obtener datos detallados
+      for (const grupo of gruposData) {
+        try {
+          // Obtener estudiantes del grupo
+          const estudiantes = await getEstudiantesByGrupoId(grupo.id);
+          estudiantesPorGrupo[grupo.id] = estudiantes;
+          
+          // Obtener informes del grupo
+          const informes = await getInformesPorGrupoId(grupo.id);
+          informesPorGrupo[grupo.id] = informes;
+          
+          // Para cada informe, obtener su rúbrica
+          for (const informe of informes) {
+            if (informe && informe.rubrica_id) {
+              try {
+                const rubrica = await getRubricaPorId(informe.rubrica_id);
+                if (rubrica) {
+                  rubricasPorInforme[informe.id] = rubrica;
+                }
+              } catch (error) {
+                console.error(`Error al cargar rúbrica para informe ${informe.id}:`, error);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error al cargar datos para el grupo ${grupo.id}:`, error);
+        }
+      }
+      
+      // 7. Procesar informes directamente para optimizar rendimiento
+      let informesGenerales = [];
+      for (const grupoId in informesPorGrupo) {
+        informesGenerales = [...informesGenerales, ...informesPorGrupo[grupoId]];
+      }
+      
+      // 8. Calcular estadísticas de estudiantes (aprobados, reprobados, pendientes)
+      const estadisticasEstudiantesTemp = calcularEstadisticasEstudiantes(
+        estudiantesData,
+        informesGenerales,
+        rubricasPorInforme
+      );
+      setEstadisticasEstudiantes(estadisticasEstudiantesTemp);
+      
+      // 9. Calcular promedios por secciones
+      const promediosSecciones = calcularPromediosPorSeccion(rubricasPorInforme);
+      setPromediosSecciones(promediosSecciones);
+      
+      // 10. Calcular estadísticas por carrera
+      const estadisticasPorCarrera = calcularEstadisticasPorCarrera(
+        estudiantesData,
+        gruposData,
+        estudiantesPorGrupo,
+        informesPorGrupo,
+        rubricasPorInforme
+      );
+      setEstadisticasPorCarrera(estadisticasPorCarrera);
+      
+      // 11. Procesar grupos para estados
+      const gruposConEstado = await procesarGrupos(gruposData, rubricasData, informesGenerales);
+      
+      // 12. Ordenar grupos por últimas actividades
+      const gruposOrdenados = [...gruposConEstado].sort((a, b) => {
+        return new Date(b.ultimaActividad || Date.now()) - 
+               new Date(a.ultimaActividad || Date.now());
+      });
+      
+      // 13. Obtener grupos recientes y pendientes
+      setGruposRecientes(gruposOrdenados.slice(0, 5));
+      
+      const gruposPendientesTemp = gruposConEstado.filter(grupo => 
+        grupo.estado === 'pendiente' || grupo.estado === 'sin_rubrica'
+      );
+      setGruposPendientes(gruposPendientesTemp.slice(0, 5));
+      
+      // 14. Generar alertas
+      const alertasGeneradas = generarAlertas(
+        gruposData, 
+        rubricasData, 
+        estudiantesData, 
+        informesGenerales
+      );
+      setAlertas(alertasGeneradas);
+      
+      // Guardar timestamp de actualización
+      setUltimaActualizacion(new Date().toISOString());
+      setLoading(false);
+    } catch (error) {
+      console.error('Error al cargar datos del dashboard:', error);
+      toast.error('Error al cargar datos del dashboard');
+      setLoading(false);
+    }
+  };
         
   // Función para calcular estadísticas de estudiantes
   const calcularEstadisticasEstudiantes = (estudiantes, informes, rubricasPorInforme) => {
@@ -366,6 +430,16 @@ const SupervisorDashboard = () => {
   ) => {
     // Inicializar objeto para almacenar datos por carrera
     const datosPorCarrera = {};
+    
+    // Inicializar con las carreras asignadas al supervisor
+    carrerasAsignadas.forEach(carrera => {
+      datosPorCarrera[carrera] = {
+        aprobados: 0,
+        reprobados: 0,
+        pendientes: 0,
+        total: 0
+      };
+    });
     
     // Recorrer los grupos para asignar estudiantes a sus carreras
     grupos.forEach(grupo => {
@@ -717,6 +791,11 @@ const SupervisorDashboard = () => {
             <p className="header-subtitle">
               Bienvenido, <strong>{supervisor?.nombre_completo || 'Supervisor'}</strong>
             </p>
+            {carrerasAsignadas.length > 0 && (
+              <p className="header-asignacion">
+                Carreras asignadas: <strong>{carrerasAsignadas.join(', ')}</strong>
+              </p>
+            )}
           </div>
           <div className="header-actions">
             <div className="last-update">
@@ -724,7 +803,7 @@ const SupervisorDashboard = () => {
             </div>
             <button 
               className="btn-actualizar"
-              onClick={() => window.location.reload()}
+              onClick={() => cargarDatosFiltrados()}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 10h7V3l-2.35 3.35z"/>

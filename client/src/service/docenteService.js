@@ -280,6 +280,52 @@ export const obtenerResumenDependenciasDocente = (dependencias) => {
   return `El docente tiene: ${resumen.join(", ")}`;
 };
 
+/**
+ * Gestiona las carreras asignadas a un docente
+ * @param {number|string} docenteId - ID del docente
+ * @param {Array<string>} carreras - Lista de carreras a asignar
+ * @returns {Promise<Object>} - Resultado de la operación
+ */
+export const gestionarCarrerasDocente = async (docenteId, carreras) => {
+  try {
+    validateId(docenteId);
+    
+    if (!Array.isArray(carreras)) {
+      throw new Error('Las carreras deben ser proporcionadas como un array');
+    }
+    
+    // Verificar límite de 3 carreras
+    if (carreras.length > 6) {
+      throw new Error('Un docente no puede tener más de 6 carreras asignadas');
+    }
+    
+    const response = await api.post(`/api/docentes/carreras/${docenteId}`, { carreras });
+    return response.data;
+  } catch (error) {
+    console.error('Error al gestionar carreras del docente:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene los docentes por carrera
+ * @param {string} carrera - Nombre de la carrera
+ * @returns {Promise<Array>} - Lista de docentes
+ */
+export const getDocentesPorCarrera = async (carrera) => {
+  try {
+    if (!carrera || typeof carrera !== 'string') {
+      throw new Error('Nombre de carrera inválido');
+    }
+    
+    const response = await api.get(`/api/docentes/carrera/${carrera}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error al obtener docentes por carrera:', error);
+    throw error;
+  }
+};
+
 export default {
   loginDocente,
   verificarCodigo,
@@ -291,7 +337,9 @@ export default {
   validateEmail,
   validateCodigo,
   verificarCodigoExistente,
-  // Nuevas funciones:
   verificarDependenciasDocente,
-  obtenerResumenDependenciasDocente
+  obtenerResumenDependenciasDocente,
+  // Nuevas funciones:
+  gestionarCarrerasDocente,
+  getDocentesPorCarrera
 };

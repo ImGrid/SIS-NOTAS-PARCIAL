@@ -8,7 +8,7 @@ import {
   updateEstudiante, 
   verificarDependenciasEstudiante,
   obtenerResumenDependencias,
-  createEstudiante // CORRECTO - este es el nombre exportado
+  createEstudiante
 } from '../../../service/estudianteService';
 import '../style/editarEstudiante.css';
 
@@ -62,15 +62,46 @@ function EditarEstudiante() {
     semestre: false
   });
 
-  // Lista de carreras disponibles
-  const CARRERAS = [
-    { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
-    { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
-    { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
-    { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
-    { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
-    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
-  ];
+  // Estado para carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+  const [errorAcceso, setErrorAcceso] = useState('');
+  const [estudiantePropio, setEstudiantePropio] = useState(false);
+  
+  // Obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (!usuarioStr) {
+        console.error("No se encontró información del usuario en sessionStorage");
+        return [];
+      }
+      
+      const usuario = JSON.parse(usuarioStr);
+      
+      if (!usuario || !usuario.carreras) {
+        console.error("El usuario no tiene carreras asignadas");
+        return [];
+      }
+      
+      if (!Array.isArray(usuario.carreras)) {
+        console.error("Las carreras del usuario no son un array:", usuario.carreras);
+        // Si es un string, intentar convertirlo a array
+        if (typeof usuario.carreras === 'string') {
+          return [usuario.carreras];
+        }
+        return [];
+      }
+      
+      // Asegurar que no hay elementos vacíos
+      const carrerasFiltradas = usuario.carreras.filter(carrera => carrera && carrera.trim() !== '');
+      
+      return carrerasFiltradas;
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
 
   // Obtener semestres disponibles según la carrera
   const getSemestresDisponibles = (carrera) => {
@@ -95,14 +126,50 @@ function EditarEstudiante() {
     ];
   };
   
-  // Cargar datos del estudiante
+  // Cargar datos del estudiante y carreras del docente
   useEffect(() => {
-    const cargarEstudiante = async () => {
+    const cargarCarrerasYEstudiante = async () => {
       try {
         setLoading(true);
         
+        // Primero cargamos las carreras del docente
+        const carreras = obtenerCarrerasDocente();
+        setCarrerasAsignadas(carreras);
+        
+        // Filtrar las opciones de carreras para el selector
+        const opcionesCarreras = carreras.map(carrera => ({
+          value: carrera,
+          label: carrera
+        }));
+        
+        setCarrerasDisponibles(opcionesCarreras);
+        
+        // Si no hay carreras asignadas, mostrar mensaje
+        if (carreras.length === 0) {
+          setErrorAcceso("No tiene carreras asignadas. Contacte con el administrador.");
+          toast.error("No tiene carreras asignadas. Contacte con el administrador.");
+          setLoading(false);
+          return;
+        }
+        
         // Obtener datos del estudiante
         const estudiante = await getEstudianteById(id);
+        
+        // Verificar si el estudiante pertenece a una carrera asignada al docente
+        const carreraEstudiante = estudiante.carrera?.toLowerCase().trim() || '';
+        const carrerasNormalizadas = carreras.map(c => c.toLowerCase().trim());
+        
+        const tienePermiso = carrerasNormalizadas.includes(carreraEstudiante);
+        
+        if (!tienePermiso) {
+          setErrorAcceso(`No tiene permisos para editar estudiantes de la carrera ${estudiante.carrera}. Sus carreras asignadas son: ${carreras.join(', ')}`);
+          toast.error(`No tiene permisos para editar estudiantes de la carrera ${estudiante.carrera}`);
+          setLoading(false);
+          return;
+        }
+        
+        // Si todo está bien, establecer que el estudiante es propio
+        setEstudiantePropio(true);
         
         // Guardar los datos originales para comparación
         setDatosOriginales(estudiante);
@@ -125,13 +192,14 @@ function EditarEstudiante() {
       } catch (error) {
         console.error('Error al cargar estudiante:', error);
         toast.error('Error al cargar datos del estudiante');
+        setErrorAcceso('Error al cargar datos del estudiante. Por favor, inténtelo de nuevo más tarde.');
       } finally {
         setLoading(false);
       }
     };
     
     if (id) {
-      cargarEstudiante();
+      cargarCarrerasYEstudiante();
     }
   }, [id]);
 
@@ -212,6 +280,15 @@ function EditarEstudiante() {
     const { name, value } = e.target;
     
     if (name === 'carrera') {
+      // Verificar que la carrera seleccionada esté entre las asignadas al docente
+      const carreraSeleccionada = value.toLowerCase().trim();
+      const carrerasNormalizadas = carrerasAsignadas.map(c => c.toLowerCase().trim());
+      
+      if (value !== '' && !carrerasNormalizadas.includes(carreraSeleccionada)) {
+        toast.error('No tiene permiso para asignar estudiantes a esta carrera');
+        return;
+      }
+      
       // Si cambia la carrera, resetear el semestre y semestres adicionales
       setFormData({
         ...formData,
@@ -261,6 +338,14 @@ function EditarEstudiante() {
     };
     
     try {
+      // Verificar que la carrera seleccionada esté entre las asignadas al docente
+      const carreraEstudiante = estudianteData.carrera.toLowerCase().trim();
+      const carrerasNormalizadas = carrerasAsignadas.map(c => c.toLowerCase().trim());
+      
+      if (!carrerasNormalizadas.includes(carreraEstudiante)) {
+        throw new Error('No tiene permiso para crear estudiantes en esta carrera');
+      }
+      
       // Usar el servicio para crear un nuevo estudiante
       await createEstudiante(estudianteData);
       return true;
@@ -278,6 +363,15 @@ function EditarEstudiante() {
         ...formData,
         codigo: formData.codigo.toUpperCase()
       };
+      
+      // Verificar que la carrera seleccionada esté entre las asignadas al docente
+      const carreraEstudiante = datosActualizados.carrera.toLowerCase().trim();
+      const carrerasNormalizadas = carrerasAsignadas.map(c => c.toLowerCase().trim());
+      
+      if (!carrerasNormalizadas.includes(carreraEstudiante)) {
+        toast.error('No tiene permiso para asignar estudiantes a esta carrera');
+        return false;
+      }
       
       // Si requiere confirmación, enviar flag confirmarLimpieza
       const resultado = await updateEstudiante(id, datosActualizados, confirmar);
@@ -355,6 +449,16 @@ function EditarEstudiante() {
       
       if (!nombre || !apellido || !codigo || !carrera || !semestre || !unidad_educativa) {
         toast.error('Todos los campos son obligatorios');
+        setSaving(false);
+        return;
+      }
+      
+      // Verificar que la carrera seleccionada esté entre las asignadas al docente
+      const carreraEstudiante = carrera.toLowerCase().trim();
+      const carrerasNormalizadas = carrerasAsignadas.map(c => c.toLowerCase().trim());
+      
+      if (!carrerasNormalizadas.includes(carreraEstudiante)) {
+        toast.error('No tiene permiso para asignar estudiantes a esta carrera');
         setSaving(false);
         return;
       }
@@ -509,7 +613,17 @@ function EditarEstudiante() {
           
           {loading ? (
             <div className="loading-indicator">Cargando datos del estudiante...</div>
-          ) : (
+          ) : errorAcceso ? (
+            <div className="error-message">
+              <p>{errorAcceso}</p>
+              <button 
+                className="btn-editar-cancelar" 
+                onClick={() => navigate('/estudiantes/listar')}
+              >
+                Volver a la lista de estudiantes
+              </button>
+            </div>
+          ) : estudiantePropio ? (
             <>
               {/* Opciones para múltiples semestres */}
               <div className="multi-semestre-options">
@@ -640,7 +754,7 @@ function EditarEstudiante() {
                     required
                   >
                     <option value="">Seleccione una carrera</option>
-                    {CARRERAS.map((carrera, index) => (
+                    {carrerasDisponibles.map((carrera, index) => (
                       <option key={index} value={carrera.value}>
                         {carrera.label}
                       </option>
@@ -809,6 +923,16 @@ function EditarEstudiante() {
                 )}
               </form>
             </>
+          ) : (
+            <div className="error-message">
+              <p>No se pudo cargar el estudiante solicitado.</p>
+              <button 
+                className="btn-editar-cancelar" 
+                onClick={() => navigate('/estudiantes/listar')}
+              >
+                Volver a la lista de estudiantes
+              </button>
+            </div>
           )}
         </div>
       </div>

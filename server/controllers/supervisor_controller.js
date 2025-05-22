@@ -1,4 +1,5 @@
 const supervisorModel = require('../models/supervisor_model');
+const supervisorCarreraModel = require('../models/supervisor_carrera_model');
 const { createAuthService, AuthenticationError } = require('../secutiry/auth');
 const codigoVerificacionModel = require('../models/codigo_verificacion_model');
 const emailService = require('../utils/email');
@@ -6,6 +7,7 @@ require('dotenv').config();
 const grupoModel = require('../models/grupos_model');
 const authService = createAuthService();
 const pool = require('../database/db');
+
 async function loginSupervisor(req, res) {
   try {
     const { correo_electronico } = req.body;
@@ -77,6 +79,7 @@ async function verificarCodigoSupervisor(req, res) {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+
 /**
  * Tercera etapa - Verifica la clave secreta y genera token
  */
@@ -108,7 +111,8 @@ async function autenticarSupervisor(req, res) {
     // Crear objeto para el token
     const usuarioParaToken = {
       id: resultado.supervisor.id,
-      correo: resultado.supervisor.correo
+      correo: resultado.supervisor.correo,
+      carreras: resultado.supervisor.carreras
     };
     
     // Generar token JWT
@@ -117,7 +121,11 @@ async function autenticarSupervisor(req, res) {
     // Devolver respuesta exitosa con token
     res.json({
       token,
-      usuario: resultado.supervisor,
+      usuario: {
+        ...usuarioParaToken,
+        nombre: resultado.supervisor.nombre,
+        cargo: resultado.supervisor.cargo
+      },
       message: 'Inicio de sesión exitoso como supervisor'
     });
   } catch (error) {
@@ -128,6 +136,24 @@ async function autenticarSupervisor(req, res) {
 
 async function crearSupervisor(req, res) {
   try {
+    // Verificar si el usuario es un supervisor con permisos
+    if (req.user && req.user.carreras && Array.isArray(req.user.carreras)) {
+      // Solo permitir la creación de supervisores que administren carreras a las que 
+      // el supervisor actual tiene acceso
+      if (req.body.carreras && Array.isArray(req.body.carreras)) {
+        const carrerasSinAcceso = req.body.carreras.filter(carrera => 
+          !req.user.carreras.includes(carrera)
+        );
+        
+        if (carrerasSinAcceso.length > 0) {
+          return res.status(403).json({ 
+            error: 'No tiene permisos para asignar algunas de las carreras especificadas',
+            carrerasSinAcceso
+          });
+        }
+      }
+    }
+    
     const supervisor = await supervisorModel.crearSupervisor(req.body);
     res.status(201).json(supervisor);
   } catch (error) {
@@ -140,7 +166,32 @@ async function crearSupervisor(req, res) {
 
 async function obtenerSupervisores(req, res) {
   try {
-    const supervisores = await supervisorModel.obtenerSupervisores();
+    let supervisores;
+    
+    // Si el usuario es un supervisor, obtener solo supervisores de sus carreras
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Obtener supervisores para cada carrera del usuario
+      let supervisoresPorCarrera = [];
+      
+      for (const carrera of req.user.carreras) {
+        const supervisoresCarrera = await supervisorModel.obtenerSupervisoresPorCarrera(carrera);
+        supervisoresPorCarrera = [...supervisoresPorCarrera, ...supervisoresCarrera];
+      }
+      
+      // Eliminar duplicados
+      const supervisoresIds = new Set();
+      supervisores = supervisoresPorCarrera.filter(supervisor => {
+        if (supervisoresIds.has(supervisor.id)) {
+          return false;
+        }
+        supervisoresIds.add(supervisor.id);
+        return true;
+      });
+    } else {
+      // Obtener todos los supervisores si no hay restricciones
+      supervisores = await supervisorModel.obtenerSupervisores();
+    }
+    
     res.json(supervisores);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -153,6 +204,19 @@ async function obtenerSupervisorPorId(req, res) {
     if (!supervisor) {
       return res.status(404).json({ error: 'Supervisor no encontrado' });
     }
+    
+    // Si el usuario es un supervisor, verificar que tenga acceso a este supervisor
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = supervisor.carreras && supervisor.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para acceder a este supervisor' });
+      }
+    }
+    
     res.json(supervisor);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -161,7 +225,41 @@ async function obtenerSupervisorPorId(req, res) {
 
 async function actualizarSupervisor(req, res) {
   try {
-    const supervisor = await supervisorModel.actualizarSupervisor(req.params.id, req.body);
+    const id = req.params.id;
+    
+    // Verificar si el supervisor existe
+    const supervisorActual = await supervisorModel.obtenerSupervisorPorId(id);
+    if (!supervisorActual) {
+      return res.status(404).json({ error: 'Supervisor no encontrado' });
+    }
+    
+    // Si el usuario es un supervisor, verificar permisos
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = supervisorActual.carreras && supervisorActual.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para actualizar este supervisor' });
+      }
+      
+      // Si intenta asignar carreras, verificar que solo asigne carreras a las que tiene acceso
+      if (req.body.carreras && Array.isArray(req.body.carreras)) {
+        const carrerasSinAcceso = req.body.carreras.filter(carrera => 
+          !req.user.carreras.includes(carrera)
+        );
+        
+        if (carrerasSinAcceso.length > 0) {
+          return res.status(403).json({ 
+            error: 'No tiene permisos para asignar algunas de las carreras especificadas',
+            carrerasSinAcceso
+          });
+        }
+      }
+    }
+    
+    const supervisor = await supervisorModel.actualizarSupervisor(id, req.body);
     if (!supervisor) {
       return res.status(404).json({ error: 'Supervisor no encontrado' });
     }
@@ -176,7 +274,27 @@ async function actualizarSupervisor(req, res) {
 
 async function eliminarSupervisor(req, res) {
   try {
-    const supervisor = await supervisorModel.eliminarSupervisor(req.params.id);
+    const id = req.params.id;
+    
+    // Verificar si el supervisor existe
+    const supervisorActual = await supervisorModel.obtenerSupervisorPorId(id);
+    if (!supervisorActual) {
+      return res.status(404).json({ error: 'Supervisor no encontrado' });
+    }
+    
+    // Si el usuario es un supervisor, verificar permisos
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = supervisorActual.carreras && supervisorActual.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para eliminar este supervisor' });
+      }
+    }
+    
+    const supervisor = await supervisorModel.eliminarSupervisor(id);
     if (!supervisor) {
       return res.status(404).json({ error: 'Supervisor no encontrado' });
     }
@@ -248,7 +366,7 @@ async function verificarCodigoExistente(req, res) {
 }
 
 /**
- * NUEVAS FUNCIONES PARA GESTIÓN DE RÚBRICAS
+ * FUNCIONES PARA GESTIÓN DE RÚBRICAS
  */
 
 /**
@@ -258,7 +376,16 @@ async function verificarCodigoExistente(req, res) {
  */
 async function obtenerTodasRubricas(req, res) {
   try {
-    const rubricas = await supervisorModel.obtenerTodasRubricas();
+    let rubricas;
+    
+    // Si el usuario tiene carreras asignadas, filtrar por esas carreras
+    const carrerasUsuario = req.user?.carreras || req.supervisor?.carreras;
+    
+    if (carrerasUsuario && carrerasUsuario.length > 0) {
+      rubricas = await supervisorModel.obtenerTodasRubricas(carrerasUsuario);
+    } else {
+      rubricas = await supervisorModel.obtenerTodasRubricas();
+    }
     
     // Procesar y agrupar los resultados por grupo
     const gruposMap = new Map();
@@ -346,8 +473,7 @@ async function obtenerRubricasGrupo(req, res) {
       return res.status(400).json({ error: 'ID de grupo es requerido' });
     }
     
-    // Primero verificar si el grupo existe usando el modelo
-    const grupoModel = require('../models/grupos_model'); // Asegúrate de importar el modelo al inicio del archivo
+    // Primero verificar si el grupo existe
     const grupo = await grupoModel.obtenerGrupoPorId(grupoId);
     
     if (!grupo) {
@@ -357,6 +483,15 @@ async function obtenerRubricasGrupo(req, res) {
         estudiantes: [],
         total_estudiantes: 0
       });
+    }
+    
+    // Si el usuario tiene carreras asignadas, verificar que tenga acceso a este grupo
+    const carrerasUsuario = req.user?.carreras || req.supervisor?.carreras;
+    
+    if (carrerasUsuario && carrerasUsuario.length > 0) {
+      if (!carrerasUsuario.includes(grupo.carrera)) {
+        return res.status(403).json({ error: 'No tiene permisos para acceder a este grupo' });
+      }
     }
     
     // Obtener información de contadores (con manejo de errores)
@@ -482,7 +617,13 @@ async function habilitarRubricasGrupo(req, res) {
   try {
     const { grupoId } = req.params;
     const { motivo } = req.body;
-    const supervisorId = req.user.id;
+    
+    // Usar req.user.id (del token JWT) o req.supervisor.id (del middleware verificarSupervisor)
+    const supervisorId = req.user?.id || req.supervisor?.id;
+    
+    if (!supervisorId) {
+      return res.status(401).json({ error: 'ID de supervisor no disponible' });
+    }
     
     if (!grupoId) {
       return res.status(400).json({ error: 'ID de grupo es requerido' });
@@ -490,6 +631,16 @@ async function habilitarRubricasGrupo(req, res) {
     
     if (!motivo || motivo.trim() === '') {
       return res.status(400).json({ error: 'El motivo de habilitación es requerido' });
+    }
+    
+    // Verificar si el grupo pertenece a alguna de las carreras del supervisor
+    const grupo = await grupoModel.obtenerGrupoPorId(grupoId);
+    const carrerasUsuario = req.user?.carreras || req.supervisor?.carreras;
+    
+    if (carrerasUsuario && carrerasUsuario.length > 0) {
+      if (!grupo || !carrerasUsuario.includes(grupo.carrera)) {
+        return res.status(403).json({ error: 'No tiene permisos para habilitar este grupo' });
+      }
     }
     
     // Verificar si ya existe una habilitación activa
@@ -542,6 +693,16 @@ async function obtenerHistorialHabilitacionesGrupo(req, res) {
     
     if (!grupoId) {
       return res.status(400).json({ error: 'ID de grupo es requerido' });
+    }
+    
+    // Verificar si el grupo pertenece a alguna de las carreras del supervisor
+    const grupo = await grupoModel.obtenerGrupoPorId(grupoId);
+    const carrerasUsuario = req.user?.carreras || req.supervisor?.carreras;
+    
+    if (carrerasUsuario && carrerasUsuario.length > 0) {
+      if (!grupo || !carrerasUsuario.includes(grupo.carrera)) {
+        return res.status(403).json({ error: 'No tiene permisos para ver el historial de este grupo' });
+      }
     }
     
     const historial = await supervisorModel.obtenerHistorialHabilitaciones(grupoId);
@@ -616,6 +777,24 @@ async function desactivarHabilitacion(req, res) {
       return res.status(400).json({ error: 'Esta habilitación ya está desactivada' });
     }
     
+    // Verificar permisos por carrera si el usuario tiene carreras asignadas
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      const query = `
+        SELECT g.carrera 
+        FROM habilitaciones_rubricas h
+        JOIN grupos g ON h.grupo_id = g.id
+        WHERE h.id = $1
+      `;
+      const carreraResult = await pool.query(query, [habilitacionId]);
+      
+      if (carreraResult.rows.length > 0) {
+        const carreraGrupo = carreraResult.rows[0].carrera;
+        if (!req.user.carreras.includes(carreraGrupo)) {
+          return res.status(403).json({ error: 'No tiene permisos para desactivar esta habilitación' });
+        }
+      }
+    }
+    
     // Ahora intentar la desactivación con el valor correcto de supervisorId (NULL o un ID válido)
     const query = `
       UPDATE habilitaciones_rubricas 
@@ -658,6 +837,82 @@ async function desactivarHabilitacion(req, res) {
   }
 }
 
+/**
+ * Gestiona las carreras asignadas a un supervisor
+ */
+async function gestionarCarrerasSupervisor(req, res) {
+  try {
+    const supervisorId = req.params.id;
+    const { carreras } = req.body;
+    
+    if (!Array.isArray(carreras)) {
+      return res.status(400).json({ error: 'Se debe proporcionar un array de carreras' });
+    }
+    
+    // Verificar que el supervisor existe
+    const supervisor = await supervisorModel.obtenerSupervisorPorId(supervisorId);
+    if (!supervisor) {
+      return res.status(404).json({ error: 'Supervisor no encontrado' });
+    }
+    
+    // Si el usuario es un supervisor, verificar permisos
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común (para edición)
+      const tieneAccesoActual = supervisor.carreras && supervisor.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      // Verificar si intenta asignar carreras a las que no tiene acceso
+      const carrerasSinAcceso = carreras.filter(carrera => 
+        !req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAccesoActual || carrerasSinAcceso.length > 0) {
+        return res.status(403).json({ 
+          error: 'No tiene permisos para modificar las carreras de este supervisor o asignar algunas de las carreras especificadas',
+          carrerasSinAcceso
+        });
+      }
+    }
+    
+    // Asignar las carreras
+    const resultado = await supervisorCarreraModel.asignarCarrerasASupervisor(supervisorId, carreras);
+    
+    // Obtener el supervisor actualizado
+    const supervisorActualizado = await supervisorModel.obtenerSupervisorPorId(supervisorId);
+    
+    res.json({
+      message: 'Carreras actualizadas correctamente',
+      supervisor: supervisorActualizado
+    });
+  } catch (error) {
+    console.error('Error al gestionar carreras del supervisor:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Obtiene supervisores filtrados por carrera
+ */
+async function obtenerSupervisoresPorCarrera(req, res) {
+  try {
+    const carrera = req.params.carrera;
+    
+    // Si el usuario es un supervisor, verificar que tenga acceso a esta carrera
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      if (!req.user.carreras.includes(carrera)) {
+        return res.status(403).json({ error: 'No tiene acceso a los supervisores de esta carrera' });
+      }
+    }
+    
+    const supervisores = await supervisorModel.obtenerSupervisoresPorCarrera(carrera);
+    res.json(supervisores);
+  } catch (error) {
+    console.error('Error al obtener supervisores por carrera:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 module.exports = {
     crearSupervisor,
     obtenerSupervisores,
@@ -673,5 +928,7 @@ module.exports = {
     obtenerRubricasGrupo,
     obtenerHistorialHabilitacionesGrupo,
     habilitarRubricasGrupo,
-    desactivarHabilitacion
+    desactivarHabilitacion,
+    gestionarCarrerasSupervisor,
+    obtenerSupervisoresPorCarrera
   };

@@ -23,7 +23,6 @@ const solicitudLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Middleware para verificar si el usuario es un supervisor
 const verificarSupervisor = async (req, res, next) => {
   try {
     // Obtener ID del usuario autenticado
@@ -35,11 +34,21 @@ const verificarSupervisor = async (req, res, next) => {
     
     // Importar y usar el modelo en lugar del controlador
     const supervisorModel = require('../models/supervisor_model');
+    
+    // Agregar log para depurar
+    console.log('Verificando supervisor con ID:', userId);
+    
     const supervisor = await supervisorModel.obtenerSupervisorPorId(userId);
+    
+    // Agregar log para ver el resultado de la consulta
+    console.log('Resultado de la consulta:', supervisor);
     
     if (!supervisor) {
       return res.status(403).json({ error: 'Acceso denegado: Se requieren permisos de supervisor' });
     }
+    
+    // Agregar los datos del supervisor al request para uso posterior
+    req.supervisor = supervisor;
     
     next();
   } catch (error) {
@@ -48,7 +57,16 @@ const verificarSupervisor = async (req, res, next) => {
   }
 };
 
-// Rutas de autenticación
+// Middleware para validar datos de supervisor
+const validarSupervisor = (req, res, next) => {
+  const { nombre_completo, correo_electronico, cargo } = req.body;
+  if (!nombre_completo || !correo_electronico || !cargo) {
+    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+  }
+  next();
+};
+
+// Rutas de autenticación (públicas)
 router.post('/login', solicitudLimiter, supervisorController.loginSupervisor);
 router.post('/verificar-codigo', codigoLimiter, supervisorController.verificarCodigoSupervisor);
 router.post('/autenticar', codigoLimiter, supervisorController.autenticarSupervisor);
@@ -59,6 +77,7 @@ router.get('/verificar-correo/:correo', supervisorController.verificarCorreoSupe
 router.post('/create', 
   authService.createAuthMiddleware(), 
   verificarSupervisor, 
+  validarSupervisor,
   supervisorController.crearSupervisor
 );
 
@@ -77,6 +96,7 @@ router.get('/get/:id',
 router.put('/update/:id', 
   authService.createAuthMiddleware(), 
   verificarSupervisor, 
+  validarSupervisor,
   supervisorController.actualizarSupervisor
 );
 
@@ -86,7 +106,20 @@ router.delete('/delete/:id',
   supervisorController.eliminarSupervisor
 );
 
-// NUEVAS RUTAS PARA GESTIÓN DE RÚBRICAS
+// Rutas para gestión de carreras de supervisor
+router.post('/carreras/:id',
+  authService.createAuthMiddleware(),
+  verificarSupervisor,
+  supervisorController.gestionarCarrerasSupervisor
+);
+
+router.get('/carrera/:carrera',
+  authService.createAuthMiddleware(),
+  verificarSupervisor,
+  supervisorController.obtenerSupervisoresPorCarrera
+);
+
+// RUTAS PARA GESTIÓN DE RÚBRICAS
 router.get('/rubricas', 
   authService.createAuthMiddleware(), 
   verificarSupervisor, 

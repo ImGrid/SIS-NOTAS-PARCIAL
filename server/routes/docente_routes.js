@@ -31,6 +31,31 @@ const validarDocente = (req, res, next) => {
   next();
 };
 
+// Middleware para verificar si el usuario es un supervisor
+const verificarSupervisor = async (req, res, next) => {
+  try {
+    // Obtener ID del usuario autenticado
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+    
+    // Importar y usar el modelo para verificar si es supervisor
+    const supervisorModel = require('../models/supervisor_model');
+    const supervisor = await supervisorModel.obtenerSupervisorPorId(userId);
+    
+    if (!supervisor) {
+      return res.status(403).json({ error: 'Esta acción requiere permisos de supervisor' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error al verificar supervisor:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // Rutas de autenticación
 router.post('/login', solicitudLimiter, docenteController.loginDocente);
 router.post('/verificar-codigo', codigoLimiter, docenteController.verificarCodigo);
@@ -39,6 +64,7 @@ router.post('/verificar-codigo-existente', docenteController.verificarCodigoExis
 // Rutas protegidas que requieren autenticación
 router.post('/create', 
   authService.createAuthMiddleware(), 
+  verificarSupervisor, // Solo los supervisores pueden crear docentes
   validarDocente, 
   docenteController.crearDocente
 );
@@ -68,6 +94,18 @@ router.delete('/delete/:id',
 router.get('/verificar-dependencias/:id',
   authService.createAuthMiddleware(),
   docenteController.verificarDependencias
+);
+
+// Nuevas rutas para gestionar carreras
+router.post('/carreras/:id', 
+  authService.createAuthMiddleware(), 
+  verificarSupervisor, // Solo supervisores pueden asignar carreras
+  docenteController.gestionarCarrerasDocente
+);
+
+router.get('/carrera/:carrera',
+  authService.createAuthMiddleware(),
+  docenteController.obtenerDocentesPorCarrera
 );
 
 module.exports = router;

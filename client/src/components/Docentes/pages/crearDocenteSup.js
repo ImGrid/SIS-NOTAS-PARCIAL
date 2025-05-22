@@ -6,6 +6,23 @@ import '../style/crearDocenteSup.css';
 import api from '../../../service/api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { createDocente, gestionarCarrerasDocente } from '../../../service/docenteService';
+
+// Lista estática de todas las carreras disponibles en la universidad
+const CARRERAS = [
+  { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
+  { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
+  { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
+  { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
+  { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
+  { value: 'Ingeniería Civil', label: 'Ingeniería Civil' },
+  { value: 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual', label: 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual' },
+  { value: 'Tec. Sup. en Informática', label: 'Tec. Sup. en Informática' },
+  { value: 'Tec. Sup. en Análisis de Sistemas', label: 'Tec. Sup. en Análisis de Sistemas' },
+  { value: 'Tec. Sup. en Programación de Sistemas', label: 'Tec. Sup. en Programación de Sistemas' },
+  { value: 'Tec. Sup. en Sistemas Electrónicos', label: 'Tec. Sup. en Sistemas Electrónicos' },
+  { value: 'Técnico Superior en Energías Renovables', label: 'Técnico Superior en Energías Renovables' }
+];
 
 function CrearDocenteAdmin() {
   const navigate = useNavigate();
@@ -16,11 +33,17 @@ function CrearDocenteAdmin() {
     cargo: 'Ingeniero' // Valor predeterminado
   });
   
+  // Estados para manejo de carreras
+  const [carrerasSeleccionadas, setCarrerasSeleccionadas] = useState([]);
+  const [carreraActual, setCarreraActual] = useState('');
+  
   const [loading, setLoading] = useState(false);
+  
   const [validFields, setValidFields] = useState({
     nombre_completo: false,
     correo_electronico: false,
-    cargo: true // Inicialmente verdadero ya que tiene valor predeterminado
+    cargo: true, // Inicialmente verdadero ya que tiene valor predeterminado
+    carreras: false // Requerimos al menos una carrera
   });
 
   // Efecto para verificar si todos los campos requeridos están llenos
@@ -34,9 +57,10 @@ function CrearDocenteAdmin() {
     setValidFields({
       nombre_completo: nombre_completo.trim() !== '',
       correo_electronico: correo_electronico.trim() !== '' && isEmailValid,
-      cargo: cargo.trim() !== ''
+      cargo: cargo.trim() !== '',
+      carreras: carrerasSeleccionadas.length > 0 // Verificar que se haya seleccionado al menos una carrera
     });
-  }, [formData]);
+  }, [formData, carrerasSeleccionadas]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,6 +68,36 @@ function CrearDocenteAdmin() {
       ...formData,
       [name]: value
     });
+  };
+
+  // Manejar selección de carrera
+  const handleCarreraChange = (e) => {
+    setCarreraActual(e.target.value);
+  };
+
+  // Añadir carrera a la lista de seleccionadas
+  const agregarCarrera = () => {
+    if (!carreraActual) return;
+    
+    // Verificar si la carrera ya está seleccionada
+    if (carrerasSeleccionadas.includes(carreraActual)) {
+      toast.info('Esta carrera ya ha sido seleccionada');
+      return;
+    }
+    
+    // Verificar límite de 5 carreras por docente (actualizado de 3 a 5)
+    if (carrerasSeleccionadas.length >= 6) {
+      toast.warning('Un docente no puede tener más de 6 carreras asignadas');
+      return;
+    }
+    
+    setCarrerasSeleccionadas([...carrerasSeleccionadas, carreraActual]);
+    setCarreraActual(''); // Resetear selección actual
+  };
+
+  // Eliminar carrera de la lista de seleccionadas
+  const eliminarCarrera = (carrera) => {
+    setCarrerasSeleccionadas(carrerasSeleccionadas.filter(c => c !== carrera));
   };
 
   const handleSubmit = async (e) => {
@@ -55,9 +109,14 @@ function CrearDocenteAdmin() {
       const { nombre_completo, correo_electronico, cargo } = formData;
       
       if (!nombre_completo || !correo_electronico || !cargo) {
-        toast.error('Todos los campos son obligatorios', {
-          className: 'toast-notification'
-        });
+        toast.error('Todos los campos son obligatorios');
+        setLoading(false);
+        return;
+      }
+      
+      // Validar que se haya seleccionado al menos una carrera
+      if (carrerasSeleccionadas.length === 0) {
+        toast.error('Debe asignar al menos una carrera al docente');
         setLoading(false);
         return;
       }
@@ -65,46 +124,51 @@ function CrearDocenteAdmin() {
       // Validación de email con expresión regular
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(correo_electronico)) {
-        toast.error('Por favor, introduce un correo electrónico válido', {
-          className: 'toast-notification'
-        });
+        toast.error('Por favor, introduce un correo electrónico válido');
         setLoading(false);
         return;
       }
       
-      // Usamos api directamente para tener más control
-      const response = await api.post('/api/docentes/create', {
-        ...formData
+      // Paso 1: Crear el docente
+      const nuevoDocente = await createDocente({
+        nombre_completo,
+        correo_electronico,
+        cargo
       });
       
-      // Notificación de éxito
-      toast.success('Docente registrado exitosamente', {
-        className: 'toast-notification'
-      });
-      
-      // Resetear el formulario
-      setFormData({
-        nombre_completo: '',
-        correo_electronico: '',
-        cargo: 'Ingeniero'
-      });
+      if (nuevoDocente && nuevoDocente.id) {
+        // Paso 2: Asignar carreras al docente
+        try {
+          await gestionarCarrerasDocente(nuevoDocente.id, carrerasSeleccionadas);
+          
+          // Notificación de éxito
+          toast.success(`Docente "${nombre_completo}" registrado exitosamente con ${carrerasSeleccionadas.length} carrera(s) asignada(s)`);
+          
+          // Resetear el formulario
+          setFormData({
+            nombre_completo: '',
+            correo_electronico: '',
+            cargo: 'Ingeniero'
+          });
+          setCarrerasSeleccionadas([]);
+          setCarreraActual('');
+          
+        } catch (errorCarreras) {
+          console.error("Error al asignar carreras:", errorCarreras);
+          toast.warning("Docente creado, pero hubo un problema al asignar las carreras");
+        }
+      }
       
     } catch (err) {
       console.error("Error al crear el docente:", err);
       
       // Manejar específicamente el error de correo duplicado
       if (err.response && err.response.data && err.response.data.error === 'El correo electrónico ya está en uso') {
-        toast.error("El correo electrónico ya está registrado. Por favor, utilice otro correo.", {
-          className: 'toast-notification'
-        });
+        toast.error("El correo electrónico ya está registrado. Por favor, utilice otro correo.");
       } else if (err.message) {
-        toast.error(err.message, {
-          className: 'toast-notification'
-        });
+        toast.error(err.message);
       } else {
-        toast.error("Error al crear el docente. Por favor, intente de nuevo.", {
-          className: 'toast-notification'
-        });
+        toast.error("Error al crear el docente. Por favor, intente de nuevo.");
       }
     } finally {
       setLoading(false);
@@ -118,6 +182,10 @@ function CrearDocenteAdmin() {
   // Función para determinar la clase CSS de cada campo del formulario
   const getFieldClass = (fieldName) => {
     // Si el campo tiene contenido, verificamos si es válido
+    if (fieldName === 'carreras') {
+      return validFields.carreras ? 'valid' : '';
+    }
+    
     if (formData[fieldName] && formData[fieldName].trim !== undefined && formData[fieldName].trim() !== '') {
       return validFields[fieldName] ? 'valid' : '';
     }
@@ -127,6 +195,7 @@ function CrearDocenteAdmin() {
   return (
     <LayoutSup>
       <div className="docente-admin-form-styles">
+        <ToastContainer position="top-right" autoClose={3000} />
         <div className="crear-docente-admin-container">
           <h1>Registrar Nuevo Docente</h1>
           
@@ -173,6 +242,61 @@ function CrearDocenteAdmin() {
                 <option value="Licenciado">Licenciado</option>
                 <option value="Doctor">Doctor</option>
               </select>
+            </div>
+            
+            {/* Campo para selección de carreras */}
+            <div className={`form-group carreras-group ${getFieldClass('carreras')}`}>
+              <label htmlFor="carreras">Asignar Carreras:</label>
+              
+              <div className="carreras-seleccion">
+                <div className="carreras-input-container">
+                  <select
+                    id="carrera"
+                    name="carrera"
+                    value={carreraActual}
+                    onChange={handleCarreraChange}
+                  >
+                    <option value="">Seleccione una carrera</option>
+                    {CARRERAS.map(carrera => (
+                      <option key={carrera.value} value={carrera.value}>
+                        {carrera.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button 
+                    type="button" 
+                    className="btn-agregar-carrera"
+                    onClick={agregarCarrera}
+                    disabled={!carreraActual || carrerasSeleccionadas.length >= 5}
+                  >
+                    Agregar
+                  </button>
+                </div>
+                
+                {carrerasSeleccionadas.length > 0 && (
+                  <div className="carreras-seleccionadas">
+                    <label>Carreras asignadas:</label>
+                    <div className="carreras-tags">
+                      {carrerasSeleccionadas.map(carrera => (
+                        <div key={carrera} className="carrera-tag">
+                          <span>{carrera}</span>
+                          <button 
+                            type="button" 
+                            className="btn-eliminar-carrera"
+                            onClick={() => eliminarCarrera(carrera)}
+                            title="Eliminar carrera"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="carreras-limite-info">
+                      <small>Un docente puede tener asignadas máximo 6 carreras</small>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="form-actions">

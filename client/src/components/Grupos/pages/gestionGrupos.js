@@ -76,17 +76,56 @@ function GestionGrupos() {
   // Estados para el modal de confirmación
   const [modalOpen, setModalOpen] = useState(false);
   const [grupoToDelete, setGrupoToDelete] = useState(null);
+  
+  // Estado para guardar las carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+
+  // Función para obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
 
   // Función para cargar los grupos
   const cargarGrupos = async () => {
     try {
       setLoading(true);
+      
+      // Obtener carreras asignadas al docente
+      const carrerasDocente = obtenerCarrerasDocente();
+      setCarrerasAsignadas(carrerasDocente);
+      
+      // Si no hay carreras asignadas, mostrar error
+      if (carrerasDocente.length === 0) {
+        setError("No tiene carreras asignadas. Contacte con el administrador.");
+        setLoading(false);
+        return;
+      }
+      
+      // Obtener todos los grupos del docente
       const data = await getMisGrupos();
-      setGrupos(data);
+      
+      // Filtrar solo los grupos que pertenecen a las carreras asignadas al docente
+      const gruposFiltradosPorCarrera = data.filter(grupo => 
+        carrerasDocente.includes(grupo.carrera)
+      );
+      
+      setGrupos(gruposFiltradosPorCarrera);
       
       // Obtener estudiantes para cada grupo
       const estudiantesPorGrupo = {};
-      for (const grupo of data) {
+      for (const grupo of gruposFiltradosPorCarrera) {
         const estudiantes = await getEstudiantesByGrupoId(grupo.id);
         estudiantesPorGrupo[grupo.id] = estudiantes;
       }
@@ -113,8 +152,11 @@ function GestionGrupos() {
   };
 
   const getCarrerasUnicas = () => {
-    const carreras = grupos.map(g => g.carrera);
-    return [...new Set(carreras)].sort();
+    // Solo mostrar las carreras que están asignadas al docente Y están presentes en los grupos
+    const carrerasEnGrupos = grupos.map(g => g.carrera);
+    return [...new Set(carrerasEnGrupos)]
+      .filter(carrera => carrerasAsignadas.includes(carrera))
+      .sort();
   };
 
   const getMateriasUnicas = () => {
@@ -243,12 +285,24 @@ function GestionGrupos() {
 
   // Función para redirigir a la página de edición de grupo
   const handleEditarGrupo = (grupoId) => {
-    navigate(`/grupos/editar/${grupoId}`);
+    // Verificar si el grupo pertenece a una carrera asignada al docente
+    const grupo = grupos.find(g => g.id === grupoId);
+    if (grupo && carrerasAsignadas.includes(grupo.carrera)) {
+      navigate(`/grupos/editar/${grupoId}`);
+    } else {
+      toast.error("No tiene permisos para editar este grupo");
+    }
   };
 
   // Función para redirigir a la página de asignación de estudiantes
   const handleAsignarEstudiantes = (grupoId) => {
-    navigate(`/grupos/asignar?id=${grupoId}`);
+    // Verificar si el grupo pertenece a una carrera asignada al docente
+    const grupo = grupos.find(g => g.id === grupoId);
+    if (grupo && carrerasAsignadas.includes(grupo.carrera)) {
+      navigate(`/grupos/asignar?id=${grupoId}`);
+    } else {
+      toast.error("No tiene permisos para asignar estudiantes a este grupo");
+    }
   };
 
   // Función para desasignar estudiantes de un grupo
@@ -274,8 +328,14 @@ function GestionGrupos() {
 
   // Función para abrir el modal de confirmación
   const handleEliminarGrupo = (grupoId) => {
-    setGrupoToDelete(grupoId);
-    setModalOpen(true);
+    // Verificar si el grupo pertenece a una carrera asignada al docente
+    const grupo = grupos.find(g => g.id === grupoId);
+    if (grupo && carrerasAsignadas.includes(grupo.carrera)) {
+      setGrupoToDelete(grupoId);
+      setModalOpen(true);
+    } else {
+      toast.error("No tiene permisos para eliminar este grupo");
+    }
   };
 
   // Función para procesar la confirmación de eliminación
@@ -341,6 +401,12 @@ function GestionGrupos() {
         </div>
         
         <div className="grupos-container">
+          {carrerasAsignadas.length === 0 && (
+            <div className="error-message">
+              No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
+            </div>
+          )}
+          
           {/* Barra de búsqueda y filtros en una sola línea */}
           <div className="search-filters-container">
             <div className="search-filters-row">

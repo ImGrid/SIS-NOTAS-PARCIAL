@@ -31,9 +31,13 @@ function CrearGrupos() {
     semestre: false,
     materia: false
   });
+  
+  // Estado para las carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
 
-  // Mapa de carreras disponibles
-  const CARRERAS = [
+  // Mapa de todas las carreras disponibles en el sistema
+  const TODAS_CARRERAS = [
     { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
     { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
     { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
@@ -41,6 +45,40 @@ function CrearGrupos() {
     { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
     { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
   ];
+
+  // Cargar las carreras asignadas al docente cuando el componente se monta
+  useEffect(() => {
+    const obtenerCarrerasDocente = () => {
+      try {
+        const usuarioStr = sessionStorage.getItem('usuario');
+        if (usuarioStr) {
+          const usuario = JSON.parse(usuarioStr);
+          if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+            setCarrerasAsignadas(usuario.carreras);
+            
+            // Filtrar las carreras disponibles basadas en las asignadas al docente
+            const carreras = TODAS_CARRERAS.filter(carrera => 
+              usuario.carreras.includes(carrera.value)
+            );
+            setCarrerasDisponibles(carreras);
+          } else {
+            toast.error("No tiene carreras asignadas. Contacte con el administrador.");
+          }
+        } else {
+          toast.error("No se pudo obtener la información del usuario. Por favor, vuelva a iniciar sesión.");
+          // Redireccionar al login si no hay datos de usuario
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("Error al obtener carreras del docente:", error);
+        toast.error("Error al cargar sus datos. Por favor, vuelva a iniciar sesión.");
+      }
+    };
+    
+    obtenerCarrerasDocente();
+  }, [navigate]);
 
   // Función para obtener semestres disponibles según la carrera
   const getSemestresDisponibles = (carrera) => {
@@ -118,6 +156,14 @@ function CrearGrupos() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // Validar que solo se puedan seleccionar carreras asignadas al docente
+    if (name === 'carrera' && value !== '') {
+      if (!carrerasAsignadas.includes(value)) {
+        toast.error("No tiene permisos para crear grupos en esta carrera");
+        return;
+      }
+    }
+    
     // Si cambia la carrera, resetear también el semestre
     if (name === 'carrera') {
       setFormData({
@@ -139,6 +185,11 @@ function CrearGrupos() {
     setLoading(true);
 
     try {
+      // Validar que la carrera esté asignada al docente
+      if (!carrerasAsignadas.includes(formData.carrera)) {
+        throw new Error("No tiene permisos para crear grupos en esta carrera");
+      }
+      
       // La función createGrupo ya se encargará de obtener el ID del docente actual
       const grupoCreado = await createGrupo(formData);
       
@@ -196,6 +247,12 @@ function CrearGrupos() {
         <div className="crear-grupo-container">
           <h1>Crear Nuevo Grupo</h1>
           
+          {carrerasAsignadas.length === 0 && (
+            <div className="error-message">
+              No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
+            </div>
+          )}
+          
           <form className="crear-grupo-form" onSubmit={handleSubmit}>
             <div className={`form-group ${getFieldClass('nombre_proyecto')}`}>
               <label htmlFor="nombre_proyecto">Nombre del Proyecto:</label>
@@ -207,6 +264,7 @@ function CrearGrupos() {
                 onChange={handleChange}
                 required
                 placeholder="Ingrese el nombre del proyecto"
+                disabled={carrerasAsignadas.length === 0}
               />
             </div>
             
@@ -218,14 +276,18 @@ function CrearGrupos() {
                 value={formData.carrera}
                 onChange={handleChange}
                 required
+                disabled={carrerasAsignadas.length === 0}
               >
                 <option value="">Seleccione una carrera</option>
-                {CARRERAS.map((carrera, index) => (
+                {carrerasDisponibles.map((carrera, index) => (
                   <option key={index} value={carrera.value}>
                     {carrera.label}
                   </option>
                 ))}
               </select>
+              {carrerasAsignadas.length === 0 && (
+                <p className="help-text">No tiene carreras asignadas. Contacte con el administrador.</p>
+              )}
             </div>
             
             <div className={`form-group ${getFieldClass('semestre')}`}>
@@ -236,7 +298,7 @@ function CrearGrupos() {
                 value={formData.semestre}
                 onChange={handleChange}
                 required
-                disabled={!formData.carrera}
+                disabled={!formData.carrera || carrerasAsignadas.length === 0}
               >
                 <option value="">Seleccione un semestre</option>
                 {semestresDisponibles.map((semestre, index) => (
@@ -259,7 +321,7 @@ function CrearGrupos() {
                 value={formData.materia}
                 onChange={handleChange}
                 required
-                disabled={!formData.semestre || materias.length === 0}
+                disabled={!formData.semestre || materias.length === 0 || carrerasAsignadas.length === 0}
               >
                 <option value="">Seleccione una materia</option>
                 {materias.map((materia, index) => (
@@ -287,7 +349,7 @@ function CrearGrupos() {
               <button 
                 type="submit" 
                 className={`btn-guardar ${loading ? 'loading' : ''}`}
-                disabled={loading || Object.values(validFields).some(valid => !valid)}
+                disabled={loading || Object.values(validFields).some(valid => !valid) || carrerasAsignadas.length === 0}
               >
                 {loading ? 'Guardando...' : 'Guardar Grupo'}
               </button>

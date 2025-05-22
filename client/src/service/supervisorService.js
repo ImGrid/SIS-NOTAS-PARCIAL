@@ -189,6 +189,7 @@ export const deleteSupervisor = async (id) => {
     throw error;
   }
 };
+
 /**
  * Verifica si existe un código de verificación vigente para el correo
  * @param {string} correo_electronico - Correo del supervisor
@@ -222,6 +223,48 @@ export const verificarCodigoExistente = async (correo_electronico) => {
     }
   }
 };
+
+/**
+ * Gestiona las carreras asignadas a un supervisor
+ * @param {number|string} supervisorId - ID del supervisor
+ * @param {Array<string>} carreras - Lista de carreras a asignar
+ * @returns {Promise<Object>} - Resultado de la operación
+ */
+export const gestionarCarrerasSupervisor = async (supervisorId, carreras) => {
+  try {
+    validateId(supervisorId);
+    
+    if (!Array.isArray(carreras)) {
+      throw new Error('Las carreras deben ser proporcionadas como un array');
+    }
+    
+    const response = await api.post(`/api/supervisores/carreras/${supervisorId}`, { carreras });
+    return response.data;
+  } catch (error) {
+    console.error('Error al gestionar carreras del supervisor:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene los supervisores por carrera
+ * @param {string} carrera - Nombre de la carrera
+ * @returns {Promise<Array>} - Lista de supervisores
+ */
+export const getSupervisoresPorCarrera = async (carrera) => {
+  try {
+    if (!carrera || typeof carrera !== 'string') {
+      throw new Error('Nombre de carrera inválido');
+    }
+    
+    const response = await api.get(`/api/supervisores/carrera/${carrera}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error al obtener supervisores por carrera:', error);
+    throw error;
+  }
+};
+
 export default {
   loginSupervisor,
   verificarCodigoSupervisor,
@@ -233,5 +276,8 @@ export default {
   updateSupervisor,
   deleteSupervisor,
   validateEmail,
-  verificarCodigoExistente
+  verificarCodigoExistente,
+  // Nuevas funciones:
+  gestionarCarrerasSupervisor,
+  getSupervisoresPorCarrera
 };

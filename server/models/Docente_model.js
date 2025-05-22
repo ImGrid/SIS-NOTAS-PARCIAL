@@ -1,29 +1,153 @@
 const pool = require('../database/db');
+const docenteCarreraModel = require('./docente_carrera_model');
 
 async function crearDocente(docente) {
-  const { nombre_completo, correo_electronico, cargo } = docente;
-  const query = 'INSERT INTO docentes (nombre_completo, correo_electronico, cargo) VALUES ($1, $2, $3) RETURNING *';
-  const values = [nombre_completo, correo_electronico, cargo];
-  const result = await pool.query(query, values);
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Extraer carreras (si existen) y el resto de datos del docente
+    const { carreras, ...datosDocente } = docente;
+    const { nombre_completo, correo_electronico, cargo } = datosDocente;
+
+    // Insertar docente básico
+    const queryDocente = 'INSERT INTO docentes (nombre_completo, correo_electronico, cargo) VALUES ($1, $2, $3) RETURNING *';
+    const valuesDocente = [nombre_completo, correo_electronico, cargo];
+    const resultDocente = await client.query(queryDocente, valuesDocente);
+    const docenteCreado = resultDocente.rows[0];
+    
+    // Si hay carreras especificadas, asignarlas
+    if (carreras && Array.isArray(carreras) && carreras.length > 0) {
+      for (const carrera of carreras) {
+        const queryCarrera = 'INSERT INTO docente_carrera (docente_id, carrera) VALUES ($1, $2)';
+        await client.query(queryCarrera, [docenteCreado.id, carrera]);
+      }
+    }
+    
+    await client.query('COMMIT');
+    
+    // Obtener las carreras asignadas
+    const carrerasAsignadas = await docenteCarreraModel.obtenerCarrerasDeDocente(docenteCreado.id);
+    
+    // Devolver docente con sus carreras
+    return {
+      ...docenteCreado,
+      carreras: carrerasAsignadas
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function obtenerDocentes() {
-  const result = await pool.query('SELECT * FROM docentes');
-  return result.rows;
+  try {
+    // Primero obtenemos todos los docentes
+    const result = await pool.query('SELECT * FROM docentes');
+    const docentes = result.rows;
+    
+    // Para cada docente, obtenemos sus carreras
+    for (const docente of docentes) {
+      const carreras = await docenteCarreraModel.obtenerCarrerasDeDocente(docente.id);
+      docente.carreras = carreras;
+    }
+    
+    return docentes;
+  } catch (error) {
+    console.error('Error al obtener docentes con carreras:', error);
+    throw error;
+  }
 }
 
 async function obtenerDocentePorId(id) {
-  const result = await pool.query('SELECT * FROM docentes WHERE id = $1', [id]);
-  return result.rows[0];
+  try {
+    const result = await pool.query('SELECT * FROM docentes WHERE id = $1', [id]);
+    const docente = result.rows[0];
+    
+    if (docente) {
+      // Obtener carreras asignadas
+      const carreras = await docenteCarreraModel.obtenerCarrerasDeDocente(docente.id);
+      docente.carreras = carreras;
+    }
+    
+    return docente;
+  } catch (error) {
+    console.error('Error al obtener docente por ID con carreras:', error);
+    throw error;
+  }
+}
+
+async function obtenerDocentePorCorreo(correo) {
+  try {
+    // Obtener el docente básico
+    const result = await pool.query('SELECT * FROM docentes WHERE correo_electronico = $1', [correo]);
+    const docente = result.rows[0];
+    
+    if (docente) {
+      // Obtener sus carreras asignadas
+      const carreras = await docenteCarreraModel.obtenerCarrerasDeDocente(docente.id);
+      docente.carreras = carreras;
+    }
+    
+    return docente;
+  } catch (error) {
+    console.error('Error al obtener docente por correo con carreras:', error);
+    throw error;
+  }
 }
 
 async function actualizarDocente(id, docente) {
-  const { nombre_completo, correo_electronico, cargo } = docente;
-  const query = 'UPDATE docentes SET nombre_completo = $1, correo_electronico = $2, cargo = $3 WHERE id = $4 RETURNING *';
-  const values = [nombre_completo, correo_electronico, cargo, id];
-  const result = await pool.query(query, values);
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Extraer carreras (si existen) y el resto de datos del docente
+    const { carreras, ...datosDocente } = docente;
+    const { nombre_completo, correo_electronico, cargo } = datosDocente;
+
+    // Actualizar datos básicos del docente
+    const queryDocente = 'UPDATE docentes SET nombre_completo = $1, correo_electronico = $2, cargo = $3 WHERE id = $4 RETURNING *';
+    const valuesDocente = [nombre_completo, correo_electronico, cargo, id];
+    const resultDocente = await client.query(queryDocente, valuesDocente);
+    
+    // Si no hay docente para actualizar, terminamos
+    if (resultDocente.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    
+    const docenteActualizado = resultDocente.rows[0];
+    
+    // Si se proporcionaron carreras, actualizamos asignaciones
+    if (carreras && Array.isArray(carreras)) {
+      // Primero eliminamos asignaciones existentes
+      await client.query('DELETE FROM docente_carrera WHERE docente_id = $1', [id]);
+      
+      // Luego insertamos las nuevas
+      for (const carrera of carreras) {
+        const queryCarrera = 'INSERT INTO docente_carrera (docente_id, carrera) VALUES ($1, $2)';
+        await client.query(queryCarrera, [id, carrera]);
+      }
+    }
+    
+    await client.query('COMMIT');
+    
+    // Obtener las carreras actualizadas
+    const carrerasActualizadas = await docenteCarreraModel.obtenerCarrerasDeDocente(id);
+    
+    // Devolver docente con sus carreras
+    return {
+      ...docenteActualizado,
+      carreras: carrerasActualizadas
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /**
@@ -51,6 +175,10 @@ async function verificarDependenciasDocente(id) {
       detalle: []
     },
     borradores: {
+      cantidad: 0,
+      detalle: []
+    },
+    carreras: {
       cantidad: 0,
       detalle: []
     }
@@ -106,13 +234,24 @@ async function verificarDependenciasDocente(id) {
   dependencias.borradores.cantidad = borradoresQuery.rows.length;
   dependencias.borradores.detalle = borradoresQuery.rows;
 
+  // Buscar carreras asignadas
+  const carrerasQuery = await pool.query(`
+    SELECT carrera
+    FROM docente_carrera
+    WHERE docente_id = $1
+  `, [id]);
+  
+  dependencias.carreras.cantidad = carrerasQuery.rows.length;
+  dependencias.carreras.detalle = carrerasQuery.rows;
+
   // Calcular si tiene dependencias
   dependencias.tieneDependencias = (
     dependencias.grupos.cantidad > 0 || 
     dependencias.rubricas.cantidad > 0 || 
     dependencias.calificaciones.cantidad > 0 ||
     dependencias.informes.cantidad > 0 ||
-    dependencias.borradores.cantidad > 0
+    dependencias.borradores.cantidad > 0 ||
+    dependencias.carreras.cantidad > 0
   );
 
   return dependencias;
@@ -177,7 +316,10 @@ async function eliminarDocenteSeguro(id, docenteNuevoId = null, borrarGrupos = f
       }
     }
     
-    // 7. Finalmente eliminar el docente
+    // 7. Eliminar asignaciones de carrera
+    await client.query('DELETE FROM docente_carrera WHERE docente_id = $1', [id]);
+    
+    // 8. Finalmente eliminar el docente
     const result = await client.query('DELETE FROM docentes WHERE id = $1 RETURNING *', [id]);
     
     // Si no se encontró docente para eliminar
@@ -195,7 +337,8 @@ async function eliminarDocenteSeguro(id, docenteNuevoId = null, borrarGrupos = f
         rubricas: dependencias.rubricas.cantidad,
         calificaciones: dependencias.calificaciones.cantidad,
         informes: dependencias.informes.cantidad,
-        borradores: dependencias.borradores.cantidad
+        borradores: dependencias.borradores.cantidad,
+        carreras: dependencias.carreras.cantidad
       },
       accionGrupos: borrarGrupos ? 'eliminados' : (docenteNuevoId ? 'reasignados' : 'desasignados')
     };
@@ -215,9 +358,35 @@ async function eliminarDocente(id) {
   return resultado ? resultado.docente : null;
 }
 
-async function obtenerDocentePorCorreo(correo) {
-  const result = await pool.query('SELECT * FROM docentes WHERE correo_electronico = $1', [correo]);
-  return result.rows[0];
+/**
+ * Obtiene docentes filtrados por carrera
+ * @param {string} carrera - Carrera para filtrar
+ * @returns {Promise<Array>} - Lista de docentes de la carrera especificada
+ */
+async function obtenerDocentesPorCarrera(carrera) {
+  try {
+    const query = `
+      SELECT d.* 
+      FROM docentes d
+      JOIN docente_carrera dc ON d.id = dc.docente_id
+      WHERE dc.carrera = $1
+      ORDER BY d.nombre_completo
+    `;
+    
+    const result = await pool.query(query, [carrera]);
+    const docentes = result.rows;
+    
+    // Para cada docente, obtenemos sus carreras completas
+    for (const docente of docentes) {
+      const carreras = await docenteCarreraModel.obtenerCarrerasDeDocente(docente.id);
+      docente.carreras = carreras;
+    }
+    
+    return docentes;
+  } catch (error) {
+    console.error('Error al obtener docentes por carrera:', error);
+    throw error;
+  }
 }
 
 module.exports = {
@@ -229,5 +398,6 @@ module.exports = {
   obtenerDocentePorCorreo,
   // Nuevas funciones:
   verificarDependenciasDocente,
-  eliminarDocenteSeguro
+  eliminarDocenteSeguro,
+  obtenerDocentesPorCarrera
 };

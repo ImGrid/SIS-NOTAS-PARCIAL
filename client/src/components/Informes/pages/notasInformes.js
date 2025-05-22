@@ -50,18 +50,55 @@ function NotasInformes() {
   const [error, setError] = useState(null);
   const [docenteActual, setDocenteActual] = useState(null);
   const [generandoPDF, setGenerandoPDF] = useState(false);
+  
+  // Estado para carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
 
   const navigate = useNavigate();
+
+  // Función para obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
 
   // Función para cargar todos los datos necesarios
   useEffect(() => {
     const cargarDatos = async () => {
       try {
         setLoading(true);
+        
+        // Obtener carreras asignadas al docente
+        const carreras = obtenerCarrerasDocente();
+        setCarrerasAsignadas(carreras);
+        
+        // Si no hay carreras asignadas, mostrar mensaje
+        if (carreras.length === 0) {
+          setError("No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.");
+          setLoading(false);
+          return;
+        }
 
         // 1. Cargar todos los grupos del docente
         const gruposData = await getMisGrupos();
-        setGrupos(gruposData);
+        
+        // Filtrar grupos para mostrar solo los de las carreras asignadas
+        const gruposFiltrados = gruposData.filter(grupo => 
+          carreras.includes(grupo.carrera)
+        );
+        
+        setGrupos(gruposFiltrados);
         
         // 2. Obtener información del docente
         const usuarioString = sessionStorage.getItem('usuario');
@@ -83,7 +120,7 @@ function NotasInformes() {
         const semestresPorCarreraTemp = {};
         const materiasPorCarreraYSemestre = {};
 
-        for (const grupo of gruposData) {
+        for (const grupo of gruposFiltrados) {
           const materia = grupo.materia;
           const carrera = grupo.carrera;
           const semestre = grupo.semestre;
@@ -94,23 +131,25 @@ function NotasInformes() {
           // Almacenar materias únicas
           materiasSet.add(materiaKey);
           
-          // Almacenar carreras únicas
-          carrerasSet.add(carrera);
+          // Solo almacenar carreras que el docente tenga asignadas
+          if (carreras.includes(carrera)) {
+            carrerasSet.add(carrera);
           
-          // Almacenar semestres por carrera
-          if (!semestresPorCarreraTemp[carrera]) {
-            semestresPorCarreraTemp[carrera] = new Set();
+            // Almacenar semestres por carrera
+            if (!semestresPorCarreraTemp[carrera]) {
+              semestresPorCarreraTemp[carrera] = new Set();
+            }
+            semestresPorCarreraTemp[carrera].add(semestre);
+            
+            // Almacenar materias por carrera y semestre
+            if (!materiasPorCarreraYSemestre[carrera]) {
+              materiasPorCarreraYSemestre[carrera] = {};
+            }
+            if (!materiasPorCarreraYSemestre[carrera][semestre]) {
+              materiasPorCarreraYSemestre[carrera][semestre] = new Set();
+            }
+            materiasPorCarreraYSemestre[carrera][semestre].add(materiaKey);
           }
-          semestresPorCarreraTemp[carrera].add(semestre);
-          
-          // Almacenar materias por carrera y semestre
-          if (!materiasPorCarreraYSemestre[carrera]) {
-            materiasPorCarreraYSemestre[carrera] = {};
-          }
-          if (!materiasPorCarreraYSemestre[carrera][semestre]) {
-            materiasPorCarreraYSemestre[carrera][semestre] = new Set();
-          }
-          materiasPorCarreraYSemestre[carrera][semestre].add(materiaKey);
         }
         
         // Convertir los Sets a arrays
@@ -123,9 +162,15 @@ function NotasInformes() {
         });
         setSemestresPorCarrera(semestresPorCarreraObj);
 
-        // 4. Obtener TODOS los estudiantes
+        // 4. Obtener TODOS los estudiantes y filtrar por carrera
         const todosLosEstudiantesTemp = await getEstudiantes();
-        setTodosLosEstudiantes(todosLosEstudiantesTemp);
+        
+        // Filtrar estudiantes por carreras asignadas al docente
+        const estudiantesFiltrados = todosLosEstudiantesTemp.filter(estudiante => 
+          carreras.includes(estudiante.carrera)
+        );
+        
+        setTodosLosEstudiantes(estudiantesFiltrados);
 
         // 5. Inicializar objetos para almacenar información
         const estudiantesPorGrupoTemp = {};
@@ -134,7 +179,7 @@ function NotasInformes() {
         const calificacionesPorInformeTemp = {};
         
         // 6. Cargar datos para cada grupo
-        for (const grupo of gruposData) {
+        for (const grupo of gruposFiltrados) {
           try {
             // Obtener estudiantes del grupo
             const estudiantes = await getEstudiantesByGrupoId(grupo.id);
@@ -179,8 +224,8 @@ function NotasInformes() {
         // 8. Utilizar la función importada para organizar datos por materia
         const datosPorMateriaTemp = organizarDatosPorMateria(
           materiasSet,
-          gruposData,
-          todosLosEstudiantesTemp,
+          gruposFiltrados,
+          estudiantesFiltrados,
           estudiantesPorGrupoTemp,
           informesPorGrupoTemp,
           rubricasPorInformeTemp,
@@ -251,11 +296,11 @@ function NotasInformes() {
 
   // Función para limpiar la búsqueda
   const limpiarBusqueda = () => {
-  setBusquedaEstudiante('');
-  setCarreraSeleccionada('TODAS');
-  setSemestreSeleccionado('TODOS');
-  setMateriaSeleccionada('TODAS');
-};
+    setBusquedaEstudiante('');
+    setCarreraSeleccionada('TODAS');
+    setSemestreSeleccionado('TODOS');
+    setMateriaSeleccionada('TODAS');
+  };
 
   // Función para generar PDF utilizando el módulo externo
   const generarPDF = () => {
@@ -341,6 +386,36 @@ function NotasInformes() {
     );
   }
 
+  // Si no hay carreras asignadas, mostrar mensaje específico
+  if (carrerasAsignadas.length === 0) {
+    return (
+      <div className="docentes-container">
+        <ToastContainer position="top-right" autoClose={3000} />
+        <Sidebar />
+        <main className="content content-with-sidebar">
+          <div className="notas-informe-styles">
+            <div className="evaluacion-header">
+              <h1>INFORME DE NOTAS FINALES</h1>
+            </div>
+            <div className="evaluacion-container">
+              <div className="error-message">
+                No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
+              </div>
+              <div className="acciones-container">
+                <button 
+                  className="btn-volver"
+                  onClick={() => navigate('/docentes')}
+                >
+                  Volver al Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Renderizado principal
   return (
     <div className="docentes-container">
@@ -404,7 +479,7 @@ function NotasInformes() {
                 </div>
               </div>
               
-              {/* Filtro de carrera */}
+              {/* Filtro de carrera - Mostrar solo las carreras asignadas al docente */}
               <div className="filtro">
                 <label className="filtro-label">Carrera</label>
                 <select 
@@ -415,9 +490,12 @@ function NotasInformes() {
                     setSemestreSeleccionado('TODOS');
                   }}
                 >
-                  <option value="TODAS">Todas las carreras</option>
-                  {carrerasUnicas.filter(c => c !== 'TODAS').map(carrera => (
-                    <option key={carrera} value={carrera}>{carrera}</option>
+                  <option value="TODAS">Todas mis carreras</option>
+                  {carrerasUnicas
+                    .filter(c => c !== 'TODAS')
+                    .filter(c => carrerasAsignadas.includes(c))
+                    .map(carrera => (
+                      <option key={carrera} value={carrera}>{carrera}</option>
                   ))}
                 </select>
               </div>

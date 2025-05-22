@@ -62,6 +62,9 @@ function GestionarEvaluaciones() {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [eliminando, setEliminando] = useState(false);
+  
+  // Estado para carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
 
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,26 +78,60 @@ function GestionarEvaluaciones() {
 
   const navigate = useNavigate();
 
+  // Función para obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
+
   // Cargar grupos y sus estados al montar el componente
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        setLoading(true);        
+        setLoading(true);
+        
+        // Obtener carreras asignadas al docente
+        const carreras = obtenerCarrerasDocente();
+        setCarrerasAsignadas(carreras);
+        
+        // Si no hay carreras asignadas, mostrar mensaje
+        if (carreras.length === 0) {
+          setError("No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.");
+          setLoading(false);
+          return;
+        }
+
         const gruposData = await getMisGrupos();
-        setGrupos(gruposData);
+        
+        // Filtrar grupos para mostrar solo los de las carreras asignadas
+        const gruposFiltrados = gruposData.filter(grupo => 
+          carreras.includes(grupo.carrera)
+        );
+        
+        setGrupos(gruposFiltrados);
 
         const estudiantesPorGrupo = {};
         const rubricasPorGrupo = {};
         const rubricasData = {};
 
-        for (const grupo of gruposData) {
+        for (const grupo of gruposFiltrados) {
           const estudiantes = await getEstudiantesByGrupoId(grupo.id);
           estudiantesPorGrupo[grupo.id] = estudiantes;
 
           const informes = await getInformesPorGrupoId(grupo.id);
 
           // Crear un mapa para almacenar solo el informe más reciente por estudiante
-          // (Este paso será innecesario cuando el backend ya filtre los informes más recientes)
           const informesPorEstudiante = {};
           for (const informe of informes) {
             // Almacenar solo el informe con el ID más alto (presumiblemente el más reciente)
@@ -159,13 +196,13 @@ function GestionarEvaluaciones() {
             rubricasPorGrupo[grupo.id] = {
               estado: 'pendiente', 
               texto: 'Pendiente',
-              informes: informesFiltrados  // Usar informes filtrados
+              informes: informesFiltrados
             };
           } else {
             rubricasPorGrupo[grupo.id] = {
               estado: 'finalizado', 
               texto: 'Finalizado',
-              informes: informesFiltrados  // Usar informes filtrados
+              informes: informesFiltrados
             };
           }
 
@@ -176,9 +213,9 @@ function GestionarEvaluaciones() {
             if (detallesGrupo.grupo.habilitacion_activa) {
               rubricasPorGrupo[grupo.id] = {
                 ...rubricasPorGrupo[grupo.id],
-                estado: 'pendiente_habilitado',  // Estado especial para grupos habilitados
-                texto: 'Habilitado para edición', // Texto más descriptivo
-                habilitacion_activa: true  // Flag para indicar que está habilitado
+                estado: 'pendiente_habilitado',
+                texto: 'Habilitado para edición',
+                habilitacion_activa: true
               };
             }
           } catch (error) {
@@ -207,17 +244,26 @@ function GestionarEvaluaciones() {
   };
 
   const getCarrerasUnicas = () => {
-    const carreras = grupos.map(g => g.carrera);
-    return [...new Set(carreras)].sort();
+    // Solo mostrar las carreras asignadas al docente
+    return [...new Set(carrerasAsignadas)].sort();
   };
 
   const getMateriasUnicas = () => {
-    const materias = grupos.map(g => g.materia).filter(Boolean);
-    return [...new Set(materias)].sort();
+    const materiasArray = grupos
+      .filter(g => !carreraFilter || g.carrera === carreraFilter) // Mostrar materias solo de la carrera filtrada actual, si hay filtro
+      .map(g => g.materia)
+      .filter(Boolean);
+    
+    return [...new Set(materiasArray)].sort();
   };
 
   // Filtrar grupos
   const gruposFiltrados = grupos.filter(grupo => {
+    // Solo incluir grupos de carreras asignadas al docente
+    if (!carrerasAsignadas.includes(grupo.carrera)) {
+      return false;
+    }
+    
     const matchesSearch = grupo.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           grupo.carrera.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (grupo.materia && grupo.materia.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -332,6 +378,13 @@ function GestionarEvaluaciones() {
 
 
   const handleEvaluarGrupo = async (grupoId, estado) => {
+    // Verificar si el grupo pertenece a una carrera asignada al docente
+    const grupo = grupos.find(g => g.id === grupoId);
+    if (!grupo || !carrerasAsignadas.includes(grupo.carrera)) {
+      toast.error("No tiene permisos para evaluar este grupo");
+      return;
+    }
+    
     if (estado === 'finalizado') {
       try {
         const detallesGrupo = await supRubricaService.obtenerRubricasGrupo(grupoId);
@@ -356,6 +409,13 @@ function GestionarEvaluaciones() {
   };
 
   const handleVerEvaluaciones = (grupoId) => {
+    // Verificar si el grupo pertenece a una carrera asignada al docente
+    const grupo = grupos.find(g => g.id === grupoId);
+    if (!grupo || !carrerasAsignadas.includes(grupo.carrera)) {
+      toast.error("No tiene permisos para ver las evaluaciones de este grupo");
+      return;
+    }
+    
     navigate(`/evaluaciones/ver-grupo/${grupoId}`);
   };
 
@@ -431,6 +491,27 @@ function GestionarEvaluaciones() {
           </div>
           <div className="grupos-container">
             <div className="error-message">{error}</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Si no hay carreras asignadas, mostrar mensaje apropiado
+  if (carrerasAsignadas.length === 0) {
+    return (
+      <div className="docentes-container">
+        <Sidebar />
+        <main className="content content-with-sidebar evaluaciones-styles">
+          <div className="grupos-header">
+            <div className="ev-titulo-botones-container">
+              <h1>Gestionar Evaluaciones</h1>
+            </div>
+          </div>
+          <div className="grupos-container">
+            <div className="error-message">
+              No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
+            </div>
           </div>
         </main>
       </div>
@@ -514,7 +595,7 @@ function GestionarEvaluaciones() {
                 </select>
               </div>
 
-              {/* Filtro de carreras */}
+              {/* Filtro de carreras - Mostrar solo las asignadas al docente */}
               <div className="filter-container">
                 <label className="filter-label">CARRERA</label>
                 <select 
@@ -522,10 +603,12 @@ function GestionarEvaluaciones() {
                   onChange={(e) => {
                     setCarreraFilter(e.target.value);
                     setPaginaActual(1);
+                    // Si cambia la carrera, resetear el filtro de materia
+                    setMateriaFilter('');
                   }}
                   className="filter-select"
                 >
-                  <option value="">Todas las carreras</option>
+                  <option value="">Todas mis carreras</option>
                   {getCarrerasUnicas().map(carrera => (
                     <option key={carrera} value={carrera}>
                       {carrera}

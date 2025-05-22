@@ -26,53 +26,117 @@ function ListarEstudiantes() {
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [estudianteSeleccionado, setEstudianteSeleccionado] = useState(null);
   
-  // Opciones para los filtros
-  const carreras = [
-    'Ingeniería de Sistemas',
-    'Ingeniería de Sistemas Electronicos',
-    'Ingeniería Agroindustrial',
-    'Ciencias Básicas',
-    'Ingeniería Comercial',
-    'Ingeniería Civil'
-  ];
+  // Estado para las carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
   
-  // Obtener semestres disponibles según la carrera
-  const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Ciencias Básicas') {
-      return [
-        { value: '1', label: '1º Semestre' },
-        { value: '2', label: '2º Semestre' }
-      ];
+  // Estado para mostrar errores de carga
+  const [errorCarga, setErrorCarga] = useState('');
+  
+  // Obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (!usuarioStr) {
+        console.error("No se encontró información del usuario en sessionStorage");
+        return [];
+      }
+      
+      const usuario = JSON.parse(usuarioStr);
+      
+      if (!usuario || !usuario.carreras) {
+        return [];
+      }
+      
+      if (!Array.isArray(usuario.carreras)) {
+        // Si es un string, intentar convertirlo a array
+        if (typeof usuario.carreras === 'string') {
+          return [usuario.carreras];
+        }
+        return [];
+      }
+      
+      // Asegurar que no hay elementos vacíos
+      const carrerasFiltradas = usuario.carreras.filter(carrera => carrera && carrera.trim() !== '');
+      
+      return carrerasFiltradas;
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
     }
-    
-    // Para el resto de carreras (3ro a 10mo)
-    return [
-      { value: '3', label: '3º Semestre' },
-      { value: '4', label: '4º Semestre' },
-      { value: '5', label: '5º Semestre' },
-      { value: '6', label: '6º Semestre' },
-      { value: '7', label: '7º Semestre' },
-      { value: '8', label: '8º Semestre' },
-      { value: '9', label: '9º Semestre' },
-      { value: '10', label: '10º Semestre' }
-    ];
   };
-
-  // Cargar estudiantes al iniciar
-  useEffect(() => {
-    cargarEstudiantes();
-  }, []);
   
-  const cargarEstudiantes = async () => {
+  // Efecto para cargar las carreras del docente
+  useEffect(() => {
+    const carreras = obtenerCarrerasDocente();
+    setCarrerasAsignadas(carreras);
+    
+    // Filtrar las opciones de carreras para el selector
+    const opcionesCarreras = carreras.map(carrera => ({
+      value: carrera,
+      label: carrera
+    }));
+    
+    setCarrerasDisponibles(opcionesCarreras);
+    
+    // Si no hay carreras asignadas, mostrar mensaje
+    if (carreras.length === 0) {
+      setErrorCarga("No tiene carreras asignadas. Contacte con el administrador.");
+      toast.error("No tiene carreras asignadas. Contacte con el administrador.");
+      setLoading(false);
+    } else {
+      // Solo cargar estudiantes si hay carreras asignadas
+      cargarEstudiantes(carreras);
+    }
+  }, []); // Este efecto solo debe ejecutarse una vez al montar el componente
+  
+  const cargarEstudiantes = async (carreras) => {
     try {
       setLoading(true);
-      // Usar el nuevo método en lugar del original
-      const data = await getEstudiantesConEstadoGrupo();
-      setEstudiantes(data);
-      setEstudiantesFiltrados(data);
+      
+      // Asegurar que tenemos carreras
+      const carrerasParaFiltrar = carreras || carrerasAsignadas;
+      
+      if (!carrerasParaFiltrar || carrerasParaFiltrar.length === 0) {
+        setErrorCarga("No hay carreras para filtrar estudiantes");
+        setLoading(false);
+        return;
+      }
+            
+      // Obtener todos los estudiantes
+      const response = await getEstudiantesConEstadoGrupo();
+      
+      // Verificar si la respuesta es válida
+      if (!response || !Array.isArray(response)) {
+        setErrorCarga("Error al obtener los datos de estudiantes");
+        setLoading(false);
+        return;
+      }      
+      // Normalizar nombres de carreras para comparación consistente
+      const carrerasNormalizadas = carrerasParaFiltrar.map(c => c.toLowerCase().trim());
+      
+      // Filtrar solo los estudiantes de las carreras asignadas al docente
+      const estudiantesCarrerasAsignadas = response.filter(estudiante => {
+        // Asegurar que el estudiante tiene una carrera definida
+        if (!estudiante || !estudiante.carrera) return false;
+        
+        // Normalizar el nombre de la carrera del estudiante
+        const carreraEstudiante = estudiante.carrera.toLowerCase().trim();
+        
+        // Verificar si la carrera del estudiante está entre las asignadas al docente
+        return carrerasNormalizadas.includes(carreraEstudiante);
+      });
+      
+      
+      // Si después de filtrar no hay estudiantes, establecer un mensaje
+      if (estudiantesCarrerasAsignadas.length === 0) {
+        setErrorCarga(`No se encontraron estudiantes para las carreras: ${carrerasParaFiltrar.join(', ')}`);
+      }
+      
+      setEstudiantes(estudiantesCarrerasAsignadas);
+      setEstudiantesFiltrados(estudiantesCarrerasAsignadas);
     } catch (error) {
-      console.error('Error al cargar estudiantes:', error);
+      setErrorCarga('Error al cargar la lista de estudiantes: ' + (error.message || 'Error desconocido'));
       toast.error('Error al cargar la lista de estudiantes');
     } finally {
       setLoading(false);
@@ -81,11 +145,16 @@ function ListarEstudiantes() {
 
   // Aplicar filtros cuando cambian
   useEffect(() => {
+    // Solo aplicar filtros si hay estudiantes cargados
+    if (!estudiantes || estudiantes.length === 0) return;
     let resultado = [...estudiantes];
     
     // Filtrar por carrera
     if (carreraSeleccionada) {
-      resultado = resultado.filter(e => e.carrera === carreraSeleccionada);
+      resultado = resultado.filter(e => {
+        if (!e.carrera) return false;
+        return e.carrera.toLowerCase().trim() === carreraSeleccionada.toLowerCase().trim();
+      });
     }
     
     // Filtrar por semestre (asegurarse de comparar números con números)
@@ -93,18 +162,21 @@ function ListarEstudiantes() {
       // Convertir el semestre seleccionado a número para comparar correctamente
       const semestreNum = parseInt(semestreSeleccionado, 10);
       resultado = resultado.filter(e => {
+        if (!e.semestre) return false;
+        
         // Si el semestre en la base de datos ya es un número, comparar directamente
         // Si es un string, intentar extraer el número
         const estudianteSemestre = typeof e.semestre === 'number' 
           ? e.semestre 
           : parseInt(e.semestre, 10);
-        return estudianteSemestre === semestreNum;
+          
+        return !isNaN(estudianteSemestre) && estudianteSemestre === semestreNum;
       });
     }
     
     // Filtrar por término de búsqueda (nombre, apellido o código)
     if (terminoBusqueda) {
-      const termino = terminoBusqueda.toLowerCase();
+      const termino = terminoBusqueda.toLowerCase().trim();
       resultado = resultado.filter(e =>
         (e.nombre && e.nombre.toLowerCase().includes(termino)) ||
         (e.apellido && e.apellido.toLowerCase().includes(termino)) ||
@@ -112,6 +184,7 @@ function ListarEstudiantes() {
       );
     }
     
+    console.log(`Filtrado completado: ${resultado.length} estudiantes coinciden con los criterios`);
     setEstudiantesFiltrados(resultado);
     // Resetear a la primera página cuando se aplican filtros
     setPaginaActual(1);
@@ -144,16 +217,19 @@ function ListarEstudiantes() {
     setCarreraSeleccionada(e.target.value);
     // Resetear el semestre seleccionado cuando se cambia la carrera
     setSemestreSeleccionado('');
+    setErrorCarga(''); // Limpiar cualquier mensaje de error
   };
 
   // Manejar cambio en filtro de semestre
   const handleSemestreChange = (e) => {
     setSemestreSeleccionado(e.target.value);
+    setErrorCarga(''); // Limpiar cualquier mensaje de error
   };
 
   // Manejar cambio en término de búsqueda
   const handleSearchChange = (e) => {
     setTerminoBusqueda(e.target.value);
+    setErrorCarga(''); // Limpiar cualquier mensaje de error
   };
 
   // Función para limpiar todos los filtros
@@ -161,6 +237,7 @@ function ListarEstudiantes() {
     setCarreraSeleccionada('');
     setSemestreSeleccionado('');
     setTerminoBusqueda('');
+    setErrorCarga(''); // Limpiar cualquier mensaje de error
   };
 
   // Redirigir a página de crear estudiante
@@ -170,13 +247,28 @@ function ListarEstudiantes() {
   
   // Redirigir a página de editar estudiante
   const irAEditarEstudiante = (id) => {
-    navigate(`/estudiantes/editar/${id}`);
+    // Verificar si el estudiante pertenece a una carrera asignada al docente
+    const estudiante = estudiantes.find(e => e.id === id);
+    if (estudiante && carrerasAsignadas.some(
+      carrera => carrera.toLowerCase().trim() === estudiante.carrera.toLowerCase().trim()
+    )) {
+      navigate(`/estudiantes/editar/${id}`);
+    } else {
+      toast.error("No tiene permisos para editar este estudiante");
+    }
   };
   
   // Abrir modal de confirmación para eliminar estudiante
   const mostrarConfirmacionEliminar = (estudiante) => {
-    setEstudianteSeleccionado(estudiante);
-    setMostrarModalEliminar(true);
+    // Verificar si el estudiante pertenece a una carrera asignada al docente
+    if (carrerasAsignadas.some(
+      carrera => carrera.toLowerCase().trim() === estudiante.carrera.toLowerCase().trim()
+    )) {
+      setEstudianteSeleccionado(estudiante);
+      setMostrarModalEliminar(true);
+    } else {
+      toast.error("No tiene permisos para eliminar este estudiante");
+    }
   };
   
   // Cerrar modal de confirmación
@@ -188,7 +280,7 @@ function ListarEstudiantes() {
   // Manejar eliminación exitosa
   const manejarEliminacionExitosa = () => {
     // Recargar lista de estudiantes
-    cargarEstudiantes();
+    cargarEstudiantes(carrerasAsignadas);
     // Mostrar mensaje de éxito
     toast.success('Estudiante eliminado con éxito');
   };
@@ -205,6 +297,29 @@ function ListarEstudiantes() {
     if (paginaActual < totalPaginas) {
       setPaginaActual(paginaActual + 1);
     }
+  };
+
+  // Obtener semestres disponibles según la carrera
+  const getSemestresDisponibles = (carrera) => {
+    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+    if (carrera === 'Ciencias Básicas') {
+      return [
+        { value: '1', label: '1º Semestre' },
+        { value: '2', label: '2º Semestre' }
+      ];
+    }
+    
+    // Para el resto de carreras (3ro a 10mo)
+    return [
+      { value: '3', label: '3º Semestre' },
+      { value: '4', label: '4º Semestre' },
+      { value: '5', label: '5º Semestre' },
+      { value: '6', label: '6º Semestre' },
+      { value: '7', label: '7º Semestre' },
+      { value: '8', label: '8º Semestre' },
+      { value: '9', label: '9º Semestre' },
+      { value: '10', label: '10º Semestre' }
+    ];
   };
 
   // Renderizar controles de paginación
@@ -316,125 +431,140 @@ function ListarEstudiantes() {
           
           <div className="estudiantes-header">
             <h1>Lista de Estudiantes</h1>
-            <button className="btn-crear-estudiante" onClick={irACrearEstudiante}>
-              + Registrar Nuevo Estudiante
-            </button>
+            {carrerasAsignadas.length > 0 && (
+              <button className="btn-crear-estudiante" onClick={irACrearEstudiante}>
+                + Registrar Nuevo Estudiante
+              </button>
+            )}
           </div>
           
-          <div className="content-container">
-            <div className="filtros-container">
-              <div className="filtros-grupo">
-                <div className="filtro">
-                  <label htmlFor="carrera-filter">Carrera:</label>
-                  <select
-                    id="carrera-filter"
-                    value={carreraSeleccionada}
-                    onChange={handleCarreraChange}
-                  >
-                    <option value="">Todas las carreras</option>
-                    {carreras.map((carrera, index) => (
-                      <option key={index} value={carrera}>
-                        {carrera}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="filtro">
-                  <label htmlFor="semestre-filter">Semestre:</label>
-                  <select
-                    id="semestre-filter"
-                    value={semestreSeleccionado}
-                    onChange={handleSemestreChange}
-                  >
-                    <option value="">Todos los semestres</option>
-                    {semestresDisponibles.map((semestre) => (
-                      <option key={semestre.value} value={semestre.value}>
-                        {semestre.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <button className="btn-limpiar-filtros" onClick={limpiarFiltros}>
-                  Limpiar Filtros
-                </button>
-              </div>
-              
-              <div className="busqueda-container">
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o código..."
-                  value={terminoBusqueda}
-                  onChange={handleSearchChange}
-                  className="busqueda-input"
-                />
-              </div>
+          {carrerasAsignadas.length === 0 ? (
+            <div className="error-message">
+              No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
             </div>
-            
-            {loading ? (
-              <div className="loading-indicator">Cargando estudiantes...</div>
-            ) : estudiantesFiltrados.length > 0 ? (
-              <>
-                <div className="tabla-header">
-                  {renderPaginacion()}
-                  <div className="resultados-info">
-                    Mostrando {estudiantesActuales.length} de {estudiantesFiltrados.length} estudiantes
-                  </div>
-                </div>
-                
-                <div className="estudiantes-table-container">
-                  <table className="estudiantes-table">
-                    <thead>
-                      <tr>
-                        <th className="col-num">#</th>
-                        <th className="col-codigo">Código</th>
-                        <th className="col-nombre">Nombre Completo</th>
-                        <th className="col-carrera">Carrera</th>
-                        <th className="col-semestre">Semestre</th>
-                        <th className="col-grupo">Grupo</th>
-                        <th className="col-acciones">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {estudiantesActuales.map((estudiante, index) => (
-                        <tr key={estudiante.id} className="estudiante-row">
-                          <td className="col-num">{indexPrimerEstudiante + index + 1}</td>
-                          <td className="col-codigo">{estudiante.codigo}</td>
-                          <td className="col-nombre">{`${estudiante.nombre} ${estudiante.apellido}`}</td>
-                          <td className="col-carrera">{estudiante.carrera}</td>
-                          <td className="col-semestre">{estudiante.semestre}º Semestre</td>
-                          <td className="col-grupo">
-                            {estudiante.en_grupo_del_docente ? (
-                              <span className="badge badge-success">Asignado</span>
-                            ) : (
-                              <span className="badge badge-warning">Sin grupo</span>
-                            )}
-                          </td>
-                          <td className="col-acciones">
-                            {renderAccionesEstudiante(estudiante)}
-                          </td>
-                        </tr>
+          ) : (
+            <div className="content-container">
+              <div className="filtros-container">
+                <div className="filtros-grupo">
+                  <div className="filtro">
+                    <label htmlFor="carrera-filter">Carrera:</label>
+                    <select
+                      id="carrera-filter"
+                      value={carreraSeleccionada}
+                      onChange={handleCarreraChange}
+                    >
+                      <option value="">Todas mis carreras</option>
+                      {carrerasDisponibles.map((carrera, index) => (
+                        <option key={index} value={carrera.value}>
+                          {carrera.label}
+                        </option>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-                
-                <div className="paginacion-container paginacion-bottom">
-                  {renderPaginacion()}
-                </div>
-              </>
-            ) : (
-              <div className="empty-state">
-                <p>No se encontraron estudiantes con los criterios seleccionados.</p>
-                {(carreraSeleccionada || semestreSeleccionado || terminoBusqueda) && (
+                    </select>
+                  </div>
+                  
+                  <div className="filtro">
+                    <label htmlFor="semestre-filter">Semestre:</label>
+                    <select
+                      id="semestre-filter"
+                      value={semestreSeleccionado}
+                      onChange={handleSemestreChange}
+                    >
+                      <option value="">Todos los semestres</option>
+                      {semestresDisponibles.map((semestre) => (
+                        <option key={semestre.value} value={semestre.value}>
+                          {semestre.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
                   <button className="btn-limpiar-filtros" onClick={limpiarFiltros}>
                     Limpiar Filtros
                   </button>
-                )}
+                </div>
+                
+                <div className="busqueda-container">
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o código..."
+                    value={terminoBusqueda}
+                    onChange={handleSearchChange}
+                    className="busqueda-input"
+                  />
+                </div>
               </div>
-            )}
-          </div>
+              
+              {loading ? (
+                <div className="loading-indicator">Cargando estudiantes...</div>
+              ) : errorCarga ? (
+                <div className="error-message">
+                  <p>{errorCarga}</p>
+                  <button className="btn-limpiar-filtros" onClick={() => cargarEstudiantes(carrerasAsignadas)}>
+                    Intentar de nuevo
+                  </button>
+                </div>
+              ) : estudiantesFiltrados.length > 0 ? (
+                <>
+                  <div className="tabla-header">
+                    {renderPaginacion()}
+                    <div className="resultados-info">
+                      Mostrando {estudiantesActuales.length} de {estudiantesFiltrados.length} estudiantes
+                    </div>
+                  </div>
+                  
+                  <div className="estudiantes-table-container">
+                    <table className="estudiantes-table">
+                      <thead>
+                        <tr>
+                          <th className="col-num">#</th>
+                          <th className="col-codigo">Código</th>
+                          <th className="col-nombre">Nombre Completo</th>
+                          <th className="col-carrera">Carrera</th>
+                          <th className="col-semestre">Semestre</th>
+                          <th className="col-grupo">Grupo</th>
+                          <th className="col-acciones">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {estudiantesActuales.map((estudiante, index) => (
+                          <tr key={estudiante.id} className="estudiante-row">
+                            <td className="col-num">{indexPrimerEstudiante + index + 1}</td>
+                            <td className="col-codigo">{estudiante.codigo}</td>
+                            <td className="col-nombre">{`${estudiante.nombre} ${estudiante.apellido}`}</td>
+                            <td className="col-carrera">{estudiante.carrera}</td>
+                            <td className="col-semestre">{estudiante.semestre}º Semestre</td>
+                            <td className="col-grupo">
+                              {estudiante.en_grupo_del_docente ? (
+                                <span className="badge badge-success">Asignado</span>
+                              ) : (
+                                <span className="badge badge-warning">Sin grupo</span>
+                              )}
+                            </td>
+                            <td className="col-acciones">
+                              {renderAccionesEstudiante(estudiante)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="paginacion-container paginacion-bottom">
+                    {renderPaginacion()}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state">
+                  <p>No se encontraron estudiantes con los criterios seleccionados.</p>
+                  {(carreraSeleccionada || semestreSeleccionado || terminoBusqueda) && (
+                    <button className="btn-limpiar-filtros" onClick={limpiarFiltros}>
+                      Limpiar Filtros
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       

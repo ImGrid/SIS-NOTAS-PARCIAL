@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/editarGrupos.css';
 import { getGrupoPorId, updateGrupo } from '../../../service/grupoService';
+import { getDocenteById } from '../../../service/docenteService';
 import { getEstudiantesByGrupoId, desasignarEstudianteDeGrupo, asignarEstudianteAGrupo } from '../../../service/estudianteService';
 import informeService from '../../../service/informeService';
 import borradorService from '../../../service/borradorService';
@@ -43,6 +44,7 @@ function EditarGrupos() {
   
   const [materias, setMaterias] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingCarreras, setLoadingCarreras] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -63,10 +65,15 @@ function EditarGrupos() {
   // Estado para el modal de confirmación de eliminación de evaluaciones
   const [showEvaluacionesModal, setShowEvaluacionesModal] = useState(false);
   
+  // Estado para el docente y sus carreras asignadas
+  const [docente, setDocente] = useState(null);
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+  
   const formRef = useRef(null);
 
-  // Mapa de carreras disponibles
-  const CARRERAS = [
+  // Mapa de todas las carreras disponibles en el sistema
+  const TODAS_CARRERAS = [
     { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
     { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
     { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
@@ -74,6 +81,69 @@ function EditarGrupos() {
     { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
     { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
   ];
+
+  // Cargar las carreras asignadas al docente cuando el componente se monta
+  useEffect(() => {
+    const cargarDatosDocente = async () => {
+      try {
+        setLoadingCarreras(true);
+        setError(null);
+        
+        const usuarioStr = sessionStorage.getItem('usuario');
+        if (!usuarioStr) {
+          setError("No se pudo obtener la información del usuario. Por favor, vuelva a iniciar sesión.");
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
+        const usuario = JSON.parse(usuarioStr);
+        if (!usuario || !usuario.id) {
+          setError("Datos de usuario inválidos. Por favor, vuelva a iniciar sesión.");
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
+        // Obtener datos completos del docente desde el servidor
+        const docenteData = await getDocenteById(usuario.id);
+        
+        if (!docenteData) {
+          setError("No se pudieron obtener los datos del docente.");
+          return;
+        }
+        
+        setDocente(docenteData);
+        
+        // Obtener carreras asignadas
+        const carreras = docenteData.carreras || [];
+        
+        if (carreras.length === 0) {
+          setError("No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.");
+          setCarrerasAsignadas([]);
+          setCarrerasDisponibles([]);
+          return;
+        }
+        
+        setCarrerasAsignadas(carreras);
+        
+        // Filtrar las carreras disponibles basadas en las asignadas al docente
+        const carrerasFiltradas = TODAS_CARRERAS.filter(carrera => 
+          carreras.includes(carrera.value)
+        );
+        setCarrerasDisponibles(carrerasFiltradas);
+        
+        console.log(`Docente ${docenteData.nombre_completo} - Carreras asignadas:`, carreras);
+        
+      } catch (error) {
+        console.error("Error al obtener datos del docente:", error);
+        setError("Error al cargar sus datos. Por favor, vuelva a iniciar sesión.");
+        toast.error("Error al cargar datos del docente");
+      } finally {
+        setLoadingCarreras(false);
+      }
+    };
+    
+    cargarDatosDocente();
+  }, [navigate]);
 
   // Función para obtener semestres disponibles según la carrera
   const getSemestresDisponibles = (carrera) => {
@@ -118,12 +188,19 @@ function EditarGrupos() {
     }
   };
 
-  // Cargamos los datos del grupo cuando el componente se monta
+  // Cargamos los datos del grupo cuando el componente se monta y las carreras están cargadas
   useEffect(() => {
     const fetchGrupo = async () => {
       try {
         setLoading(true);
         const data = await getGrupoPorId(id);
+        
+        // Verificar si el grupo pertenece a una carrera asignada al docente
+        if (!carrerasAsignadas.includes(data.carrera)) {
+          setError("No tiene permisos para editar este grupo. No pertenece a ninguna de sus carreras asignadas.");
+          setLoading(false);
+          return;
+        }
         
         // Actualizamos el formData con los datos del grupo
         setFormData({
@@ -166,14 +243,20 @@ function EditarGrupos() {
       }
     };
 
-    if (id) {
+    if (id && carrerasAsignadas.length > 0 && !loadingCarreras) {
       fetchGrupo();
     }
-  }, [id]);
+  }, [id, carrerasAsignadas, loadingCarreras]);
 
   // Actualizar la lista de materias cuando cambia el semestre o la carrera
   useEffect(() => {
     if (formData.semestre && formData.carrera) {
+      // Verificar que la carrera seleccionada esté en las carreras asignadas
+      if (!carrerasAsignadas.includes(formData.carrera)) {
+        setMaterias([]);
+        return;
+      }
+      
       // Obtener el objeto de materias según la carrera
       const materiasCarrera = getMateriasCarrera(formData.carrera);
       
@@ -190,17 +273,17 @@ function EditarGrupos() {
     } else {
       setMaterias([]);
     }
-  }, [formData.semestre, formData.carrera]);
+  }, [formData.semestre, formData.carrera, carrerasAsignadas]);
   
   // Verificar validez de los campos
   useEffect(() => {
     setValidFields({
       nombre_proyecto: formData.nombre_proyecto.trim() !== '',
-      carrera: formData.carrera !== '',
+      carrera: formData.carrera !== '' && carrerasAsignadas.includes(formData.carrera),
       semestre: formData.semestre !== '',
       materia: formData.materia !== ''
     });
-  }, [formData]);
+  }, [formData, carrerasAsignadas]);
 
   // Verificar si hay cambios importantes que requieran eliminar evaluaciones
   useEffect(() => {
@@ -217,6 +300,14 @@ function EditarGrupos() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Validar que solo se puedan seleccionar carreras asignadas al docente
+    if (name === 'carrera' && value !== '') {
+      if (!carrerasAsignadas.includes(value)) {
+        toast.error("No tiene permisos para cambiar el grupo a esta carrera");
+        return;
+      }
+    }
     
     // Si cambió semestre o carrera, mostremos una advertencia
     if ((name === 'semestre' && value !== originalData.semestre) || 
@@ -286,8 +377,8 @@ function EditarGrupos() {
       // 2. Eliminar los borradores asociados
       try {
         // Obtener el ID del docente desde la sesión
-        const docenteId = sessionStorage.getItem('usuario') ? 
-          JSON.parse(sessionStorage.getItem('usuario')).id : null;
+        const docenteId = docente?.id || (sessionStorage.getItem('usuario') ? 
+          JSON.parse(sessionStorage.getItem('usuario')).id : null);
           
         if (docenteId) {
           // Eliminar el borrador si existe
@@ -341,6 +432,13 @@ function EditarGrupos() {
   const handleConfirmChange = async () => {
     if (!pendingChange) return;
     
+    // Validar que si es cambio de carrera, la nueva carrera esté asignada al docente
+    if (pendingChange.name === 'carrera' && !carrerasAsignadas.includes(pendingChange.value)) {
+      toast.error("No tiene permisos para cambiar el grupo a esta carrera");
+      handleCancelChange();
+      return;
+    }
+    
     // El usuario confirmó el cambio, procedemos con desasignar estudiantes
     const desasignacionExitosa = await desasignarEstudiantes();
     
@@ -393,6 +491,11 @@ function EditarGrupos() {
     setSuccess(false);
 
     try {
+      // Validar que la carrera esté asignada al docente
+      if (!carrerasAsignadas.includes(formData.carrera)) {
+        throw new Error("No tiene permisos para editar grupos en esta carrera");
+      }
+      
       // Verificar si hay cambios en semestre o carrera que requieran desasignar estudiantes
       const requiereDesasignar = 
         formData.semestre !== originalData.semestre || 
@@ -456,11 +559,35 @@ function EditarGrupos() {
     return '';
   };
 
-  if (loading) {
+  // Renderizar información del docente
+  const renderInfoDocente = () => {
+    if (!docente || loadingCarreras) return null;
+  };
+
+  if (loading || loadingCarreras) {
     return (
       <Layout>
         <div className="grupo-edit-styles">
           <div className="loading-indicator">Cargando datos del grupo...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error && (error.includes("No tiene permisos") || error.includes("vuelva a iniciar sesión"))) {
+    return (
+      <Layout>
+        <div className="grupo-edit-styles">
+          <div className="error-message">
+            {error}
+            <button 
+              className="btn-grupo-volver" 
+              onClick={() => navigate('/grupos/gestion')}
+              style={{ marginTop: '20px', padding: '10px 20px' }}
+            >
+              Volver a Gestión de Grupos
+            </button>
+          </div>
         </div>
       </Layout>
     );
@@ -548,6 +675,8 @@ function EditarGrupos() {
         <div className="editar-grupo-container">
           <h1>Editar Grupo</h1>
           
+          {renderInfoDocente()}
+          
           {success && (
             <div className="success-message">
               Grupo actualizado exitosamente. Redirigiendo a gestión de grupos...
@@ -589,6 +718,7 @@ function EditarGrupos() {
                 onChange={handleChange}
                 required
                 placeholder="Ingrese el nombre del proyecto"
+                disabled={carrerasAsignadas.length === 0}
               />
             </div>
             
@@ -600,9 +730,10 @@ function EditarGrupos() {
                 value={formData.carrera}
                 onChange={handleChange}
                 required
+                disabled={carrerasAsignadas.length === 0}
               >
                 <option value="">Seleccione una carrera</option>
-                {CARRERAS.map((carrera, index) => (
+                {carrerasDisponibles.map((carrera, index) => (
                   <option key={index} value={carrera.value}>
                     {carrera.label}
                   </option>
@@ -614,6 +745,9 @@ function EditarGrupos() {
               {tieneEvaluaciones && formData.carrera !== originalData.carrera && !evaluacionesEliminadas && (
                 <p className="danger-text">Cambiar la carrera eliminará todas las evaluaciones del grupo.</p>
               )}
+              {carrerasAsignadas.length > 0 && (
+                <p className="help-text">Solo puede asignar carreras que tiene asignadas.</p>
+              )}
             </div>
             
             <div className={`form-group ${getFieldClass('semestre')}`}>
@@ -624,7 +758,7 @@ function EditarGrupos() {
                 value={formData.semestre}
                 onChange={handleChange}
                 required
-                disabled={!formData.carrera}
+                disabled={!formData.carrera || carrerasAsignadas.length === 0}
               >
                 <option value="">Seleccione un semestre</option>
                 {semestresDisponibles.map((semestre, index) => (
@@ -653,7 +787,7 @@ function EditarGrupos() {
                 value={formData.materia}
                 onChange={handleChange}
                 required
-                disabled={!formData.semestre || materias.length === 0}
+                disabled={!formData.semestre || materias.length === 0 || carrerasAsignadas.length === 0}
               >
                 <option value="">Seleccione una materia</option>
                 {materias.map((materia, index) => (
@@ -685,7 +819,7 @@ function EditarGrupos() {
               <button 
                 type="submit" 
                 className={`btn-grupo-guardar ${submitting ? 'loading' : ''}`}
-                disabled={submitting || Object.values(validFields).some(valid => !valid)}
+                disabled={submitting || Object.values(validFields).some(valid => !valid) || carrerasAsignadas.length === 0}
               >
                 {submitting ? 'Guardando...' : 'Guardar Cambios'}
               </button>
@@ -693,6 +827,65 @@ function EditarGrupos() {
           </form>
         </div>
       </div>
+      
+      <style jsx>{`
+        .docente-info {
+          margin-bottom: 1.5rem;
+          padding: 15px;
+          background-color: #f8f9fa;
+          border-radius: 8px;
+          border-left: 4px solid #28a745;
+        }
+        
+        .docente-carreras {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        
+        .docente-label {
+          font-weight: 600;
+          color: #495057;
+          font-size: 14px;
+        }
+        
+        .carreras-docente {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        
+        .carrera-docente {
+          background-color: #28a745;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        
+        .help-text {
+          font-size: 12px;
+          color: #6c757d;
+          margin-top: 5px;
+          font-style: italic;
+        }
+        
+        .warning-text {
+          font-size: 12px;
+          color: #856404;
+          margin-top: 5px;
+          font-weight: 500;
+        }
+        
+        .danger-text {
+          font-size: 12px;
+          color: #721c24;
+          margin-top: 5px;
+          font-weight: 500;
+        }
+      `}</style>
     </Layout>
   );
 }

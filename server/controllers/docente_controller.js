@@ -1,5 +1,6 @@
 const { createAuthService, AuthenticationError } = require('../secutiry/auth');
 const docenteModel = require('../models/Docente_model');
+const docenteCarreraModel = require('../models/docente_carrera_model');
 const codigoVerificacionModel = require('../models/codigo_verificacion_model');
 const emailService = require('../utils/email');
 
@@ -72,10 +73,14 @@ async function verificarCodigo(req, res) {
       return res.status(401).json({ error: 'Código inválido o expirado' });
     }
     
+    // Obtener las carreras del docente
+    const carreras = await docenteCarreraModel.obtenerCarrerasDeDocente(docente.id);
+    
     // Crear objeto para el token
     const usuarioParaToken = {
       id: docente.id,
-      correo: docente.correo_electronico
+      correo: docente.correo_electronico,
+      carreras: carreras
     };
     
     // Generar token JWT
@@ -84,7 +89,11 @@ async function verificarCodigo(req, res) {
     // Devolver respuesta exitosa con token
     res.json({
       token,
-      usuario: usuarioParaToken,
+      usuario: {
+        ...usuarioParaToken,
+        nombre_completo: docente.nombre_completo,
+        cargo: docente.cargo
+      },
       message: mantener_codigo ? 'Inicio de sesión exitoso. El código permanecerá válido durante 60 minutos.' : 'Inicio de sesión exitoso. El código ha sido eliminado.'
     });
   } catch (error) {
@@ -95,6 +104,22 @@ async function verificarCodigo(req, res) {
 
 async function crearDocente(req, res) {
   try {
+    // Si el usuario es un supervisor, verificar que solo asigne carreras a las que tiene acceso
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      if (req.body.carreras && Array.isArray(req.body.carreras)) {
+        const carrerasSinAcceso = req.body.carreras.filter(carrera => 
+          !req.user.carreras.includes(carrera)
+        );
+        
+        if (carrerasSinAcceso.length > 0) {
+          return res.status(403).json({ 
+            error: 'No tiene permisos para asignar algunas de las carreras especificadas',
+            carrerasSinAcceso
+          });
+        }
+      }
+    }
+    
     const docente = await docenteModel.crearDocente(req.body);
     res.status(201).json(docente);
   } catch (error) {
@@ -107,7 +132,32 @@ async function crearDocente(req, res) {
 
 async function obtenerDocentes(req, res) {
   try {
-    const docentes = await docenteModel.obtenerDocentes();
+    let docentes;
+    
+    // Si el usuario tiene carreras asignadas, filtrar docentes por esas carreras
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Obtener docentes para cada carrera del usuario
+      let docentesPorCarrera = [];
+      
+      for (const carrera of req.user.carreras) {
+        const docentesCarrera = await docenteModel.obtenerDocentesPorCarrera(carrera);
+        docentesPorCarrera = [...docentesPorCarrera, ...docentesCarrera];
+      }
+      
+      // Eliminar duplicados
+      const docentesIds = new Set();
+      docentes = docentesPorCarrera.filter(docente => {
+        if (docentesIds.has(docente.id)) {
+          return false;
+        }
+        docentesIds.add(docente.id);
+        return true;
+      });
+    } else {
+      // Si no hay restricciones, obtener todos los docentes
+      docentes = await docenteModel.obtenerDocentes();
+    }
+    
     res.json(docentes);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -120,6 +170,19 @@ async function obtenerDocentePorId(req, res) {
     if (!docente) {
       return res.status(404).json({ error: 'Docente no encontrado' });
     }
+    
+    // Si el usuario tiene carreras asignadas, verificar que tenga acceso a este docente
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = docente.carreras && docente.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para acceder a este docente' });
+      }
+    }
+    
     res.json(docente);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -128,7 +191,41 @@ async function obtenerDocentePorId(req, res) {
 
 async function actualizarDocente(req, res) {
   try {
-    const docente = await docenteModel.actualizarDocente(req.params.id, req.body);
+    const id = req.params.id;
+    
+    // Verificar si el docente existe
+    const docenteActual = await docenteModel.obtenerDocentePorId(id);
+    if (!docenteActual) {
+      return res.status(404).json({ error: 'Docente no encontrado' });
+    }
+    
+    // Si el usuario tiene carreras asignadas, verificar permisos
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = docenteActual.carreras && docenteActual.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para actualizar este docente' });
+      }
+      
+      // Si intenta asignar carreras, verificar que solo asigne carreras a las que tiene acceso
+      if (req.body.carreras && Array.isArray(req.body.carreras)) {
+        const carrerasSinAcceso = req.body.carreras.filter(carrera => 
+          !req.user.carreras.includes(carrera)
+        );
+        
+        if (carrerasSinAcceso.length > 0) {
+          return res.status(403).json({ 
+            error: 'No tiene permisos para asignar algunas de las carreras especificadas',
+            carrerasSinAcceso
+          });
+        }
+      }
+    }
+    
+    const docente = await docenteModel.actualizarDocente(id, req.body);
     if (!docente) {
       return res.status(404).json({ error: 'Docente no encontrado' });
     }
@@ -152,6 +249,18 @@ async function eliminarDocente(req, res) {
     const docente = await docenteModel.obtenerDocentePorId(id);
     if (!docente) {
       return res.status(404).json({ error: 'Docente no encontrado' });
+    }
+    
+    // 1.5 Verificar si el usuario tiene permisos para eliminar este docente
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = docente.carreras && docente.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para eliminar este docente' });
+      }
     }
     
     // 2. Verificar si tiene dependencias antes de eliminar
@@ -220,24 +329,57 @@ async function verificarDependencias(req, res) {
       return res.status(404).json({ error: 'Docente no encontrado' });
     }
     
+    // Verificar si el usuario tiene permisos para ver este docente
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común
+      const tieneAcceso = docente.carreras && docente.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permisos para ver este docente' });
+      }
+    }
+    
     // Obtener dependencias
     const dependencias = await docenteModel.verificarDependenciasDocente(id);
     
     // Obtener lista de docentes disponibles para reasignación
-    const docentes = await docenteModel.obtenerDocentes();
-    const docentesDisponibles = docentes
-      .filter(d => d.id !== parseInt(id)) // Excluir el docente actual
-      .map(d => ({
-        id: d.id,
-        nombre_completo: d.nombre_completo,
-        correo_electronico: d.correo_electronico
-      }));
+    let docentesDisponibles = [];
+    
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Para supervisores, mostrar solo docentes de sus carreras
+      for (const carrera of req.user.carreras) {
+        const docentesCarrera = await docenteModel.obtenerDocentesPorCarrera(carrera);
+        docentesDisponibles = [...docentesDisponibles, ...docentesCarrera.filter(d => d.id !== parseInt(id))];
+      }
+      
+      // Eliminar duplicados
+      const idsSet = new Set();
+      docentesDisponibles = docentesDisponibles.filter(d => {
+        if (idsSet.has(d.id)) return false;
+        idsSet.add(d.id);
+        return true;
+      });
+    } else {
+      // Si no es un supervisor con carreras, mostrar todos los docentes
+      const docentes = await docenteModel.obtenerDocentes();
+      docentesDisponibles = docentes.filter(d => d.id !== parseInt(id));
+    }
+    
+    // Simplificar para la respuesta
+    docentesDisponibles = docentesDisponibles.map(d => ({
+      id: d.id,
+      nombre_completo: d.nombre_completo,
+      correo_electronico: d.correo_electronico,
+      carreras: d.carreras
+    }));
     
     res.json({
       docente,
       dependencias,
       tieneDependencias: dependencias.tieneDependencias,
-      docentesDisponibles: docentesDisponibles
+      docentesDisponibles
     });
   } catch (error) {
     console.error('Error al verificar dependencias:', error);
@@ -290,6 +432,91 @@ async function verificarCodigoExistente(req, res) {
   }
 }
 
+/**
+ * Gestiona las carreras asignadas a un docente
+ */
+async function gestionarCarrerasDocente(req, res) {
+  try {
+    const docenteId = req.params.id;
+    const { carreras } = req.body;
+    
+    if (!Array.isArray(carreras)) {
+      return res.status(400).json({ error: 'Se debe proporcionar un array de carreras' });
+    }
+    
+    // Verificar que el docente existe
+    const docente = await docenteModel.obtenerDocentePorId(docenteId);
+    if (!docente) {
+      return res.status(404).json({ error: 'Docente no encontrado' });
+    }
+    
+    // Verificar límite de 6 carreras
+    if (carreras.length > 6) {
+      return res.status(400).json({ 
+        error: 'Un docente no puede tener más de 6 carreras asignadas',
+        carrieras_proporcionadas: carreras.length,
+        limite: 6
+      });
+    }
+    
+    // Si el usuario tiene carreras asignadas, verificar permisos
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      // Verificar si hay al menos una carrera en común (para edición)
+      const tieneAccesoActual = docente.carreras && docente.carreras.some(carrera => 
+        req.user.carreras.includes(carrera)
+      );
+      
+      // Verificar si intenta asignar carreras a las que no tiene acceso
+      const carrerasSinAcceso = carreras.filter(carrera => 
+        !req.user.carreras.includes(carrera)
+      );
+      
+      if (!tieneAccesoActual || carrerasSinAcceso.length > 0) {
+        return res.status(403).json({ 
+          error: 'No tiene permisos para modificar las carreras de este docente o asignar algunas de las carreras especificadas',
+          carrerasSinAcceso
+        });
+      }
+    }
+    
+    // Asignar las carreras
+    const resultado = await docenteCarreraModel.asignarCarrerasADocente(docenteId, carreras);
+    
+    // Obtener el docente actualizado
+    const docenteActualizado = await docenteModel.obtenerDocentePorId(docenteId);
+    
+    res.json({
+      message: 'Carreras actualizadas correctamente',
+      docente: docenteActualizado
+    });
+  } catch (error) {
+    console.error('Error al gestionar carreras del docente:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Obtiene docentes filtrados por carrera
+ */
+async function obtenerDocentesPorCarrera(req, res) {
+  try {
+    const carrera = req.params.carrera;
+    
+    // Si el usuario tiene carreras asignadas, verificar que tenga acceso a esta carrera
+    if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+      if (!req.user.carreras.includes(carrera)) {
+        return res.status(403).json({ error: 'No tiene acceso a los docentes de esta carrera' });
+      }
+    }
+    
+    const docentes = await docenteModel.obtenerDocentesPorCarrera(carrera);
+    res.json(docentes);
+  } catch (error) {
+    console.error('Error al obtener docentes por carrera:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 module.exports = {
   crearDocente,
   obtenerDocentes,
@@ -299,6 +526,7 @@ module.exports = {
   loginDocente,
   verificarCodigo,
   verificarCodigoExistente,
-  // Nueva función:
-  verificarDependencias
+  verificarDependencias,
+  gestionarCarrerasDocente,
+  obtenerDocentesPorCarrera
 };

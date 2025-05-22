@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './style/sidebar.css';
-import docenteService from '../../service/docenteService'; // Importar el servicio de docentes
+import docenteService from '../../service/docenteService';
+import api from '../../service/api';
 
 function Sidebar() {
   const [gruposOpen, setGruposOpen] = useState(false);
@@ -10,16 +11,16 @@ function Sidebar() {
   const [evaluacionesOpen, setEvaluacionesOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [informesOpen, setInformesOpen] = useState(false);
-  const [nombreUsuario, setNombreUsuario] = useState('Usuario Docente'); // Estado para el nombre
-  const [ubicacion, setUbicacion] = useState('Cochabamba'); // Estado para la ubicación
+  const [nombreUsuario, setNombreUsuario] = useState('Usuario Docente');
+  const [ubicacion, setUbicacion] = useState('Cochabamba');
   const navigate = useNavigate();
   
   // Efecto para cargar los datos del usuario al montar el componente
   useEffect(() => {
     const cargarDatosUsuario = async () => {
       try {
-        // Obtener el ID del usuario del sessionStorage
-        const usuarioString = sessionStorage.getItem('usuario');
+        // Obtener el ID del usuario del localStorage
+        const usuarioString = localStorage.getItem('usuario');
         if (!usuarioString) {
           return; // Si no hay datos de usuario, salir
         }
@@ -34,8 +35,7 @@ function Sidebar() {
         
         // Actualizar el estado con el nombre real
         if (datosDocente && datosDocente.nombre_completo) {
-          setNombreUsuario(datosDocente.nombre_completo);          
-
+          setNombreUsuario(datosDocente.nombre_completo);
         }
       } catch (error) {
         console.error('Error al cargar datos del usuario:', error);
@@ -99,14 +99,37 @@ function Sidebar() {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Función para cerrar sesión
-  const handleLogout = () => {
-    // Eliminar datos de la sesión
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('usuario');
-    
-    // Redirigir al login
-    navigate('/login');
+  // Función mejorada para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      // Indicar que la app está procesando el logout
+      const logoutButton = document.querySelector('.logout-button');
+      if (logoutButton) {
+        logoutButton.disabled = true;
+        logoutButton.textContent = 'Cerrando sesión...';
+      }
+      
+      // Intentar cerrar sesión en el servidor (revocar tokens)
+      await api.logout(true);
+      
+      // Limpiar localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('usuario');
+      
+      // Redirigir al login
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      
+      // En caso de error, forzar logout local
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('usuario');
+      
+      // Redirigir al login
+      navigate('/login', { replace: true });
+    }
   };
 
   return (

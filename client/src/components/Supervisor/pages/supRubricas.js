@@ -4,9 +4,10 @@ import LayoutSup from './LayoutSup';
 import supRubricaService from '../../../service/supRubricaService';
 import { getEstudiantesByGrupoId } from '../../../service/estudianteService';
 import { getInformesPorGrupoId } from '../../../service/informeService';
-import { getGrupos } from '../../../service/grupoService'; 
+import { getGrupos, getGruposPorCarrera } from '../../../service/grupoService'; 
 import { getBorradorPorDocenteYGrupo } from '../../../service/borradorService';
-import { getDocenteById } from '../../../service/docenteService'; // Importamos el servicio de docente
+import { getDocenteById } from '../../../service/docenteService';
+import { getSupervisorById } from '../../../service/supervisorService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../style/supRubrica.css';
@@ -26,8 +27,10 @@ const SupervisorRubricas = () => {
   // Estados para los catálogos
   const [catalogoMaterias, setCatalogoMaterias] = useState({});
   const [carreras, setCarreras] = useState([]);
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [semestres, setSemestres] = useState({});
   const [asignaturas, setAsignaturas] = useState([]);
+  const [supervisor, setSupervisor] = useState(null);
   
   // Estados para los grupos
   const [grupos, setGrupos] = useState([]);
@@ -54,45 +57,80 @@ const SupervisorRubricas = () => {
   
   // Estados de carga
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const navigate = useNavigate();
 
-  // Cargar datos iniciales usando catálogos de materias
+  // Cargar datos iniciales usando catálogos de materias y carreras asignadas al supervisor
   useEffect(() => {
     const cargarDatosIniciales = async () => {
       try {
         setLoading(true);
         
-        // 1. Configurar catálogos de materias
-        // Asegurar que el nombre de carrera coincida exactamente con el de la base de datos (sin tilde)
-        const catalogoCompleto = {
-          'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-          'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN, // Sin tilde, según datos de DB
-          'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
-          'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
-          'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
-          'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
-        };
-        setCatalogoMaterias(catalogoCompleto);
-        
-        // 2. Obtener lista de carreras
-        const carrerasDisponibles = Object.keys(catalogoCompleto);
-        setCarreras(carrerasDisponibles);
-        
-        // 3. Preparar semestres disponibles por carrera
-        const semestresObj = {};
-        carrerasDisponibles.forEach(carrera => {
-          semestresObj[carrera] = Object.keys(catalogoCompleto[carrera]).sort((a, b) => parseInt(a) - parseInt(b));
-        });
-        setSemestres(semestresObj);
-        
-        // 4. No seleccionar filtros específicos al iniciar, mantener vista amplia
-        setFiltroCarrera('');
-        setFiltroSemestre('');
-        setFiltroAsignatura('TODAS');
-        
-        // 5. Cargar todos los grupos registrados
-        await cargarTodosLosGrupos();
+        // 1. Obtener datos del supervisor y sus carreras asignadas
+        const usuarioStr = sessionStorage.getItem('usuario');
+        if (usuarioStr) {
+          try {
+            const usuario = JSON.parse(usuarioStr);
+            setSupervisor(usuario);
+            
+            // Obtener carreras asignadas desde el objeto de usuario
+            let carrerasDelSupervisor = [];
+            if (usuario.carreras && Array.isArray(usuario.carreras)) {
+              carrerasDelSupervisor = usuario.carreras;
+            } else if (usuario.id) {
+              // Si no hay carreras en el objeto de usuario, intentar obtenerlas desde el servidor
+              const supervisorData = await getSupervisorById(usuario.id);
+              if (supervisorData && supervisorData.carreras) {
+                carrerasDelSupervisor = supervisorData.carreras;
+              } else {
+                toast.error('No se pudieron obtener las carreras asignadas');
+                setLoading(false);
+                return;
+              }
+            }
+            
+            setCarrerasAsignadas(carrerasDelSupervisor);
+            
+            // 2. Configurar catálogos de materias
+            const catalogoCompleto = {
+              'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
+              'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
+              'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
+              'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
+              'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
+              'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
+            };
+            setCatalogoMaterias(catalogoCompleto);
+            
+            // 3. Filtrar catálogos para mostrar solo las carreras asignadas al supervisor
+            const carrerasFiltradas = Object.keys(catalogoCompleto).filter(
+              carrera => carrerasDelSupervisor.includes(carrera)
+            );
+            
+            setCarreras(carrerasFiltradas);
+            
+            // 4. Preparar semestres disponibles por carrera
+            const semestresObj = {};
+            carrerasFiltradas.forEach(carrera => {
+              semestresObj[carrera] = Object.keys(catalogoCompleto[carrera]).sort((a, b) => parseInt(a) - parseInt(b));
+            });
+            setSemestres(semestresObj);
+            
+            // 5. No seleccionar filtros específicos al iniciar, mantener vista amplia
+            setFiltroCarrera('');
+            setFiltroSemestre('');
+            setFiltroAsignatura('TODAS');
+            
+            // 6. Cargar grupos filtrados por carreras asignadas
+            await cargarGruposPorCarrerasAsignadas(carrerasDelSupervisor);
+          } catch (error) {
+            console.error('Error al parsear datos del supervisor:', error);
+            setError('Error al procesar datos del supervisor');
+          }
+        } else {
+          setError('No se encontraron datos del supervisor. Por favor, inicie sesión nuevamente.');
+        }
         
         setLoading(false);
       } catch (error) {
@@ -112,19 +150,60 @@ const SupervisorRubricas = () => {
       return;
     }
     
+    // Verificar que la carrera seleccionada esté entre las asignadas
+    if (!carrerasAsignadas.includes(filtroCarrera)) {
+      setFiltroCarrera('');
+      toast.warning('No tiene acceso a esa carrera');
+      return;
+    }
+    
     // Actualizar lista de asignaturas
     if (catalogoMaterias[filtroCarrera] && catalogoMaterias[filtroCarrera][filtroSemestre]) {
       const asignaturasSemestre = catalogoMaterias[filtroCarrera][filtroSemestre];
       setAsignaturas(['TODAS', ...asignaturasSemestre]);
       setFiltroAsignatura('TODAS'); // Resetear a TODAS cuando cambia carrera o semestre
     }
-  }, [filtroCarrera, filtroSemestre, catalogoMaterias]);
+  }, [filtroCarrera, filtroSemestre, catalogoMaterias, carrerasAsignadas]);
 
-  // Función para cargar todos los grupos y procesarlos
-  const cargarTodosLosGrupos = async () => {
+  // Función para cargar grupos filtrados por carreras asignadas
+  const cargarGruposPorCarrerasAsignadas = async (carrerasAsignadas) => {
     try {
-      // Obtener todos los grupos existentes en el sistema, no solo los del docente
-      const gruposExistentes = await getGrupos();
+      if (!carrerasAsignadas || carrerasAsignadas.length === 0) {
+        setGrupos([]);
+        setLoading(false);
+        return;
+      }
+
+      // Cargar grupos de todas las carreras asignadas
+      let gruposFiltrados = [];
+      for (const carrera of carrerasAsignadas) {
+        try {
+          const gruposCarrera = await getGruposPorCarrera(carrera);
+          gruposFiltrados = [...gruposFiltrados, ...gruposCarrera];
+        } catch (error) {
+          console.error(`Error al cargar grupos de la carrera ${carrera}:`, error);
+        }
+      }
+
+      // Eliminar duplicados (grupos que pertenecen a más de una carrera)
+      gruposFiltrados = gruposFiltrados.filter((grupo, index, self) =>
+        index === self.findIndex((g) => g.id === grupo.id)
+      );
+      
+      // Procesar grupos con datos adicionales
+      const gruposConDatos = await procesarGrupos(gruposFiltrados);
+      setGrupos(gruposConDatos);
+    } catch (error) {
+      toast.error('Error al cargar datos de rúbricas');
+    }
+  };
+
+  // Función para procesar cada grupo con datos adicionales
+  const procesarGrupos = async (gruposExistentes) => {
+    try {
+      if (!gruposExistentes || gruposExistentes.length === 0) {
+        return [];
+      }
       
       // Procesar cada grupo existente con su información
       const gruposConDatos = await Promise.all(gruposExistentes.map(async (grupo) => {
@@ -135,7 +214,7 @@ const SupervisorRubricas = () => {
           // Obtener informes del grupo
           const informes = await getInformesPorGrupoId(grupo.id);
           
-          // NUEVO: Obtener datos del docente si existe docente_id
+          // Obtener datos del docente si existe docente_id
           let docente_nombre = "-";
           if (grupo.docente_id) {
             try {
@@ -157,6 +236,7 @@ const SupervisorRubricas = () => {
                 estadoGrupo = 'pendiente';
               }
             } catch (error) {
+              // Ignorar errores al verificar borradores
             }
           }
           
@@ -176,7 +256,7 @@ const SupervisorRubricas = () => {
           
           return {
             ...grupo,
-            docente_nombre, // AÑADIR EL NOMBRE DEL DOCENTE AQUÍ
+            docente_nombre,
             total_estudiantes: estudiantes.length,
             total_informes: informes.filter((inf, index, self) => 
               index === self.findIndex(i => i.estudiante_id === inf.estudiante_id)
@@ -202,18 +282,10 @@ const SupervisorRubricas = () => {
         }
       }));
       
-      // Log para verificar cuántos grupos y de qué carreras se han cargado
-      const gruposPorCarrera = {};
-      gruposConDatos.forEach(grupo => {
-        if (!gruposPorCarrera[grupo.carrera]) {
-          gruposPorCarrera[grupo.carrera] = 0;
-        }
-        gruposPorCarrera[grupo.carrera]++;
-      });
-      
-      setGrupos(gruposConDatos);
+      return gruposConDatos;
     } catch (error) {
-      toast.error('Error al cargar datos de rúbricas');
+      console.error('Error al procesar grupos:', error);
+      return [];
     }
   };
 
@@ -264,7 +336,18 @@ const SupervisorRubricas = () => {
 
   // Aplicar filtros a los grupos
   const gruposFiltrados = React.useMemo(() => {
+    // Primero filtrar por carreras asignadas al supervisor
     const resultado = grupos.filter(grupo => {
+      // Si se seleccionó una carrera específica, verificar que coincida y que esté asignada
+      if (filtroCarrera && filtroCarrera !== grupo.carrera) {
+        return false;
+      }
+      
+      // Verificar que la carrera del grupo esté entre las asignadas al supervisor
+      if (!carrerasAsignadas.includes(grupo.carrera)) {
+        return false;
+      }
+      
       // Filtro por búsqueda (nombre proyecto, carrera o materia)
       const matchBusqueda = 
         !searchTerm || // Si no hay término de búsqueda, incluir todos
@@ -275,26 +358,30 @@ const SupervisorRubricas = () => {
       // Filtro por estado
       const matchEstado = !filtroEstado || grupo.estado === filtroEstado;
       
-      // Filtro por carrera
-      const matchCarrera = !filtroCarrera || grupo.carrera === filtroCarrera;
-      
       // Filtro por semestre
       const matchSemestre = !filtroSemestre || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
       
       // Filtro por asignatura
       const matchAsignatura = filtroAsignatura === 'TODAS' || grupo.materia === filtroAsignatura;
       
-      return matchBusqueda && matchEstado && matchCarrera && matchSemestre && matchAsignatura;
+      return matchBusqueda && matchEstado && matchSemestre && matchAsignatura;
     });
     
     return resultado;
-  }, [grupos, searchTerm, filtroEstado, filtroCarrera, filtroSemestre, filtroAsignatura]);
+  }, [grupos, searchTerm, filtroEstado, filtroCarrera, filtroSemestre, filtroAsignatura, carrerasAsignadas]);
 
   // Función para ver detalles de un grupo
   const verDetalles = async (grupo) => {
     try {
       setLoading(true);
       setMostrarEstudiantes(false); // Resetear el estado del desplegable de estudiantes
+      
+      // Verificar si el grupo pertenece a una carrera asignada
+      if (!carrerasAsignadas.includes(grupo.carrera)) {
+        toast.error('No tiene acceso a este grupo');
+        setLoading(false);
+        return;
+      }
       
       // Verificar si el grupo tiene rúbricas registradas
       if (grupo.estado === 'sin_rubrica') {
@@ -325,6 +412,12 @@ const SupervisorRubricas = () => {
 
   // Función para abrir el modal de habilitación
   const abrirModalHabilitar = (grupo) => {
+    // Verificar si el grupo pertenece a una carrera asignada
+    if (!carrerasAsignadas.includes(grupo.carrera)) {
+      toast.error('No tiene acceso a este grupo');
+      return;
+    }
+    
     // Verificar si el grupo puede ser habilitado
     const verificacion = supRubricaService.verificarGrupoHabilitable(grupo);
     
@@ -353,7 +446,7 @@ const SupervisorRubricas = () => {
       setModalVisible(false);
       
       // Recargar datos
-      await cargarTodosLosGrupos();
+      await cargarGruposPorCarrerasAsignadas(carrerasAsignadas);
       
       setLoading(false);
     } catch (error) {
@@ -365,6 +458,12 @@ const SupervisorRubricas = () => {
   // Función para ver historial de habilitaciones
   const verHistorial = async (grupo) => {
     try {
+      // Verificar si el grupo pertenece a una carrera asignada
+      if (!carrerasAsignadas.includes(grupo.carrera)) {
+        toast.error('No tiene acceso a este grupo');
+        return;
+      }
+      
       setLoading(true);
       const resultado = await supRubricaService.obtenerHistorialHabilitaciones(grupo.id);
       setHistorial(resultado.historial || []);
@@ -393,6 +492,9 @@ const SupervisorRubricas = () => {
         const detalles = await supRubricaService.obtenerRubricasGrupo(grupoSeleccionado.id);
         setGrupoSeleccionado(detalles.grupo);
       }
+      
+      // Recargar todos los grupos para actualizar la vista principal
+      await cargarGruposPorCarrerasAsignadas(carrerasAsignadas);
       
       setLoading(false);
     } catch (error) {
@@ -449,7 +551,7 @@ const SupervisorRubricas = () => {
           </div>
           
           <div className="sup-modal-body">
-                          <div className="sup-detalles-info">
+            <div className="sup-detalles-info">
               <h3>{grupoSeleccionado.nombre_proyecto}</h3>
               <div className="sup-info-row">
                 <span><strong>Carrera:</strong> {grupoSeleccionado.carrera}</span>
@@ -696,6 +798,33 @@ const SupervisorRubricas = () => {
     );
   };
 
+  // Si hay error, mostrar mensaje
+  if (error) {
+    return (
+      <LayoutSup>
+        <ToastContainer position="top-right" autoClose={3000} />
+        <div className="sup-rubricas-container">
+          <div className="sup-header">
+            <div className="sup-header-content">
+              <h1>GESTIÓN DE RÚBRICAS</h1>
+            </div>
+          </div>
+          <div className="sup-evaluacion-container">
+            <div className="error-message">{error}</div>
+            <div className="acciones-container">
+              <button 
+                className="btn-volver"
+                onClick={() => navigate('/supervisor/dashboard')}
+              >
+                Volver al Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </LayoutSup>
+    );
+  }
+
   return (
     <LayoutSup>
       <ToastContainer position="top-right" autoClose={3000} />
@@ -705,8 +834,12 @@ const SupervisorRubricas = () => {
         <div className="sup-header">
           <div className="sup-header-content">
             <h1>GESTIÓN DE RÚBRICAS</h1>
+            {carrerasAsignadas.length > 0 && (
+              <p className="header-asignacion">
+                Carreras asignadas: <strong>{carrerasAsignadas.join(', ')}</strong>
+              </p>
+            )}
           </div>
-          
         </div>
         
         <div className="sup-evaluacion-container">
@@ -736,12 +869,18 @@ const SupervisorRubricas = () => {
               <select 
                 value={filtroCarrera} 
                 onChange={e => {
-                  setFiltroCarrera(e.target.value);
-                  // Resetear semestre al cambiar carrera
-                  setFiltroSemestre('');
+                  // Verificar que la carrera seleccionada esté entre las asignadas
+                  const carreraSeleccionada = e.target.value;
+                  if (carreraSeleccionada === '' || carrerasAsignadas.includes(carreraSeleccionada)) {
+                    setFiltroCarrera(carreraSeleccionada);
+                    // Resetear semestre al cambiar carrera
+                    setFiltroSemestre('');
+                  } else {
+                    toast.warning('No tiene acceso a esa carrera');
+                  }
                 }}
               >
-                <option value="">Todas las carreras</option>
+                <option value="">Todas las carreras asignadas</option>
                 {carreras.map(carrera => (
                   <option key={carrera} value={carrera}>{carrera}</option>
                 ))}

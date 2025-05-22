@@ -46,15 +46,53 @@ function CrearEstudiante() {
     unidad_educativa: true // Inicialmente verdadero ya que tiene valor predeterminado
   });
 
-  // Lista de carreras disponibles
-  const CARRERAS = [
-    { value: 'Ingeniería de Sistemas', label: 'Ingeniería de Sistemas' },
-    { value: 'Ingeniería de Sistemas Electronicos', label: 'Ingeniería de Sistemas Electronicos' },
-    { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
-    { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
-    { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
-    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
-  ];
+  // Estado para carreras asignadas al docente
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+
+  // Obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
+
+  // Efecto para cargar las carreras asignadas al docente
+  useEffect(() => {
+    const carreras = obtenerCarrerasDocente();
+    setCarrerasAsignadas(carreras);
+    
+    // Filtrar las opciones de carreras para el selector
+    const opcionesCarreras = [];
+    
+    // Solo incluir carreras que el docente tenga asignadas
+    carreras.forEach(carrera => {
+      opcionesCarreras.push({
+        value: carrera,
+        label: carrera
+      });
+    });
+    
+    setCarrerasDisponibles(opcionesCarreras);
+    
+    // Si no hay carreras asignadas, mostrar un mensaje y redirigir
+    if (carreras.length === 0) {
+      toast.error("No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.");
+      setTimeout(() => {
+        navigate('/docentes');
+      }, 2000);
+    }
+  }, [navigate]);
 
   // Obtener semestres disponibles según la carrera
   const getSemestresDisponibles = (carrera) => {
@@ -220,6 +258,15 @@ function CrearEstudiante() {
         return;
       }
       
+      // Verificar que la carrera esté entre las asignadas al docente
+      if (!carrerasAsignadas.includes(carrera)) {
+        toast.error('No tiene permiso para crear estudiantes en esta carrera', {
+          className: 'toast-notification'
+        });
+        setLoading(false);
+        return;
+      }
+      
       // Si no es multi-semestre, solo crear un estudiante
       if (!multiSemestre) {
         await crearEstudianteEnSemestre(semestre);
@@ -374,6 +421,42 @@ function CrearEstudiante() {
     return new Set(semestresValidos).size !== semestresValidos.length;
   };
 
+  // Si no hay carreras asignadas, mostrar mensaje y redirigir
+  if (carrerasAsignadas.length === 0) {
+    return (
+      <div className="docentes-container">
+        <Sidebar />
+        <main className="content">
+          <ToastContainer 
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
+          <div className="estudiante-form-styles">
+            <div className="crear-estudiante-container">
+              <h1>Registrar Nuevo Estudiante</h1>
+              <div className="error-message">
+                No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
+              </div>
+              <button 
+                className="btn-cancelar" 
+                onClick={() => navigate('/docentes')}
+              >
+                Volver al Dashboard
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="docentes-container">
       <Sidebar />
@@ -492,7 +575,7 @@ function CrearEstudiante() {
                   required
                 >
                   <option value="">Seleccione una carrera</option>
-                  {CARRERAS.map((carrera, index) => (
+                  {carrerasDisponibles.map((carrera, index) => (
                     <option key={index} value={carrera.value}>
                       {carrera.label}
                     </option>

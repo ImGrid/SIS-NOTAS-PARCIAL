@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import LayoutSup from './LayoutSup';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import '../style/supInforme.css'; // Importamos la hoja de estilos aislada
+import '../style/supInforme.css';
 
 // Importar servicios
 import { getEstudiantes, getEstudiantesBySemestreYCarrera, getEstudiantesByGrupoId } from '../../../service/estudianteService';
@@ -12,6 +12,7 @@ import { getInformesPorGrupoId } from '../../../service/informeService';
 import { getRubricaPorId } from '../../../service/rubricaService';
 import { getCalificacionPorId } from '../../../service/calificacionService';
 import { getDocenteById } from '../../../service/docenteService';
+import { getSupervisorById } from '../../../service/supervisorService';
 
 // Importar utilidades
 import { formatearNota, formatearFecha, obtenerFechaActual } from '../../../util/helpers/formatHelper';
@@ -28,10 +29,12 @@ import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
 const SupervisorInformes = () => {
   // Estados para almacenar datos cargados
   const [carreras, setCarreras] = useState([]);
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [semestres, setSemestres] = useState({});
   const [asignaturas, setAsignaturas] = useState([]);
   const [estudiantes, setEstudiantes] = useState([]);
   const [grupos, setGrupos] = useState([]);
+  const [supervisor, setSupervisor] = useState(null);
   
   // Catálogos de materias
   const [catalogoMaterias, setCatalogoMaterias] = useState({});
@@ -54,48 +57,85 @@ const SupervisorInformes = () => {
   
   const navigate = useNavigate();
   
-  // Cargar datos iniciales al montar el componente
+  // Cargar datos iniciales y carreras asignadas al supervisor al montar el componente
   useEffect(() => {
     const cargarDatosIniciales = async () => {
       try {
         setLoading(true);
         
-        // 1. Configurar catálogos de materias
-        const catalogoCompleto = {
-          'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-          'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
-          'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
-          'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
-          'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
-          'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
-        };
-        setCatalogoMaterias(catalogoCompleto);
-        
-        // 2. Obtener lista de carreras
-        const carrerasDisponibles = Object.keys(catalogoCompleto);
-        setCarreras(carrerasDisponibles);
-        
-        // 3. Preparar semestres disponibles por carrera
-        const semestresObj = {};
-        carrerasDisponibles.forEach(carrera => {
-          semestresObj[carrera] = Object.keys(catalogoCompleto[carrera]).sort((a, b) => parseInt(a) - parseInt(b));
-        });
-        setSemestres(semestresObj);
-        
-        // 4. Seleccionar primera carrera por defecto
-        if (carrerasDisponibles.length > 0) {
-          const primeraCarrera = carrerasDisponibles[0];
-          setCarreraSeleccionada(primeraCarrera);
-          
-          // 5. Seleccionar primer semestre por defecto
-          if (semestresObj[primeraCarrera] && semestresObj[primeraCarrera].length > 0) {
-            const primerSemestre = semestresObj[primeraCarrera][0];
-            setSemestreSeleccionado(primerSemestre);
+        // 1. Obtener datos del supervisor y sus carreras asignadas
+        const usuarioStr = sessionStorage.getItem('usuario');
+        if (usuarioStr) {
+          try {
+            const usuario = JSON.parse(usuarioStr);
+            setSupervisor(usuario);
             
-            // 6. Cargar asignaturas para este semestre
-            const asignaturasSemestre = catalogoCompleto[primeraCarrera][primerSemestre];
-            setAsignaturas(['TODAS', ...asignaturasSemestre]);
+            // Obtener carreras asignadas desde el objeto de usuario
+            let carrerasDelSupervisor = [];
+            if (usuario.carreras && Array.isArray(usuario.carreras)) {
+              carrerasDelSupervisor = usuario.carreras;
+            } else if (usuario.id) {
+              // Si no hay carreras en el objeto de usuario, intentar obtenerlas desde el servidor
+              const supervisorData = await getSupervisorById(usuario.id);
+              if (supervisorData && supervisorData.carreras) {
+                carrerasDelSupervisor = supervisorData.carreras;
+              } else {
+                toast.error('No se pudieron obtener las carreras asignadas');
+                setLoading(false);
+                return;
+              }
+            }
+            
+            setCarrerasAsignadas(carrerasDelSupervisor);
+            
+            // 2. Configurar catálogos de materias
+            const catalogoCompleto = {
+              'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
+              'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
+              'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
+              'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
+              'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
+              'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
+            };
+            setCatalogoMaterias(catalogoCompleto);
+            
+            // 3. Filtrar catálogos para mostrar solo las carreras asignadas al supervisor
+            const carrerasFiltradas = Object.keys(catalogoCompleto).filter(
+              carrera => carrerasDelSupervisor.includes(carrera)
+            );
+            
+            setCarreras(carrerasFiltradas);
+            
+            // 4. Preparar semestres disponibles por carrera
+            const semestresObj = {};
+            carrerasFiltradas.forEach(carrera => {
+              semestresObj[carrera] = Object.keys(catalogoCompleto[carrera]).sort((a, b) => parseInt(a) - parseInt(b));
+            });
+            setSemestres(semestresObj);
+            
+            // 5. Seleccionar primera carrera por defecto (solo si hay carreras asignadas)
+            if (carrerasFiltradas.length > 0) {
+              const primeraCarrera = carrerasFiltradas[0];
+              setCarreraSeleccionada(primeraCarrera);
+              
+              // 6. Seleccionar primer semestre por defecto
+              if (semestresObj[primeraCarrera] && semestresObj[primeraCarrera].length > 0) {
+                const primerSemestre = semestresObj[primeraCarrera][0];
+                setSemestreSeleccionado(primerSemestre);
+                
+                // 7. Cargar asignaturas para este semestre
+                const asignaturasSemestre = catalogoCompleto[primeraCarrera][primerSemestre];
+                setAsignaturas(['TODAS', ...asignaturasSemestre]);
+              }
+            } else {
+              setError('No tiene carreras asignadas. Comuníquese con el administrador.');
+            }
+          } catch (error) {
+            console.error('Error al parsear datos del supervisor:', error);
+            setError('Error al procesar datos del supervisor');
           }
+        } else {
+          setError('No se encontraron datos del supervisor. Por favor, inicie sesión nuevamente.');
         }
         
         setLoading(false);
@@ -135,6 +175,13 @@ const SupervisorInformes = () => {
   const generarDatosInforme = async (carrera, semestre, asignaturaFiltro) => {
     try {
       setLoading(true);
+      
+      // Verificar que la carrera esté asignada al supervisor
+      if (!carrerasAsignadas.includes(carrera)) {
+        toast.error('No tiene acceso a esta carrera');
+        setLoading(false);
+        return;
+      }
       
       // 1. Obtener todos los estudiantes de esta carrera y semestre
       const estudiantesFiltrados = await getEstudiantesBySemestreYCarrera(semestre, carrera);
@@ -201,7 +248,9 @@ const SupervisorInformes = () => {
               const informesGrupo = await getInformesPorGrupoId(grupo.id);
               
               // Buscar informe específico para este estudiante
-              const informe = informesGrupo.find(inf => inf.estudiante_id === estudiante.id);
+              const informe = informesGrupo.find(
+                inf => inf.estudiante_id === estudiante.id
+              );
               
               if (informe) {
                 informeEstudiante = informe;
@@ -313,9 +362,9 @@ const SupervisorInformes = () => {
   // Función para limpiar búsqueda y filtros
   const limpiarBusqueda = () => {
     setBusquedaEstudiante('');
-    // Obtener primera carrera y primer semestre por defecto
-    if (carreras.length > 0) {
-      const primeraCarrera = carreras[0];
+    // Obtener primera carrera y primer semestre por defecto (solo de las asignadas)
+    if (carrerasAsignadas.length > 0) {
+      const primeraCarrera = carrerasAsignadas[0];
       setCarreraSeleccionada(primeraCarrera);
       
       if (semestres[primeraCarrera] && semestres[primeraCarrera].length > 0) {
@@ -414,6 +463,11 @@ const SupervisorInformes = () => {
         <div className="evaluacion-header">
           <div className="header-content">
             <h1>INFORME DE NOTAS POR CARRERA</h1>
+            {carrerasAsignadas.length > 0 && (
+              <p className="header-asignacion">
+                Carreras asignadas: <strong>{carrerasAsignadas.join(', ')}</strong>
+              </p>
+            )}
           </div>
           <div className="header-actions">
             <button 
