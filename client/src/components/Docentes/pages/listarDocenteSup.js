@@ -115,9 +115,6 @@ function ListarDocentesAdmin() {
       setDocentes(docentesFiltradosBackend);
       setDocentesFiltrados(docentesFiltradosBackend);
       
-      console.log(`Carreras del supervisor: ${carrerasDelSupervisor.join(', ')}`);
-      console.log(`Total de docentes filtrados: ${docentesFiltradosBackend.length}`);
-      
     } catch (error) {
       console.error('Error al cargar docentes:', error);
       toast.error('Error al cargar la lista de docentes');

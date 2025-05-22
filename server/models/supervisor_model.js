@@ -6,34 +6,35 @@ async function crearSupervisor(supervisor) {
   try {
     await client.query('BEGIN');
     
-    // Extraer carreras (si existen) y el resto de datos del supervisor
     const { carreras, ...datosSupervisor } = supervisor;
     const { nombre_completo, correo_electronico, cargo } = datosSupervisor;
 
-    // Insertar supervisor básico
-    const querySupervisor = 'INSERT INTO supervisores (nombre_completo, correo_electronico, cargo) VALUES ($1, $2, $3) RETURNING *';
-    const valuesSupervisor = [nombre_completo, correo_electronico, cargo];
-    const resultSupervisor = await client.query(querySupervisor, valuesSupervisor);
+    // Insertar supervisor básico - SELECT específico
+    const querySupervisor = `
+      INSERT INTO supervisores (nombre_completo, correo_electronico, cargo) 
+      VALUES ($1, $2, $3) 
+      RETURNING id, nombre_completo, correo_electronico, cargo
+    `;
+    const resultSupervisor = await client.query(querySupervisor, [nombre_completo, correo_electronico, cargo]);
     const supervisorCreado = resultSupervisor.rows[0];
     
-    // Si hay carreras especificadas, asignarlas
+    // Insertar carreras en batch si existen - Aprovecha idx_supervisor_carrera_supervisor_id
     if (carreras && Array.isArray(carreras) && carreras.length > 0) {
-      for (const carrera of carreras) {
-        const queryCarrera = 'INSERT INTO supervisor_carrera (supervisor_id, carrera) VALUES ($1, $2)';
-        await client.query(queryCarrera, [supervisorCreado.id, carrera]);
-      }
+      const values = carreras.map((carrera, index) => 
+        `($1, $${index + 2}, CURRENT_TIMESTAMP)`
+      ).join(', ');
+      
+      const queryCarreras = `
+        INSERT INTO supervisor_carrera (supervisor_id, carrera, fecha_asignacion) 
+        VALUES ${values}
+      `;
+      await client.query(queryCarreras, [supervisorCreado.id, ...carreras]);
     }
     
     await client.query('COMMIT');
     
-    // Obtener las carreras asignadas
-    const carrerasAsignadas = await supervisorCarreraModel.obtenerCarrerasDeSupervisor(supervisorCreado.id);
-    
-    // Devolver supervisor con sus carreras
-    return {
-      ...supervisorCreado,
-      carreras: carrerasAsignadas
-    };
+    // Retornar con carreras usando consulta optimizada
+    return await obtenerSupervisorPorId(supervisorCreado.id);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -42,60 +43,94 @@ async function crearSupervisor(supervisor) {
   }
 }
 
-async function obtenerSupervisores() {
-  try {
-    // Primero obtenemos todos los supervisores
-    const result = await pool.query('SELECT * FROM supervisores');
-    const supervisores = result.rows;
-    
-    // Para cada supervisor, obtenemos sus carreras
-    for (const supervisor of supervisores) {
-      const carreras = await supervisorCarreraModel.obtenerCarrerasDeSupervisor(supervisor.id);
-      supervisor.carreras = carreras;
-    }
-    
-    return supervisores;
-  } catch (error) {
-    console.error('Error al obtener supervisores con carreras:', error);
-    throw error;
-  }
+/**
+ * OPTIMIZADO: Una sola consulta con JSON_AGG - Elimina N+1 problem
+ * Aprovecha: idx_supervisor_carrera_supervisor_id
+ */
+async function obtenerSupervisores(limit = 500, offset = 0) {
+  const query = `
+    SELECT 
+      s.id, s.nombre_completo, s.correo_electronico, s.cargo,
+      COALESCE(
+        JSON_AGG(sc.carrera ORDER BY sc.carrera) FILTER (WHERE sc.carrera IS NOT NULL), 
+        '[]'
+      ) as carreras
+    FROM supervisores s
+    LEFT JOIN supervisor_carrera sc ON s.id = sc.supervisor_id
+    GROUP BY s.id, s.nombre_completo, s.correo_electronico, s.cargo
+    ORDER BY s.nombre_completo
+    LIMIT $1 OFFSET $2
+  `;
+  
+  const result = await pool.query(query, [limit, offset]);
+  return result.rows;
 }
 
+/**
+ * OPTIMIZADO: Una sola consulta con JSON_AGG
+ * Aprovecha: Primary key + idx_supervisor_carrera_supervisor_id
+ */
 async function obtenerSupervisorPorId(id) {
-  try {
-    const result = await pool.query('SELECT * FROM supervisores WHERE id = $1', [id]);
-    const supervisor = result.rows[0];
-    
-    if (supervisor) {
-      // Obtener carreras asignadas
-      const carreras = await supervisorCarreraModel.obtenerCarrerasDeSupervisor(supervisor.id);
-      supervisor.carreras = carreras;
-    }
-    
-    return supervisor;
-  } catch (error) {
-    console.error('Error al obtener supervisor por ID con carreras:', error);
-    throw error;
-  }
+  const query = `
+    SELECT 
+      s.id, s.nombre_completo, s.correo_electronico, s.cargo,
+      COALESCE(
+        JSON_AGG(sc.carrera ORDER BY sc.carrera) FILTER (WHERE sc.carrera IS NOT NULL), 
+        '[]'
+      ) as carreras
+    FROM supervisores s
+    LEFT JOIN supervisor_carrera sc ON s.id = sc.supervisor_id
+    WHERE s.id = $1
+    GROUP BY s.id, s.nombre_completo, s.correo_electronico, s.cargo
+  `;
+  
+  const result = await pool.query(query, [id]);
+  return result.rows[0];
 }
 
+/**
+ * OPTIMIZADO: Aprovecha unique key en correo_electronico
+ */
 async function obtenerSupervisorPorCorreo(correo) {
-  try {
-    // Obtener el supervisor básico
-    const result = await pool.query('SELECT * FROM supervisores WHERE correo_electronico = $1', [correo]);
-    const supervisor = result.rows[0];
-    
-    if (supervisor) {
-      // Obtener sus carreras asignadas
-      const carreras = await supervisorCarreraModel.obtenerCarrerasDeSupervisor(supervisor.id);
-      supervisor.carreras = carreras;
-    }
-    
-    return supervisor;
-  } catch (error) {
-    console.error('Error al obtener supervisor por correo con carreras:', error);
-    throw error;
-  }
+  const query = `
+    SELECT 
+      s.id, s.nombre_completo, s.correo_electronico, s.cargo,
+      COALESCE(
+        JSON_AGG(sc.carrera ORDER BY sc.carrera) FILTER (WHERE sc.carrera IS NOT NULL), 
+        '[]'
+      ) as carreras
+    FROM supervisores s
+    LEFT JOIN supervisor_carrera sc ON s.id = sc.supervisor_id
+    WHERE s.correo_electronico = $1
+    GROUP BY s.id, s.nombre_completo, s.correo_electronico, s.cargo
+  `;
+  
+  const result = await pool.query(query, [correo]);
+  return result.rows[0];
+}
+
+/**
+ * OPTIMIZADO: Aprovecha idx_supervisor_carrera_carrera para filtrar eficientemente
+ */
+async function obtenerSupervisoresPorCarrera(carrera, limit = 200, offset = 0) {
+  const query = `
+    SELECT 
+      s.id, s.nombre_completo, s.correo_electronico, s.cargo,
+      COALESCE(
+        JSON_AGG(sc_all.carrera ORDER BY sc_all.carrera) FILTER (WHERE sc_all.carrera IS NOT NULL), 
+        '[]'
+      ) as carreras
+    FROM supervisores s
+    INNER JOIN supervisor_carrera sc_filter ON s.id = sc_filter.supervisor_id
+    LEFT JOIN supervisor_carrera sc_all ON s.id = sc_all.supervisor_id
+    WHERE sc_filter.carrera = $1
+    GROUP BY s.id, s.nombre_completo, s.correo_electronico, s.cargo
+    ORDER BY s.nombre_completo
+    LIMIT $2 OFFSET $3
+  `;
+  
+  const result = await pool.query(query, [carrera, limit, offset]);
+  return result.rows;
 }
 
 async function actualizarSupervisor(id, supervisor) {
@@ -103,45 +138,46 @@ async function actualizarSupervisor(id, supervisor) {
   try {
     await client.query('BEGIN');
     
-    // Extraer carreras (si existen) y el resto de datos del supervisor
     const { carreras, ...datosSupervisor } = supervisor;
     const { nombre_completo, correo_electronico, cargo } = datosSupervisor;
 
     // Actualizar datos básicos del supervisor
-    const querySupervisor = 'UPDATE supervisores SET nombre_completo = $1, correo_electronico = $2, cargo = $3 WHERE id = $4 RETURNING *';
-    const valuesSupervisor = [nombre_completo, correo_electronico, cargo, id];
-    const resultSupervisor = await client.query(querySupervisor, valuesSupervisor);
+    const querySupervisor = `
+      UPDATE supervisores 
+      SET nombre_completo = $1, correo_electronico = $2, cargo = $3 
+      WHERE id = $4 
+      RETURNING id, nombre_completo, correo_electronico, cargo
+    `;
+    const resultSupervisor = await client.query(querySupervisor, [nombre_completo, correo_electronico, cargo, id]);
     
-    // Si no hay supervisor para actualizar, terminamos
     if (resultSupervisor.rows.length === 0) {
       await client.query('ROLLBACK');
       return null;
     }
-    
-    const supervisorActualizado = resultSupervisor.rows[0];
-    
-    // Si se proporcionaron carreras, actualizamos asignaciones
+
+    // Si se proporcionaron carreras, actualizamos - Batch operation optimizada
     if (carreras && Array.isArray(carreras)) {
-      // Primero eliminamos asignaciones existentes
+      // Eliminar carreras existentes - Aprovecha idx_supervisor_carrera_supervisor_id
       await client.query('DELETE FROM supervisor_carrera WHERE supervisor_id = $1', [id]);
       
-      // Luego insertamos las nuevas
-      for (const carrera of carreras) {
-        const queryCarrera = 'INSERT INTO supervisor_carrera (supervisor_id, carrera) VALUES ($1, $2)';
-        await client.query(queryCarrera, [id, carrera]);
+      // Insertar nuevas carreras en batch
+      if (carreras.length > 0) {
+        const values = carreras.map((carrera, index) => 
+          `($1, $${index + 2}, CURRENT_TIMESTAMP)`
+        ).join(', ');
+        
+        const queryCarreras = `
+          INSERT INTO supervisor_carrera (supervisor_id, carrera, fecha_asignacion) 
+          VALUES ${values}
+        `;
+        await client.query(queryCarreras, [id, ...carreras]);
       }
     }
     
     await client.query('COMMIT');
     
-    // Obtener las carreras actualizadas
-    const carrerasActualizadas = await supervisorCarreraModel.obtenerCarrerasDeSupervisor(id);
-    
-    // Devolver supervisor con sus carreras
-    return {
-      ...supervisorActualizado,
-      carreras: carrerasActualizadas
-    };
+    // Retornar supervisor actualizado con carreras
+    return await obtenerSupervisorPorId(id);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -155,39 +191,32 @@ async function eliminarSupervisor(id) {
   try {
     await client.query('BEGIN');
     
-    // 1. Eliminar asignaciones de carrera
+    // 1. Eliminar asignaciones de carrera - Aprovecha idx_supervisor_carrera_supervisor_id
     await client.query('DELETE FROM supervisor_carrera WHERE supervisor_id = $1', [id]);
     
-    // 2. Eliminar historial de habilitaciones (si es necesario)
-    // Esta parte debe adaptarse según tu esquema específico
-    const queryHabilitaciones = `
-      SELECT id FROM habilitaciones_rubricas 
-      WHERE supervisor_id = $1 OR supervisor_desactivacion_id = $1
-    `;
-    const habilitaciones = await client.query(queryHabilitaciones, [id]);
+    // 2. Manejar habilitaciones - Aprovecha idx_habilitaciones_supervisor_id
+    // Desactivar habilitaciones activas
+    await client.query(`
+      UPDATE habilitaciones_rubricas
+      SET activa = false, 
+          fecha_desactivacion = CURRENT_TIMESTAMP,
+          supervisor_desactivacion_id = NULL
+      WHERE supervisor_id = $1 AND activa = true
+    `, [id]);
     
-    if (habilitaciones.rows.length > 0) {
-      // Desactivar habilitaciones activas
-      await client.query(`
-        UPDATE habilitaciones_rubricas
-        SET activa = false, 
-            fecha_desactivacion = CURRENT_TIMESTAMP,
-            supervisor_desactivacion_id = NULL
-        WHERE supervisor_id = $1 AND activa = true
-      `, [id]);
-      
-      // Limpiar referencias
-      await client.query(`
-        UPDATE habilitaciones_rubricas
-        SET supervisor_desactivacion_id = NULL
-        WHERE supervisor_desactivacion_id = $1
-      `, [id]);
-    }
+    // Limpiar referencias de supervisor_desactivacion_id
+    await client.query(`
+      UPDATE habilitaciones_rubricas
+      SET supervisor_desactivacion_id = NULL
+      WHERE supervisor_desactivacion_id = $1
+    `, [id]);
     
-    // 3. Finalmente eliminar el supervisor
-    const result = await client.query('DELETE FROM supervisores WHERE id = $1 RETURNING *', [id]);
+    // 3. Eliminar el supervisor
+    const result = await client.query(
+      'DELETE FROM supervisores WHERE id = $1 RETURNING id, nombre_completo, correo_electronico, cargo', 
+      [id]
+    );
     
-    // Si no se encontró supervisor para eliminar
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
       return null;
@@ -197,7 +226,6 @@ async function eliminarSupervisor(id) {
     return result.rows[0];
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Error en eliminarSupervisor:', error);
     throw error;
   } finally {
     client.release();
@@ -207,25 +235,22 @@ async function eliminarSupervisor(id) {
 // Verifica si un correo corresponde a un supervisor
 async function verificarCorreoSupervisor(correo) {
   const supervisor = await obtenerSupervisorPorCorreo(correo);
-  return !!supervisor; // Devuelve true si existe, false si no
+  return !!supervisor;
 }
 
 // Verifica la clave secreta del sistema
 async function autenticarSupervisor(correo, claveSecreta) {
   try {
-    // Verificar si existe el supervisor
     const supervisor = await obtenerSupervisorPorCorreo(correo);
     
     if (!supervisor) {
       return { success: false, message: 'Supervisor no encontrado' };
     }
     
-    // Verificar la clave secreta
     if (claveSecreta !== process.env.ADMIN_SECRET_KEY) {
       return { success: false, message: 'Clave secreta incorrecta' };
     }
     
-    // Autenticación exitosa
     return { 
       success: true, 
       supervisor: {
@@ -237,39 +262,27 @@ async function autenticarSupervisor(correo, claveSecreta) {
       }
     };
   } catch (error) {
-    console.error('Error al autenticar supervisor:', error);
     throw error;
   }
 }
 
 /**
- * FUNCIONES PARA GESTIÓN DE RÚBRICAS
+ * FUNCIONES OPTIMIZADAS PARA GESTIÓN DE RÚBRICAS
  */
 
 /**
- * Obtiene todas las rúbricas del sistema con información relacionada
- * @param {Array<string>} carrerasFiltro - Optionalmente filtrar por estas carreras
- * @returns {Promise<Array>} - Lista de rúbricas con información de docentes y grupos
+ * OPTIMIZADA: Una consulta eficiente con LEFT JOINs
+ * Aprovecha: idx_grupos_carrera, idx_informes_grupo_id, idx_rubricas_docente_id
  */
-async function obtenerTodasRubricas(carrerasFiltro = []) {
+async function obtenerTodasRubricas(carrerasFiltro = [], limit = 1000, offset = 0) {
   let query = `
     SELECT 
-      r.id, r.presentacion, r.sustentacion, r.documentacion, r.innovacion, 
+      r.id as rubrica_id, r.presentacion, r.sustentacion, r.documentacion, r.innovacion, 
       r.nota_final, r.observaciones, r.comentarios, r.docente_id, r.fecha_creacion,
       d.nombre_completo AS docente_nombre,
       i.id AS informe_id, i.grupo_id, i.estudiante_id, i.comentarios_generales,
       g.nombre_proyecto, g.carrera, g.semestre, g.materia,
-      e.nombre AS estudiante_nombre, e.apellido AS estudiante_apellido, e.codigo AS estudiante_codigo,
-      (
-        SELECT COUNT(*) 
-        FROM informes 
-        WHERE grupo_id = g.id
-      ) AS total_informes,
-      (
-        SELECT COUNT(*) 
-        FROM estudiante_grupo 
-        WHERE grupo_id = g.id AND activo = true
-      ) AS total_estudiantes
+      e.nombre AS estudiante_nombre, e.apellido AS estudiante_apellido, e.codigo AS estudiante_codigo
     FROM rubricas r
     LEFT JOIN docentes d ON r.docente_id = d.id
     LEFT JOIN informes i ON r.id = i.rubrica_id
@@ -277,40 +290,36 @@ async function obtenerTodasRubricas(carrerasFiltro = []) {
     LEFT JOIN estudiantes e ON i.estudiante_id = e.id
   `;
   
-  // Aplicar filtro de carreras si se proporciona
+  const params = [];
+  
+  // Aplicar filtro de carreras si se proporciona - Aprovecha idx_grupos_carrera
   if (carrerasFiltro && carrerasFiltro.length > 0) {
-    query += ` WHERE g.carrera IN (${carrerasFiltro.map((_, i) => `$${i + 1}`).join(',')})`;
+    const placeholders = carrerasFiltro.map((_, i) => `$${i + 1}`).join(',');
+    query += ` WHERE g.carrera IN (${placeholders})`;
+    params.push(...carrerasFiltro);
   }
   
-  query += ` ORDER BY g.id, r.id`;
+  query += ` ORDER BY g.carrera, g.id, r.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  params.push(limit, offset);
   
-  const params = carrerasFiltro || [];
-  
-  try {
-    const result = await pool.query(query, params);
-    return result.rows;
-  } catch (error) {
-    console.error('Error al obtener todas las rúbricas:', error);
-    throw error;
-  }
+  const result = await pool.query(query, params);
+  return result.rows;
 }
 
 /**
- * Obtiene las rúbricas asociadas a un grupo específico
- * @param {number} grupoId - ID del grupo a consultar
- * @returns {Promise<Array>} - Lista de rúbricas del grupo
+ * OPTIMIZADA: Aprovecha idx_informes_grupo_id directamente
  */
 async function obtenerRubricasPorGrupo(grupoId) {
   const query = `
     SELECT 
-      r.id, r.presentacion, r.sustentacion, r.documentacion, r.innovacion, 
+      r.id as rubrica_id, r.presentacion, r.sustentacion, r.documentacion, r.innovacion, 
       r.nota_final, r.observaciones, r.comentarios, r.docente_id, r.fecha_creacion,
       d.nombre_completo AS docente_nombre,
       i.id AS informe_id, i.estudiante_id, i.comentarios_generales,
       g.nombre_proyecto, g.carrera, g.semestre, g.materia,
       e.nombre AS estudiante_nombre, e.apellido AS estudiante_apellido, e.codigo AS estudiante_codigo
     FROM informes i
-    LEFT JOIN rubricas r ON r.id = i.rubrica_id
+    INNER JOIN rubricas r ON r.id = i.rubrica_id
     LEFT JOIN docentes d ON r.docente_id = d.id
     LEFT JOIN grupos g ON i.grupo_id = g.id
     LEFT JOIN estudiantes e ON i.estudiante_id = e.id
@@ -318,19 +327,13 @@ async function obtenerRubricasPorGrupo(grupoId) {
     ORDER BY e.apellido, e.nombre
   `;
   
-  try {
-    const result = await pool.query(query, [grupoId]);
-    return result.rows;
-  } catch (error) {
-    console.error(`Error al obtener rúbricas del grupo ${grupoId}:`, error);
-    return []; // Retornar array vacío en caso de error
-  }
+  const result = await pool.query(query, [grupoId]);
+  return result.rows;
 }
 
 /**
- * Cuenta el número de estudiantes y el número de informes para un grupo
- * @param {number} grupoId - ID del grupo
- * @returns {Promise<Object>} - Objeto con contadores
+ * OPTIMIZADA: Una sola consulta en lugar de dos separadas
+ * Aprovecha: idx_estudiante_grupo_grupo_activo, idx_informes_grupo_id
  */
 async function contarEstudiantesEInformes(grupoId) {
   const query = `
@@ -339,24 +342,14 @@ async function contarEstudiantesEInformes(grupoId) {
       (SELECT COUNT(*) FROM informes WHERE grupo_id = $1) AS total_informes
   `;
   
-  try {
-    const result = await pool.query(query, [grupoId]);
-    return result.rows[0];
-  } catch (error) {
-    console.error(`Error al contar estudiantes e informes para grupo ${grupoId}:`, error);
-    return { total_estudiantes: 0, total_informes: 0 }; // Valor por defecto en caso de error
-  }
+  const result = await pool.query(query, [grupoId]);
+  return {
+    total_estudiantes: parseInt(result.rows[0].total_estudiantes),
+    total_informes: parseInt(result.rows[0].total_informes)
+  };
 }
 
-/**
- * Crea un registro de habilitación de rúbrica para un grupo
- * @param {number} grupoId - ID del grupo
- * @param {number} supervisorId - ID del supervisor que realiza la habilitación
- * @param {string} motivo - Motivo de la habilitación
- * @returns {Promise<Object>} - Registro de habilitación creado
- */
 async function habilitarRubricaGrupo(grupoId, supervisorId, motivo) {
-  // Iniciar una transacción
   const client = await pool.connect();
   
   try {
@@ -365,30 +358,27 @@ async function habilitarRubricaGrupo(grupoId, supervisorId, motivo) {
     // 1. Registrar la habilitación
     const insertQuery = `
       INSERT INTO habilitaciones_rubricas (
-        grupo_id, supervisor_id, motivo, fecha_habilitacion
-      ) VALUES ($1, $2, $3, NOW())
-      RETURNING *
+        grupo_id, supervisor_id, motivo, fecha_habilitacion, activa
+      ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, true)
+      RETURNING id, grupo_id, supervisor_id, motivo, fecha_habilitacion, activa
     `;
     
-    const habilitacionResult = await client.query(insertQuery, [
-      grupoId, supervisorId, motivo
-    ]);
+    const habilitacionResult = await client.query(insertQuery, [grupoId, supervisorId, motivo]);
     
-    // 2. Verificar que existan informes para este grupo
-    const informesQuery = 'SELECT id FROM informes WHERE grupo_id = $1';
+    // 2. Verificar que existan informes - Aprovecha idx_informes_grupo_id
+    const informesQuery = 'SELECT COUNT(*) as count FROM informes WHERE grupo_id = $1';
     const informesResult = await client.query(informesQuery, [grupoId]);
     
-    if (informesResult.rows.length === 0) {
+    if (parseInt(informesResult.rows[0].count) === 0) {
       await client.query('ROLLBACK');
       throw new Error('No hay informes para habilitar en este grupo');
     }
     
-    // Confirmar la transacción
     await client.query('COMMIT');
     
     return {
       habilitacion: habilitacionResult.rows[0],
-      informes_afectados: informesResult.rows.length
+      informes_afectados: parseInt(informesResult.rows[0].count)
     };
   } catch (error) {
     await client.query('ROLLBACK');
@@ -399,110 +389,58 @@ async function habilitarRubricaGrupo(grupoId, supervisorId, motivo) {
 }
 
 /**
- * Verifica si un grupo tiene habilitaciones activas
- * @param {number} grupoId - ID del grupo a verificar
- * @returns {Promise<boolean>} - true si tiene habilitaciones activas
+ * OPTIMIZADA: Aprovecha idx_habilitaciones_grupo_id y idx_habilitaciones_activa
  */
 async function verificarHabilitacionActiva(grupoId) {
-  try {
-    const query = `
-      SELECT * FROM habilitaciones_rubricas 
-      WHERE grupo_id = $1 AND activa = true
-      ORDER BY fecha_habilitacion DESC 
-      LIMIT 1
-    `;
-    
-    const result = await pool.query(query, [grupoId]);
-    return result.rows.length > 0 ? result.rows[0] : null;
-  } catch (error) {
-    console.error(`Error al verificar habilitación para el grupo ${grupoId}:`, error);
-    return null; // Retornar null en caso de error
-  }
-}
-
-/**
- * Obtiene el historial de habilitaciones para un grupo
- * @param {number} grupoId - ID del grupo
- * @returns {Promise<Array>} - Lista de habilitaciones
- */
-async function obtenerHistorialHabilitaciones(grupoId) {
   const query = `
-    SELECT 
-      h.id, h.grupo_id, h.supervisor_id, h.motivo, 
-      h.fecha_habilitacion, h.activa,
-      s.nombre_completo AS supervisor_nombre
-    FROM habilitaciones_rubricas h
-    JOIN supervisores s ON h.supervisor_id = s.id
-    WHERE h.grupo_id = $1
-    ORDER BY h.fecha_habilitacion DESC
+    SELECT id, grupo_id, supervisor_id, motivo, fecha_habilitacion, activa
+    FROM habilitaciones_rubricas 
+    WHERE grupo_id = $1 AND activa = true
+    ORDER BY fecha_habilitacion DESC 
+    LIMIT 1
   `;
   
   const result = await pool.query(query, [grupoId]);
-  return result.rows;
+  return result.rows.length > 0 ? result.rows[0] : null;
 }
 
 /**
- * Desactiva una habilitación específica
- * @param {number} habilitacionId - ID de la habilitación
- * @param {number} supervisorId - ID del supervisor que realiza la acción
- * @returns {Promise<Object>} - Habilitación actualizada
+ * OPTIMIZADA: Aprovecha idx_habilitaciones_grupo_id con JOIN
  */
+async function obtenerHistorialHabilitaciones(grupoId, limit = 50, offset = 0) {
+  const query = `
+    SELECT 
+      h.id, h.grupo_id, h.supervisor_id, h.motivo, 
+      h.fecha_habilitacion, h.activa, h.fecha_desactivacion,
+      s.nombre_completo AS supervisor_nombre,
+      sd.nombre_completo AS supervisor_desactivacion_nombre
+    FROM habilitaciones_rubricas h
+    LEFT JOIN supervisores s ON h.supervisor_id = s.id
+    LEFT JOIN supervisores sd ON h.supervisor_desactivacion_id = sd.id
+    WHERE h.grupo_id = $1
+    ORDER BY h.fecha_habilitacion DESC
+    LIMIT $2 OFFSET $3
+  `;
+  
+  const result = await pool.query(query, [grupoId, limit, offset]);
+  return result.rows;
+}
+
 async function desactivarHabilitacion(habilitacionId, supervisorDesactivacionId = null) {
   try {
-    console.log(`[PRODUCCION] Ejecutando SQL para desactivar: ${habilitacionId}`);
-    
     const query = `
       UPDATE habilitaciones_rubricas 
       SET 
         activa = false,
-        fecha_desactivacion = NOW(),
+        fecha_desactivacion = CURRENT_TIMESTAMP,
         supervisor_desactivacion_id = $2
       WHERE id = $1
-      RETURNING *
+      RETURNING id, grupo_id, supervisor_id, motivo, fecha_habilitacion, activa, fecha_desactivacion
     `;
     
     const result = await pool.query(query, [habilitacionId, supervisorDesactivacionId]);
-    
-    console.log(`[PRODUCCION] Filas afectadas: ${result.rowCount}`);
-    
     return result.rows[0];
   } catch (error) {
-    console.error(`[PRODUCCION] Error en SQL:`, {
-      mensaje: error.message,
-      codigo: error.code,
-      habilitacionId
-    });
-    throw error;
-  }
-}
-
-/**
- * Obtiene supervisores por carrera específica
- * @param {string} carrera - Carrera para filtrar
- * @returns {Promise<Array>} - Lista de supervisores de la carrera especificada
- */
-async function obtenerSupervisoresPorCarrera(carrera) {
-  try {
-    const query = `
-      SELECT s.* 
-      FROM supervisores s
-      JOIN supervisor_carrera sc ON s.id = sc.supervisor_id
-      WHERE sc.carrera = $1
-      ORDER BY s.nombre_completo
-    `;
-    
-    const result = await pool.query(query, [carrera]);
-    const supervisores = result.rows;
-    
-    // Para cada supervisor, obtenemos sus carreras completas
-    for (const supervisor of supervisores) {
-      const carreras = await supervisorCarreraModel.obtenerCarrerasDeSupervisor(supervisor.id);
-      supervisor.carreras = carreras;
-    }
-    
-    return supervisores;
-  } catch (error) {
-    console.error('Error al obtener supervisores por carrera:', error);
     throw error;
   }
 }

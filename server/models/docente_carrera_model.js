@@ -1,19 +1,12 @@
 // src/models/docente_carrera_model.js
 const pool = require('../database/db');
-
-/**
- * Asigna una carrera a un docente
- * @param {number} docenteId - ID del docente
- * @param {string} carrera - Nombre de la carrera
- * @returns {Promise<Object>} - Objeto con la relación creada
- */
 async function asignarCarreraADocente(docenteId, carrera) {
   try {
     const query = `
-      INSERT INTO docente_carrera (docente_id, carrera) 
-      VALUES ($1, $2) 
-      ON CONFLICT (docente_id, carrera) DO NOTHING
-      RETURNING *
+      INSERT INTO docente_carrera (docente_id, carrera, fecha_asignacion) 
+      VALUES ($1, $2, CURRENT_TIMESTAMP) 
+      ON CONFLICT (docente_id, carrera) DO UPDATE SET fecha_asignacion = CURRENT_TIMESTAMP
+      RETURNING id, docente_id, carrera, fecha_asignacion
     `;
     
     const result = await pool.query(query, [docenteId, carrera]);
@@ -24,15 +17,12 @@ async function asignarCarreraADocente(docenteId, carrera) {
   }
 }
 
-/**
- * Elimina la asignación de una carrera a un docente
- * @param {number} docenteId - ID del docente
- * @param {string} carrera - Nombre de la carrera
- * @returns {Promise<Object>} - Objeto con la relación eliminada
- */
 async function eliminarCarreraDeDocente(docenteId, carrera) {
   try {
-    const query = 'DELETE FROM docente_carrera WHERE docente_id = $1 AND carrera = $2 RETURNING *';
+    const query = `
+      DELETE FROM docente_carrera WHERE docente_id = $1 AND carrera = $2 
+      RETURNING id, docente_id, carrera, fecha_asignacion
+    `;
     const result = await pool.query(query, [docenteId, carrera]);
     return result.rows[0];
   } catch (error) {
@@ -42,13 +32,16 @@ async function eliminarCarreraDeDocente(docenteId, carrera) {
 }
 
 /**
- * Obtiene todas las carreras asignadas a un docente
- * @param {number} docenteId - ID del docente
- * @returns {Promise<Array>} - Array con los nombres de las carreras
+ * VERSIÓN OPTIMIZADA: Usar índice en docente_id
  */
 async function obtenerCarrerasDeDocente(docenteId) {
   try {
-    const query = 'SELECT carrera FROM docente_carrera WHERE docente_id = $1';
+    const query = `
+      SELECT carrera 
+      FROM docente_carrera 
+      WHERE docente_id = $1
+      ORDER BY carrera
+    `;
     const result = await pool.query(query, [docenteId]);
     return result.rows.map(row => row.carrera);
   } catch (error) {
@@ -58,13 +51,16 @@ async function obtenerCarrerasDeDocente(docenteId) {
 }
 
 /**
- * Obtiene todos los docentes asignados a una carrera
- * @param {string} carrera - Nombre de la carrera
- * @returns {Promise<Array>} - Array con los IDs de los docentes
+ * VERSIÓN OPTIMIZADA: Usar índice en carrera
  */
 async function obtenerDocentesPorCarrera(carrera) {
   try {
-    const query = 'SELECT docente_id FROM docente_carrera WHERE carrera = $1';
+    const query = `
+      SELECT docente_id 
+      FROM docente_carrera 
+      WHERE carrera = $1
+      ORDER BY docente_id
+    `;
     const result = await pool.query(query, [carrera]);
     return result.rows.map(row => row.docente_id);
   } catch (error) {
@@ -74,17 +70,18 @@ async function obtenerDocentesPorCarrera(carrera) {
 }
 
 /**
- * Obtiene docentes con información detallada por carrera
- * @param {string} carrera - Nombre de la carrera
- * @returns {Promise<Array>} - Array con objetos de docente
+ * VERSIÓN OPTIMIZADA: JOIN eficiente con información completa del docente
  */
 async function obtenerDocentesDetalladosPorCarrera(carrera) {
   try {
     const query = `
-      SELECT d.* 
+      SELECT 
+        d.id, d.nombre_completo, d.correo_electronico, d.cargo,
+        dc.fecha_asignacion
       FROM docentes d
-      JOIN docente_carrera dc ON d.id = dc.docente_id
+      INNER JOIN docente_carrera dc ON d.id = dc.docente_id
       WHERE dc.carrera = $1
+      ORDER BY d.nombre_completo
     `;
     const result = await pool.query(query, [carrera]);
     return result.rows;
@@ -95,14 +92,15 @@ async function obtenerDocentesDetalladosPorCarrera(carrera) {
 }
 
 /**
- * Verifica si un docente está asignado a una carrera específica
- * @param {number} docenteId - ID del docente
- * @param {string} carrera - Nombre de la carrera
- * @returns {Promise<boolean>} - true si el docente está asignado a la carrera
+ * VERSIÓN OPTIMIZADA: Consulta directa usando índice único
  */
 async function docenteTieneCarrera(docenteId, carrera) {
   try {
-    const query = 'SELECT 1 FROM docente_carrera WHERE docente_id = $1 AND carrera = $2';
+    const query = `
+      SELECT 1 FROM docente_carrera 
+      WHERE docente_id = $1 AND carrera = $2 
+      LIMIT 1
+    `;
     const result = await pool.query(query, [docenteId, carrera]);
     return result.rows.length > 0;
   } catch (error) {
@@ -112,18 +110,20 @@ async function docenteTieneCarrera(docenteId, carrera) {
 }
 
 /**
- * Obtiene todas las relaciones docente-carrera
- * @returns {Promise<Array>} - Array con todas las relaciones
+ * VERSIÓN OPTIMIZADA: JOIN eficiente con información del docente
  */
-async function obtenerTodasRelacionesDocenteCarrera() {
+async function obtenerTodasRelacionesDocenteCarrera(limit = 1000, offset = 0) {
   try {
     const query = `
-      SELECT dc.id, dc.docente_id, dc.carrera, dc.fecha_asignacion, d.nombre_completo 
+      SELECT 
+        dc.id, dc.docente_id, dc.carrera, dc.fecha_asignacion, 
+        d.nombre_completo, d.correo_electronico
       FROM docente_carrera dc
-      JOIN docentes d ON dc.docente_id = d.id
+      INNER JOIN docentes d ON dc.docente_id = d.id
       ORDER BY d.nombre_completo, dc.carrera
+      LIMIT $1 OFFSET $2
     `;
-    const result = await pool.query(query);
+    const result = await pool.query(query, [limit, offset]);
     return result.rows;
   } catch (error) {
     console.error('Error al obtener todas las relaciones docente-carrera:', error);
@@ -132,33 +132,36 @@ async function obtenerTodasRelacionesDocenteCarrera() {
 }
 
 /**
- * Asigna múltiples carreras a un docente
- * @param {number} docenteId - ID del docente
- * @param {Array<string>} carreras - Array con nombres de carreras
- * @returns {Promise<Object>} - Objeto con resultados de la operación
+ * VERSIÓN OPTIMIZADA: Operación en batch más eficiente
  */
 async function asignarCarrerasADocente(docenteId, carreras) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     
-    // Primero eliminamos todas las carreras existentes
+    // Eliminar carreras existentes
     await client.query('DELETE FROM docente_carrera WHERE docente_id = $1', [docenteId]);
     
-    // Luego insertamos las nuevas
-    const resultados = [];
-    for (const carrera of carreras) {
+    // Insertar nuevas carreras en batch si hay carreras
+    if (carreras && carreras.length > 0) {
+      const values = carreras.map((carrera, index) => 
+        `($1, $${index + 2}, CURRENT_TIMESTAMP)`
+      ).join(', ');
+      
       const query = `
-        INSERT INTO docente_carrera (docente_id, carrera) 
-        VALUES ($1, $2) 
+        INSERT INTO docente_carrera (docente_id, carrera, fecha_asignacion) 
+        VALUES ${values}
         RETURNING *
       `;
-      const result = await client.query(query, [docenteId, carrera]);
-      resultados.push(result.rows[0]);
+      
+      const result = await client.query(query, [docenteId, ...carreras]);
+      
+      await client.query('COMMIT');
+      return { exito: true, resultados: result.rows };
     }
     
     await client.query('COMMIT');
-    return { exito: true, resultados };
+    return { exito: true, resultados: [] };
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error al asignar múltiples carreras a docente:', error);
