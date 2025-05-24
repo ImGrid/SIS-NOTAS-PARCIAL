@@ -10,6 +10,11 @@ import { getBorradorPorDocenteYGrupo } from '../../../service/borradorService';
 import { exportarTodasLasEvaluaciones } from '../../../util/export/excelService';
 import supRubricaService from '../../../service/supRubricaService';
 
+// Importar funciones de paralelos desde grupoService
+import { 
+  carreraNecesitaParalelo,
+} from '../../../service/grupoService';
+
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -66,15 +71,20 @@ function GestionarEvaluaciones() {
   // Estado para carreras asignadas al docente
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
 
-  // Estados para filtros
+  // Estados para filtros (incluyendo paralelos)
   const [searchTerm, setSearchTerm] = useState('');
   const [semestroFilter, setSemestroFilter] = useState('');
   const [carreraFilter, setCarreraFilter] = useState('');
   const [materiaFilter, setMateriaFilter] = useState('');
+  const [paraleloFilter, setParaleloFilter] = useState(''); // Nuevo filtro para paralelos
 
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
-  const gruposPorPagina = 5; // Puedes ajustar este valor según tus necesidades
+  const gruposPorPagina = 5;
+
+  // Estados para paralelos
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
+  const [mostrarColumnaParalelo, setMostrarColumnaParalelo] = useState(false);
 
   const navigate = useNavigate();
 
@@ -105,6 +115,10 @@ function GestionarEvaluaciones() {
         const carreras = obtenerCarrerasDocente();
         setCarrerasAsignadas(carreras);
         
+        // Verificar si el docente tiene Ciencias Básicas asignada
+        const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+        setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
+        
         // Si no hay carreras asignadas, mostrar mensaje
         if (carreras.length === 0) {
           setError("No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.");
@@ -120,6 +134,13 @@ function GestionarEvaluaciones() {
         );
         
         setGrupos(gruposFiltrados);
+
+        // Determinar si mostrar columna de paralelo
+        // Solo mostrarla si el docente tiene Ciencias Básicas Y hay grupos de Ciencias Básicas
+        const hayGruposCienciasBasicas = gruposFiltrados.some(grupo => 
+          carreraNecesitaParalelo(grupo.carrera)
+        );
+        setMostrarColumnaParalelo(tieneCienciasBasicas && hayGruposCienciasBasicas);
 
         const estudiantesPorGrupo = {};
         const rubricasPorGrupo = {};
@@ -257,7 +278,17 @@ function GestionarEvaluaciones() {
     return [...new Set(materiasArray)].sort();
   };
 
-  // Filtrar grupos
+  // Nuevo: Obtener paralelos únicos (solo para grupos de Ciencias Básicas)
+  const getParalelosUnicos = () => {
+    if (!docenteTieneCienciasBasicas) return [];
+    
+    const paralelos = grupos
+      .filter(grupo => carreraNecesitaParalelo(grupo.carrera))
+      .map(g => g.paralelo || 'A');
+    return [...new Set(paralelos)].sort();
+  };
+
+  // Filtrar grupos (incluyendo filtro de paralelo)
   const gruposFiltrados = grupos.filter(grupo => {
     // Solo incluir grupos de carreras asignadas al docente
     if (!carrerasAsignadas.includes(grupo.carrera)) {
@@ -271,8 +302,11 @@ function GestionarEvaluaciones() {
     const matchesSemestre = !semestroFilter || grupo.semestre.toString() === semestroFilter;
     const matchesCarrera = !carreraFilter || grupo.carrera === carreraFilter;
     const matchesMateria = !materiaFilter || grupo.materia === materiaFilter;
+    
+    // Nuevo: Filtro por paralelo
+    const matchesParalelo = !paraleloFilter || (grupo.paralelo || 'A') === paraleloFilter;
 
-    return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria;
+    return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria && matchesParalelo;
   });
 
   // Calcular grupos a mostrar en la página actual
@@ -366,16 +400,31 @@ function GestionarEvaluaciones() {
     );
   };
 
-  // Función para limpiar filtros
+  // Función para limpiar filtros (incluyendo paralelo)
   const clearFilters = () => {
     setSearchTerm('');
     setSemestroFilter('');
     setCarreraFilter('');
     setMateriaFilter('');
+    setParaleloFilter(''); // Limpiar también el filtro de paralelo
     // También reseteamos la paginación al cambiar los filtros
     setPaginaActual(1);
   };
 
+  // Función para renderizar información de paralelo en un grupo
+  const renderParaleloGrupo = (grupo) => {
+    if (!mostrarColumnaParalelo || !carreraNecesitaParalelo(grupo.carrera)) {
+      return null;
+    }
+    
+    const paralelo = grupo.paralelo || 'A';
+    
+    return (
+      <span className="paralelo-badge-grupo ciencias-basicas" title={`Paralelo ${paralelo} - Ciencias Básicas`}>
+        {paralelo}
+      </span>
+    );
+  };
 
   const handleEvaluarGrupo = async (grupoId, estado) => {
     // Verificar si el grupo pertenece a una carrera asignada al docente
@@ -637,6 +686,28 @@ function GestionarEvaluaciones() {
                 </select>
               </div>
 
+              {/* Filtro de paralelos - Solo visible cuando es relevante */}
+              {mostrarColumnaParalelo && (
+                <div className="filter-container paralelo-filter">
+                  <label className="filter-label">PARALELO</label>
+                  <select 
+                    value={paraleloFilter} 
+                    onChange={(e) => {
+                      setParaleloFilter(e.target.value);
+                      setPaginaActual(1);
+                    }}
+                    className="filter-select"
+                  >
+                    <option value="">Todos los paralelos</option>
+                    {getParalelosUnicos().map(paralelo => (
+                      <option key={paralelo} value={paralelo}>
+                        Paralelo {paralelo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Botón X para limpiar todos los filtros */}
               <button 
                 onClick={clearFilters} 
@@ -651,9 +722,10 @@ function GestionarEvaluaciones() {
           {/* Paginación superior y contador de resultados */}
           <div className="tabla-header">
             {renderPaginacion()}
-            {(searchTerm || semestroFilter || carreraFilter || materiaFilter) && (
+            {(searchTerm || semestroFilter || carreraFilter || materiaFilter || paraleloFilter) && (
               <div className="resultados-info">
                 Mostrando {gruposActuales.length} de {gruposFiltrados.length} grupos
+                {paraleloFilter && ` (Paralelo ${paraleloFilter})`}
               </div>
             )}
           </div>
@@ -683,9 +755,17 @@ function GestionarEvaluaciones() {
                     <div className="grupo-header-row">
                       <div className="grupo-title">
                         <h3>{grupo.nombre_proyecto}</h3>
-                        <span className="grupo-details">
-                          {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
-                        </span>
+                        <div className="grupo-details">
+                          <span className="grupo-info-basica">
+                            {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
+                          </span>
+                          {/* Mostrar paralelo cuando es relevante */}
+                          {renderParaleloGrupo(grupo) && (
+                            <span className="grupo-paralelo-info">
+                              | {renderParaleloGrupo(grupo)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grupo-estado-container">
@@ -722,11 +802,15 @@ function GestionarEvaluaciones() {
                     </div>
 
                     <div className="estudiantes-table">
-                      <div className="table-header-rubricas">
+                      <div className={`table-header-rubricas ${mostrarColumnaParalelo ? 'con-paralelo' : ''}`}>
                         <div className="th-numero-rubrica">#</div>
                         <div className="th-codigo-rubrica">Código</div>
                         <div className="th-nombre-rubrica">Nombre Completo</div>
                         <div className="th-estado-rubrica">Estado</div>
+                        {/* Columna de paralelo - Solo visible cuando es relevante */}
+                        {mostrarColumnaParalelo && (
+                          <div className="th-paralelo-rubrica">Paralelo</div>
+                        )}
                         <div className="th-nota-rubrica">Presentación</div>
                         <div className="th-nota-rubrica">Sustentación</div>
                         <div className="th-nota-rubrica">Documentación</div>
@@ -767,11 +851,25 @@ function GestionarEvaluaciones() {
                             };
 
                             return (
-                              <div key={estudiante.id} className="table-row-rubricas">
+                              <div key={estudiante.id} className={`table-row-rubricas ${mostrarColumnaParalelo ? 'con-paralelo' : ''}`}>
                                 <div className="td-numero-rubrica">{index + 1}</div>
                                 <div className="td-codigo-rubrica">{estudiante.codigo}</div>
                                 <div className="td-nombre-rubrica">{`${estudiante.nombre} ${estudiante.apellido}`}</div>
                                 <div className={`td-estado-rubrica ${claseEstado}`}>{estadoEstudiante}</div>
+                                {/* Celda de paralelo - Solo visible cuando es relevante */}
+                                {mostrarColumnaParalelo && (
+                                  <div className="td-paralelo-rubrica">
+                                    {estudiante.carrera === 'Ciencias Básicas' ? (
+                                      <span className="paralelo-badge-estudiante-rubrica ciencias-basicas">
+                                        {estudiante.paralelo || 'A'}
+                                      </span>
+                                    ) : (
+                                      <span className="paralelo-badge-estudiante-rubrica otras-carreras">
+                                        {estudiante.paralelo || 'A'}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                                 <div className="td-nota-rubrica">
                                   {informe ? (
                                     <span className="nota-visible-rubrica">{formatearNota(notaPresentacion)}</span>
@@ -804,6 +902,11 @@ function GestionarEvaluaciones() {
                       ) : (
                         <div className="no-estudiantes">
                           <p>No hay estudiantes asignados a este grupo</p>
+                          {carreraNecesitaParalelo(grupo.carrera) && (
+                            <p className="helper-text-paralelo">
+                              Solo estudiantes del Paralelo {grupo.paralelo || 'A'} pueden ser asignados
+                            </p>
+                          )}
                           <button 
                             className="btn-asignar-empty" 
                             onClick={() => navigate(`/grupos/asignar?id=${grupo.id}`)}

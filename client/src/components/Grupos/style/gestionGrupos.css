@@ -68,6 +68,99 @@
   padding: 0 2rem 2rem;
 }
 
+/* ========== ESTILOS ESPECÍFICOS PARA PARALELOS ========== */
+
+/* Información sobre paralelos en la parte superior */
+.grupo-gestion-styles .info-paralelos-header {
+  margin-bottom: 1rem;
+  padding: 12px 16px;
+  background-color: #e3f2fd;
+  border-radius: 6px;
+  border-left: 4px solid #2196f3;
+}
+
+.grupo-gestion-styles .info-paralelos-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #1565c0;
+}
+
+/* Información contextual sobre paralelos en el footer */
+.grupo-gestion-styles .info-paralelos-footer {
+  margin-top: 2rem;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+}
+
+.grupo-gestion-styles .info-paralelos-footer h3 {
+  margin-top: 0;
+  color: #1976d2;
+  font-size: 16px;
+}
+
+.grupo-gestion-styles .info-paralelos-footer ul {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.grupo-gestion-styles .info-paralelos-footer li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #495057;
+}
+
+
+/* Badge para paralelos en grupos */
+.grupo-gestion-styles .paralelo-badge-grupo {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.grupo-gestion-styles .paralelo-badge-grupo.ciencias-basicas {
+  background-color: #2196f3;
+  color: white;
+}
+
+/* Badge para paralelos en estudiantes */
+.grupo-gestion-styles .paralelo-badge-estudiante {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.grupo-gestion-styles .paralelo-badge-estudiante.ciencias-basicas {
+  background-color: #2196f3;
+  color: white;
+}
+
+.grupo-gestion-styles .paralelo-badge-estudiante.otras-carreras {
+  background-color: #e0e0e0;
+  color: #666;
+}
+
+/* Información de paralelo en grupos */
+.grupo-gestion-styles .grupo-paralelo-info {
+  font-weight: 500;
+}
+
+/* Texto de ayuda para paralelos */
+.grupo-gestion-styles .helper-text-paralelo {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin: 5px 0;
+}
+
+/* ========== ESTILOS PARA BÚSQUEDA Y FILTROS ========== */
+
 /* Estilos para búsqueda y filtros en una sola línea */
 .grupo-gestion-styles .search-filters-container {
   margin-bottom: 1.5rem;
@@ -229,6 +322,8 @@
   border-radius: 0 6px 6px 0;
 }
 
+/* ========== ESTILOS PARA MENSAJES ========== */
+
 /* Estilos para mensajes */
 .grupo-gestion-styles .message-container {
   padding: 15px 20px;
@@ -326,6 +421,8 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
+
+/* ========== ESTILOS PARA TARJETAS DE GRUPOS ========== */
 
 /* Contenedor principal de las tarjetas de grupos */
 .grupo-gestion-styles .grupos-table-container {
@@ -434,11 +531,14 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* ========== ESTILOS PARA TABLA DE ESTUDIANTES ========== */
+
 /* Tabla de estudiantes */
 .grupo-gestion-styles .estudiantes-table {
   width: 100%;
 }
 
+/* DISTRIBUCIÓN ORIGINAL - SIN PARALELO (por defecto) */
 .grupo-gestion-styles .table-header {
   display: grid;
   grid-template-columns: 60px 120px 1fr 120px;
@@ -446,6 +546,22 @@
   font-weight: 600;
   color: #3c6e97;
   border-bottom: 1px solid #e0e6ed;
+}
+
+.grupo-gestion-styles .table-row {
+  display: grid;
+  grid-template-columns: 60px 120px 1fr 120px;
+  border-bottom: 1px solid #e6ebf5;
+  transition: background-color 0.2s;
+}
+
+/* DISTRIBUCIÓN CON PARALELO - Solo cuando mostrarColumnaParalelo es true */
+.grupo-gestion-styles .table-header.con-paralelo {
+  grid-template-columns: 60px 120px 1fr 100px 80px;
+}
+
+.grupo-gestion-styles .table-row.con-paralelo {
+  grid-template-columns: 60px 120px 1fr 100px 80px;
 }
 
 .grupo-gestion-styles .table-header > div {
@@ -456,13 +572,6 @@
 .grupo-gestion-styles .table-body {
   max-height: 300px;
   overflow-y: auto;
-}
-
-.grupo-gestion-styles .table-row {
-  display: grid;
-  grid-template-columns: 60px 120px 1fr 120px;
-  border-bottom: 1px solid #e6ebf5;
-  transition: background-color 0.2s;
 }
 
 .grupo-gestion-styles .table-row:hover {
@@ -477,6 +586,7 @@
   white-space: nowrap;
 }
 
+/* Columnas específicas */
 .grupo-gestion-styles .td-numero {
   font-weight: 600;
   color: #5c6b80;
@@ -486,6 +596,12 @@
   font-family: monospace;
   color: #3c6e97;
   font-weight: 500;
+}
+
+/* Columna de paralelo - centrada */
+.grupo-gestion-styles .th-paralelo, 
+.grupo-gestion-styles .td-paralelo {
+  text-align: center;
 }
 
 /* Mensaje cuando no hay estudiantes */
@@ -518,6 +634,8 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
+
+/* ========== ESTILOS PARA PAGINACIÓN ========== */
 
 /* Estilos para carga */
 .grupo-gestion-styles .loading-indicator {
@@ -603,7 +721,8 @@
   font-size: 0.9rem;
 }
 
-/* Animaciones */
+/* ========== ANIMACIONES ========== */
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -626,7 +745,8 @@
   100% { opacity: 0.6; }
 }
 
-/* Responsive */
+/* ========== RESPONSIVE DESIGN ========== */
+
 @media (max-width: 1200px) {
   .grupo-gestion-styles .search-filters-row {
     flex-wrap: wrap;
@@ -637,6 +757,11 @@
   .grupo-gestion-styles .filter-container {
     flex: 1 1 200px;
     max-width: none;
+  }
+
+  /* Ajustar orden del filtro de paralelo en pantallas medianas */
+  .grupo-gestion-styles .paralelo-filter {
+    order: 1;
   }
 }
 
@@ -678,9 +803,16 @@
     justify-content: space-between;
   }
   
+  /* Ajustar grid para tablets - SIN PARALELO */
   .grupo-gestion-styles .table-header,
   .grupo-gestion-styles .table-row {
     grid-template-columns: 40px 100px 1fr 80px;
+  }
+
+  /* Ajustar grid para tablets - CON PARALELO */
+  .grupo-gestion-styles .table-header.con-paralelo,
+  .grupo-gestion-styles .table-row.con-paralelo {
+    grid-template-columns: 40px 90px 1fr 70px 60px;
   }
   
   .grupo-gestion-styles .table-header > div,
@@ -699,6 +831,28 @@
   .grupo-gestion-styles .search-input::placeholder {
     font-size: 0.85rem;
   }
+
+  /* Filtro de paralelo toma el ancho completo en mobile */
+  .grupo-gestion-styles .search-filters-row {
+    flex-wrap: wrap;
+  }
+  
+  .grupo-gestion-styles .paralelo-filter {
+    order: 1;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  /* Badges más pequeños en mobile */
+  .grupo-gestion-styles .paralelo-badge-grupo {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .grupo-gestion-styles .paralelo-badge-estudiante {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
 }
 
 @media (max-width: 576px) {
@@ -706,9 +860,16 @@
     padding: 0.8rem;
   }
   
+  /* Grid más compacto para móviles - SIN PARALELO */
   .grupo-gestion-styles .table-header,
   .grupo-gestion-styles .table-row {
     grid-template-columns: 30px 80px 1fr 60px;
+  }
+
+  /* Grid más compacto para móviles - CON PARALELO */
+  .grupo-gestion-styles .table-header.con-paralelo,
+  .grupo-gestion-styles .table-row.con-paralelo {
+    grid-template-columns: 30px 70px 1fr 50px 40px;
   }
   
   .grupo-gestion-styles .grupo-actions {
@@ -729,5 +890,21 @@
   .grupo-gestion-styles .btn-editar span,
   .grupo-gestion-styles .btn-eliminar span {
     display: none;
+  }
+
+  /* Ocultar texto de helper en móviles pequeños */
+  .grupo-gestion-styles .helper-text-paralelo {
+    font-size: 11px;
+  }
+
+  /* Info paralelos más compacta */
+  .grupo-gestion-styles .info-paralelos-header,
+  .grupo-gestion-styles .info-paralelos-footer {
+    padding: 10px 12px;
+  }
+
+  .grupo-gestion-styles .info-paralelos-header p,
+  .grupo-gestion-styles .info-paralelos-footer li {
+    font-size: 12px;
   }
 }

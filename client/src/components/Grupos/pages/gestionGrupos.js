@@ -3,7 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/gestionGrupos.css';
-import { getMisGrupos, deleteGrupo } from '../../../service/grupoService';
+import { 
+  getMisGrupos, 
+  deleteGrupo,
+  carreraNecesitaParalelo,
+  obtenerDescripcionGrupo
+} from '../../../service/grupoService';
 import { 
   getEstudiantesByGrupoId, 
   desasignarEstudianteDeGrupo
@@ -37,7 +42,7 @@ const icons = {
   trash: (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 6 5 6 21 6"></polyline>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2h4a2 2 0 0 1 2 2v2"></path>
       <line x1="10" y1="11" x2="10" y2="17"></line>
       <line x1="14" y1="11" x2="14" y2="17"></line>
     </svg>
@@ -68,10 +73,11 @@ function GestionGrupos() {
   const [semestroFilter, setSemestroFilter] = useState('');
   const [carreraFilter, setCarreraFilter] = useState('');
   const [materiaFilter, setMateriaFilter] = useState('');
+  const [paraleloFilter, setParaleloFilter] = useState(''); // Nuevo filtro para paralelos
   
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
-  const gruposPorPagina = 5; // Puedes ajustar este valor según tus necesidades
+  const gruposPorPagina = 5;
 
   // Estados para el modal de confirmación
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,6 +85,10 @@ function GestionGrupos() {
   
   // Estado para guardar las carreras asignadas al docente
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+
+  // Estados para paralelos
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
+  const [mostrarColumnaParalelo, setMostrarColumnaParalelo] = useState(false);
 
   // Función para obtener las carreras del docente desde sessionStorage
   const obtenerCarrerasDocente = () => {
@@ -106,6 +116,10 @@ function GestionGrupos() {
       const carrerasDocente = obtenerCarrerasDocente();
       setCarrerasAsignadas(carrerasDocente);
       
+      // Verificar si el docente tiene Ciencias Básicas asignada
+      const tieneCienciasBasicas = carrerasDocente.includes('Ciencias Básicas');
+      setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
+      
       // Si no hay carreras asignadas, mostrar error
       if (carrerasDocente.length === 0) {
         setError("No tiene carreras asignadas. Contacte con el administrador.");
@@ -122,6 +136,13 @@ function GestionGrupos() {
       );
       
       setGrupos(gruposFiltradosPorCarrera);
+      
+      // Determinar si mostrar columna de paralelo
+      // Solo mostrarla si el docente tiene Ciencias Básicas Y hay grupos de Ciencias Básicas
+      const hayGruposCienciasBasicas = gruposFiltradosPorCarrera.some(grupo => 
+        carreraNecesitaParalelo(grupo.carrera)
+      );
+      setMostrarColumnaParalelo(tieneCienciasBasicas && hayGruposCienciasBasicas);
       
       // Obtener estudiantes para cada grupo
       const estudiantesPorGrupo = {};
@@ -164,6 +185,16 @@ function GestionGrupos() {
     return [...new Set(materias)].sort();
   };
 
+  // Nuevo: Obtener paralelos únicos (solo para grupos de Ciencias Básicas)
+  const getParalelosUnicos = () => {
+    if (!docenteTieneCienciasBasicas) return [];
+    
+    const paralelos = grupos
+      .filter(grupo => carreraNecesitaParalelo(grupo.carrera))
+      .map(g => g.paralelo || 'A');
+    return [...new Set(paralelos)].sort();
+  };
+
   // Filtrar grupos
   const gruposFiltrados = grupos.filter(grupo => {
     const matchesSearch = grupo.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -174,7 +205,10 @@ function GestionGrupos() {
     const matchesCarrera = !carreraFilter || grupo.carrera === carreraFilter;
     const matchesMateria = !materiaFilter || grupo.materia === materiaFilter;
     
-    return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria;
+    // Nuevo: Filtro por paralelo
+    const matchesParalelo = !paraleloFilter || (grupo.paralelo || 'A') === paraleloFilter;
+    
+    return matchesSearch && matchesSemestre && matchesCarrera && matchesMateria && matchesParalelo;
   });
   
   // Calcular grupos a mostrar en la página actual
@@ -274,6 +308,7 @@ function GestionGrupos() {
     setSemestroFilter('');
     setCarreraFilter('');
     setMateriaFilter('');
+    setParaleloFilter(''); // Limpiar también el filtro de paralelo
     // También reseteamos la paginación al cambiar los filtros
     setPaginaActual(1);
   };
@@ -385,6 +420,26 @@ function GestionGrupos() {
   const cancelDelete = () => {
     setModalOpen(false);
     setGrupoToDelete(null);
+  };
+
+  // Función para renderizar información de paralelo en un grupo
+  const renderParaleloGrupo = (grupo) => {
+    if (!mostrarColumnaParalelo || !carreraNecesitaParalelo(grupo.carrera)) {
+      return null;
+    }
+    
+    const paralelo = grupo.paralelo || 'A';
+    
+    return (
+      <span className="paralelo-badge-grupo ciencias-basicas" title={`Paralelo ${paralelo} - Ciencias Básicas`}>
+        {paralelo}
+      </span>
+    );
+  };
+
+  // Función para obtener descripción completa del grupo (usando servicio)
+  const getDescripcionGrupo = (grupo) => {
+    return obtenerDescripcionGrupo(grupo);
   };
 
   return (
@@ -499,6 +554,28 @@ function GestionGrupos() {
                   ))}
                 </select>
               </div>
+
+              {/* Filtro de paralelos - Solo visible cuando es relevante */}
+              {mostrarColumnaParalelo && (
+                <div className="filter-container paralelo-filter">
+                  <label className="filter-label">PARALELO</label>
+                  <select 
+                    value={paraleloFilter} 
+                    onChange={(e) => {
+                      setParaleloFilter(e.target.value);
+                      setPaginaActual(1);
+                    }}
+                    className="filter-select"
+                  >
+                    <option value="">Todos los paralelos</option>
+                    {getParalelosUnicos().map(paralelo => (
+                      <option key={paralelo} value={paralelo}>
+                        Paralelo {paralelo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               
               {/* Botón X para limpiar todos los filtros */}
               <button 
@@ -514,9 +591,10 @@ function GestionGrupos() {
           {/* Paginación superior y contador de resultados */}
           <div className="tabla-header">
             {renderPaginacion()}
-            {(searchTerm || semestroFilter || carreraFilter || materiaFilter) && (
+            {(searchTerm || semestroFilter || carreraFilter || materiaFilter || paraleloFilter) && (
               <div className="resultados-info">
                 Mostrando {gruposActuales.length} de {gruposFiltrados.length} grupos
+                {paraleloFilter && ` (Paralelo ${paraleloFilter})`}
               </div>
             )}
           </div>
@@ -545,9 +623,17 @@ function GestionGrupos() {
                   <div className="grupo-header-row">
                     <div className="grupo-title">
                       <h3>{grupo.nombre_proyecto}</h3>
-                      <span className="grupo-details">
-                        {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
-                      </span>
+                      <div className="grupo-details">
+                        <span className="grupo-info-basica">
+                          {grupo.carrera} | Semestre {grupo.semestre} | {grupo.materia || 'Sin materia'}
+                        </span>
+                        {/* Mostrar paralelo cuando es relevante */}
+                        {renderParaleloGrupo(grupo) && (
+                          <span className="grupo-paralelo-info">
+                            | {renderParaleloGrupo(grupo)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="grupo-actions">
                       <button 
@@ -578,27 +664,50 @@ function GestionGrupos() {
                   </div>
                   
                   <div className="estudiantes-table">
-                    <div className="table-header">
+                    <div className={`table-header ${mostrarColumnaParalelo ? 'con-paralelo' : ''}`}>
                       <div className="th-numero">#</div>
                       <div className="th-codigo">Código</div>
                       <div className="th-nombre">Nombre Completo</div>
                       <div className="th-semestre">Semestre</div>
+                      {/* Columna de paralelo - Solo visible cuando es relevante */}
+                      {mostrarColumnaParalelo && (
+                        <div className="th-paralelo">Paralelo</div>
+                      )}
                     </div>
                     
                     {gruposConEstudiantes[grupo.id] && gruposConEstudiantes[grupo.id].length > 0 ? (
                       <div className="table-body">
                         {gruposConEstudiantes[grupo.id].map((estudiante, index) => (
-                          <div key={estudiante.id} className="table-row">
+                          <div key={estudiante.id} className={`table-row ${mostrarColumnaParalelo ? 'con-paralelo' : ''}`}>
                             <div className="td-numero">{index + 1}</div>
                             <div className="td-codigo">{estudiante.codigo}</div>
                             <div className="td-nombre">{`${estudiante.nombre} ${estudiante.apellido}`}</div>
                             <div className="td-semestre">{estudiante.semestre}</div>
+                            {/* Celda de paralelo - Solo visible cuando es relevante */}
+                            {mostrarColumnaParalelo && (
+                              <div className="td-paralelo">
+                                {estudiante.carrera === 'Ciencias Básicas' ? (
+                                  <span className="paralelo-badge-estudiante ciencias-basicas">
+                                    {estudiante.paralelo || 'A'}
+                                  </span>
+                                ) : (
+                                  <span className="paralelo-badge-estudiante otras-carreras">
+                                    {estudiante.paralelo || 'A'}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="no-estudiantes">
                         <p>No hay estudiantes asignados a este grupo</p>
+                        {carreraNecesitaParalelo(grupo.carrera) && (
+                          <p className="helper-text-paralelo">
+                            Solo estudiantes del Paralelo {grupo.paralelo || 'A'} pueden ser asignados
+                          </p>
+                        )}
                         <button 
                           className="btn-asignar-empty" 
                           onClick={() => handleAsignarEstudiantes(grupo.id)}

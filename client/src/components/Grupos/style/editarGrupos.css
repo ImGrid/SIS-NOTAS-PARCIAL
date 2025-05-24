@@ -300,7 +300,6 @@
   gap: 0.3rem;
   position: relative;
   transition: all 0.3s ease;
-  margin-bottom: 0.5rem;
 }
 
 .grupo-edit-styles .form-group:focus-within label {
@@ -411,7 +410,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid #f0f0f0;
 }

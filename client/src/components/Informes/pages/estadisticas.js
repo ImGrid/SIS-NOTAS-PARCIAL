@@ -10,6 +10,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../style/estadisticas.css'; // Importamos el archivo CSS
 import { generarEstadisticasPDF } from '../../../util/pdf/estadisticasPdf';
+
 // Importar servicios necesarios
 import { getMisGrupos } from '../../../service/grupoService';
 import { getEstudiantes } from '../../../service/estudianteService';
@@ -17,6 +18,9 @@ import { getEstudiantesByGrupoId } from '../../../service/estudianteService';
 import { getInformesPorGrupoId } from '../../../service/informeService';
 import { getRubricaPorId } from '../../../service/rubricaService';
 import { getDocenteById } from '../../../service/docenteService';
+
+// Importar función para verificar si necesita paralelo
+import { carreraNecesitaParalelo } from '../../../service/grupoService';
 
 function Estadisticas() {
   // Estados para almacenar los datos
@@ -50,9 +54,35 @@ function Estadisticas() {
   const [docenteActual, setDocenteActual] = useState(null);
   const [carreraSeleccionada, setCarreraSeleccionada] = useState('TODAS');
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('TODOS');
+  
+  // Nuevo estado para filtro de paralelo
+  const [paraleloSeleccionado, setParaleloSeleccionado] = useState('TODOS');
+  
   const [datosFiltrados, setDatosFiltrados] = useState([]);
   
+  // Estados para paralelos
+  const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
+  const [paralelosDisponibles, setParalelosDisponibles] = useState([]);
+  
   const navigate = useNavigate();
+
+  // Función para obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
 
   // Colores para los gráficos
   const COLORS = {
@@ -71,9 +101,23 @@ function Estadisticas() {
       try {
         setLoading(true);
 
+        // Obtener carreras asignadas al docente
+        const carreras = obtenerCarrerasDocente();
+        setCarrerasAsignadas(carreras);
+        
+        // Verificar si el docente tiene Ciencias Básicas asignada
+        const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+        setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
+
         // 1. Cargar todos los grupos del docente
         const gruposData = await getMisGrupos();
-        setGrupos(gruposData);
+        
+        // Filtrar grupos para mostrar solo los de las carreras asignadas
+        const gruposFiltrados = gruposData.filter(grupo => 
+          carreras.includes(grupo.carrera)
+        );
+        
+        setGrupos(gruposFiltrados);
 
         // 2. Obtener información del docente desde sessionStorage
         const usuarioString = sessionStorage.getItem('usuario');
@@ -91,15 +135,26 @@ function Estadisticas() {
 
         // 3. Identificar las carreras y semestres que tienen grupos creados
         const semestresConGrupos = {};
-        for (const grupo of gruposData) {
+        const paralelosUnicos = new Set();
+        
+        for (const grupo of gruposFiltrados) {
           const carrera = grupo.carrera;
           const semestre = grupo.semestre;
+          const paralelo = grupo.paralelo || 'A';
           
           if (!semestresConGrupos[carrera]) {
             semestresConGrupos[carrera] = new Set();
           }
           semestresConGrupos[carrera].add(semestre);
+          
+          // Recopilar paralelos únicos para Ciencias Básicas
+          if (carreraNecesitaParalelo(carrera)) {
+            paralelosUnicos.add(paralelo);
+          }
         }
+        
+        // Establecer paralelos disponibles
+        setParalelosDisponibles(['TODOS', ...Array.from(paralelosUnicos).sort()]);
         
         // Convertir los Sets a arrays para facilitar su manejo
         const semestresPorCarreraTemp = {};
@@ -109,12 +164,18 @@ function Estadisticas() {
         setSemestresPorCarrera(semestresPorCarreraTemp);
 
         // 4. Organizar grupos por carrera y semestre
-        const gruposPorCS = organizarGruposPorCarreraYSemestre(gruposData);
+        const gruposPorCS = organizarGruposPorCarreraYSemestre(gruposFiltrados);
         setGruposPorCarreraYSemestre(gruposPorCS);
 
-        // 5. Obtener TODOS los estudiantes
+        // 5. Obtener TODOS los estudiantes y filtrar por carreras asignadas
         const todosLosEstudiantesTemp = await getEstudiantes();
-        setTodosLosEstudiantes(todosLosEstudiantesTemp);
+        
+        // Filtrar estudiantes por carreras asignadas al docente
+        const estudiantesFiltrados = todosLosEstudiantesTemp.filter(estudiante => 
+          carreras.includes(estudiante.carrera)
+        );
+        
+        setTodosLosEstudiantes(estudiantesFiltrados);
 
         // 6. Inicializar objetos para almacenar información por grupo
         const estudiantesPorGrupoTemp = {};
@@ -122,7 +183,7 @@ function Estadisticas() {
         const rubricasPorInformeTemp = {};
         
         // 7. Cargar datos para cada grupo
-        for (const grupo of gruposData) {
+        for (const grupo of gruposFiltrados) {
           try {
             // Obtener estudiantes del grupo
             const estudiantes = await getEstudiantesByGrupoId(grupo.id);
@@ -157,8 +218,8 @@ function Estadisticas() {
 
         // 9. Preparar datos para estadísticas (solo estudiantes de semestres con grupos)
         const datosEstadisticasTemp = prepararDatosEstadisticas(
-          gruposData,
-          todosLosEstudiantesTemp,
+          gruposFiltrados,
+          estudiantesFiltrados,
           estudiantesPorGrupoTemp,
           informesPorGrupoTemp,
           rubricasPorInformeTemp,
@@ -172,7 +233,7 @@ function Estadisticas() {
         
         // 11. Extraer materias únicas
         const materiasSet = new Set();
-        for (const grupo of gruposData) {
+        for (const grupo of gruposFiltrados) {
           if (grupo.materia) {
             materiasSet.add(grupo.materia);
           }
@@ -191,7 +252,7 @@ function Estadisticas() {
     cargarDatos();
   }, []);
 
-  // Efecto para filtrar datos cuando cambian los filtros
+  // Efecto para filtrar datos cuando cambian los filtros (incluyendo paralelo)
   useEffect(() => {
     if (!loading && todosLosEstudiantes.length > 0) {
       try {
@@ -205,7 +266,8 @@ function Estadisticas() {
           carreraSeleccionada,
           semestreSeleccionado,
           materiaSeleccionada,
-          semestresPorCarrera  // Asegurarnos de pasar este parámetro
+          paraleloSeleccionado, // Nuevo parámetro
+          semestresPorCarrera
         );
         
         setDatosFiltrados(filtrados);
@@ -217,7 +279,7 @@ function Estadisticas() {
         toast.error("Error al aplicar filtros. Por favor, inténtalo de nuevo.");
       }
     }
-  }, [carreraSeleccionada, semestreSeleccionado, materiaSeleccionada, 
+  }, [carreraSeleccionada, semestreSeleccionado, materiaSeleccionada, paraleloSeleccionado, // Añadir paralelo a las dependencias
       grupos, todosLosEstudiantes, estudiantesPorGrupo, informesPorGrupo, 
       rubricasPorInforme, semestresPorCarrera, gruposPorCarreraYSemestre]);
 
@@ -234,7 +296,8 @@ function Estadisticas() {
             filtros: {
               carrera: carreraSeleccionada,
               semestre: semestreSeleccionado,
-              materia: materiaSeleccionada
+              materia: materiaSeleccionada,
+              paralelo: paraleloSeleccionado // Incluir paralelo en PDF
             },
             docente: docenteActual,
             graficos: {
@@ -269,13 +332,15 @@ function Estadisticas() {
     }
   };
 
-  // Función para limpiar todos los filtros
+  // Función para limpiar todos los filtros (incluyendo paralelo)
   const limpiarFiltros = () => {
     setCarreraSeleccionada('TODAS');
     setSemestreSeleccionado('TODOS');
     setMateriaSeleccionada('TODAS');
+    setParaleloSeleccionado('TODOS');
   };
 
+  // Función modificada para filtrar datos incluyendo paralelo
   const filtrarDatos = (
     grupos,
     todosLosEstudiantes,
@@ -285,6 +350,7 @@ function Estadisticas() {
     carrera,
     semestre,
     materia,
+    paralelo, // Nuevo parámetro
     semestresPorCarrera
   ) => {
     const datosEstadisticas = [];
@@ -299,12 +365,13 @@ function Estadisticas() {
     for (const estudiante of todosLosEstudiantes) {
       const estudianteCarrera = estudiante.carrera;
       const estudianteSemestre = estudiante.semestre;
+      const estudianteParalelo = estudiante.paralelo || 'A'; // Obtener paralelo del estudiante
       
       // LÓGICA CORREGIDA: Verificar si el estudiante pertenece a carreras/semestres del docente
       let perteneceAGruposDocente = false;
       
       // Caso 1: Sin filtros o solo filtro de carrera
-      if (semestre === 'TODOS' && materia === 'TODAS') {
+      if (semestre === 'TODOS' && materia === 'TODAS' && paralelo === 'TODOS') {
         // Si no hay filtro de carrera, verificar todas las carreras/semestres del docente
         if (carrera === 'TODAS') {
           perteneceAGruposDocente = 
@@ -322,7 +389,7 @@ function Estadisticas() {
             semestresPorCarrera[carrera].includes(estudianteSemestre);
         }
       }
-      // Caso 2: Filtros más específicos (semestre o materia)
+      // Caso 2: Filtros más específicos (semestre, materia o paralelo)
       else {
         // Para filtros específicos, la validación de si pertenece o no
         // se hará en los otros condicionales, así que aquí solo permitimos continuar
@@ -333,9 +400,10 @@ function Estadisticas() {
         continue; // Estudiante no está en ninguna carrera/semestre donde el docente tenga grupos
       }
       
-      // Aplicar filtros de carrera y semestre si están seleccionados
+      // Aplicar filtros de carrera, semestre y paralelo si están seleccionados
       if ((carrera !== 'TODAS' && estudianteCarrera !== carrera) ||
-          (semestre !== 'TODOS' && estudianteSemestre.toString() !== semestre)) {
+          (semestre !== 'TODOS' && estudianteSemestre.toString() !== semestre) ||
+          (paralelo !== 'TODOS' && estudianteParalelo !== paralelo)) {
         continue; // Si no cumple estos filtros, pasar al siguiente estudiante
       }
       
@@ -349,8 +417,13 @@ function Estadisticas() {
       // Buscar si el estudiante pertenece a algún grupo
       // y si ese grupo cumple con el filtro de materia
       for (const grupo of grupos) {
-        // Verificar si la carrera y semestre coinciden con los del estudiante
-        if (grupo.carrera === estudianteCarrera && grupo.semestre === estudianteSemestre) {
+        // Verificar si la carrera, semestre y paralelo coinciden con los del estudiante
+        const grupoParalelo = grupo.paralelo || 'A';
+        
+        if (grupo.carrera === estudianteCarrera && 
+            grupo.semestre === estudianteSemestre &&
+            grupoParalelo === estudianteParalelo) {
+          
           const estudiantesDelGrupo = estudiantesPorGrupo[grupo.id] || [];
           
           // Verificar si el estudiante está en este grupo
@@ -405,6 +478,7 @@ function Estadisticas() {
             nombre_proyecto: 'Sin asignar',
             carrera: estudianteCarrera,
             semestre: estudianteSemestre,
+            paralelo: estudianteParalelo,
             materia: materia !== 'TODAS' ? materia : 'No asignada'
           },
           informe: informeDelEstudiante,
@@ -445,6 +519,7 @@ function Estadisticas() {
       'TODAS', // carrera por defecto
       'TODOS',  // semestre por defecto
       'TODAS',  // materia por defecto
+      'TODOS',  // paralelo por defecto
       semestresPorCarrera
     );
   };
@@ -834,8 +909,11 @@ function Estadisticas() {
       semestres.push(...Object.keys(gruposPorCarreraYSemestre[carreraSeleccionada]));
     }
     
-    // Verificar si hay filtros activos
-    const hayFiltrosActivos = carreraSeleccionada !== 'TODAS' || semestreSeleccionado !== 'TODOS' || materiaSeleccionada !== 'TODAS';
+    // Verificar si hay filtros activos (incluyendo paralelo)
+    const hayFiltrosActivos = carreraSeleccionada !== 'TODAS' || 
+                             semestreSeleccionado !== 'TODOS' || 
+                             materiaSeleccionada !== 'TODAS' ||
+                             paraleloSeleccionado !== 'TODOS';
     
     return (
       <div className="docentes-container">
@@ -868,7 +946,7 @@ function Estadisticas() {
             </div>
   
             <div className="evaluacion-container" id="evaluacion-container">
-              {/* Filtros en una sola línea */}
+              {/* Filtros en una sola línea (incluyendo paralelo) */}
               <div className="filters-search-row">
                 {/* Filtro de carrera */}
                 <div className="filtro">
@@ -879,6 +957,7 @@ function Estadisticas() {
                     onChange={(e) => {
                       setCarreraSeleccionada(e.target.value);
                       setSemestreSeleccionado('TODOS');
+                      setParaleloSeleccionado('TODOS'); // Reset paralelo cuando cambia carrera
                     }}
                   >
                     <option value="TODAS">Todas las carreras</option>
@@ -921,6 +1000,23 @@ function Estadisticas() {
                     ))}
                   </select>
                 </div>
+
+                {/* Nuevo filtro de paralelo - Solo visible cuando el docente tiene Ciencias Básicas */}
+                {docenteTieneCienciasBasicas && (
+                  <div className="filtro">
+                    <label className="filtro-label">PARALELO</label>
+                    <select 
+                      id="paralelo-select" 
+                      value={paraleloSeleccionado}
+                      onChange={(e) => setParaleloSeleccionado(e.target.value)}
+                    >
+                      <option value="TODOS">Todos los paralelos</option>
+                      {paralelosDisponibles.filter(p => p !== 'TODOS').map(paralelo => (
+                        <option key={paralelo} value={paralelo}>Paralelo {paralelo}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 
                 {/* Botón X para limpiar todos los filtros */}
                 <button 
@@ -945,6 +1041,7 @@ function Estadisticas() {
                 {carreraSeleccionada !== 'TODAS' && <div><strong>Carrera:</strong> {carreraSeleccionada}</div>}
                 {semestreSeleccionado !== 'TODOS' && <div><strong>Semestre:</strong> {semestreSeleccionado}° Semestre</div>}
                 {materiaSeleccionada !== 'TODAS' && <div><strong>Asignatura:</strong> {materiaSeleccionada}</div>}
+                {paraleloSeleccionado !== 'TODOS' && <div><strong>Paralelo:</strong> {paraleloSeleccionado}</div>}
                 <div><strong>Total de estudiantes:</strong> {datosCircular.totalEstudiantes}</div>
               </div>
               

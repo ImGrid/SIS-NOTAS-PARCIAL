@@ -217,6 +217,40 @@
 .evaluaciones-styles .grupo-details {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Estilos para información de paralelo en el grupo */
+.evaluaciones-styles .grupo-info-basica {
+  display: inline-block;
+}
+
+.evaluaciones-styles .grupo-paralelo-info {
+  display: inline-flex;
+  align-items: center;
+}
+
+.evaluaciones-styles .paralelo-badge-grupo {
+  background-color: #2196f3;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+.evaluaciones-styles .paralelo-badge-grupo.ciencias-basicas {
+  background-color: #ff9800;
+  color: white;
 }
 
 /* Estado del grupo y acciones */
@@ -308,53 +342,68 @@
 }
 
 /* Tabla de estudiantes */
+/* Tabla de estudiantes */
 .evaluaciones-styles .estudiantes-table {
   width: 100%;
   overflow: auto;
   max-height: 400px;
 }
 
-/* Estilos específicos para la tabla de rubricas */
+/* Estilos específicos para la tabla de rubricas SIN paralelo */
 .evaluaciones-styles .table-header-rubricas {
   display: grid;
-  grid-template-columns: 40px 100px 1fr 100px 100px 100px 100px 100px 100px;
+  grid-template-columns: 40px 100px 220px 110px 110px 110px 110px 110px 120px;
   background-color: #f2f6fa;
   font-weight: 600;
   color: #3c6e97;
   border-bottom: 1px solid #e0e6ed;
-  min-width: 1000px;
+  min-width: 1130px;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
+/* Estilos específicos para la tabla de rubricas CON paralelo */
+.evaluaciones-styles .table-header-rubricas.con-paralelo {
+  grid-template-columns: 40px 95px 200px 100px 80px 100px 100px 100px 100px 115px;
+  min-width: 1230px;
+}
+
 .evaluaciones-styles .table-header-rubricas > div {
-  padding: 14px 10px;
+  padding: 12px 8px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.82rem;
+  line-height: 1.2;
 }
 
 .evaluaciones-styles .table-row-rubricas {
   display: grid;
-  grid-template-columns: 40px 100px 1fr 100px 100px 100px 100px 100px 100px;
+  grid-template-columns: 40px 100px 220px 110px 110px 110px 110px 110px 120px;
   border-bottom: 1px solid #e6ebf5;
   transition: all 0.2s ease;
-  min-width: 1000px;
+  min-width: 1130px;
 }
-
+.evaluaciones-styles .table-row-rubricas.con-paralelo {
+  grid-template-columns: 40px 95px 200px 100px 80px 100px 100px 100px 100px 115px;
+  min-width: 1230px;
+}
 .evaluaciones-styles .table-row-rubricas:hover {
   background-color: #f8fafc;
 }
 
 .evaluaciones-styles .table-row-rubricas > div {
-  padding: 14px 10px;
+  padding: 12px 8px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.82rem;
+  line-height: 1.3;
 }
+
 
 /* Estilos específicos para cada tipo de celda */
 .evaluaciones-styles .th-numero-rubrica, 
@@ -377,13 +426,16 @@
   font-family: monospace;
   color: #3c6e97;
   font-weight: 500;
+  font-size: 0.8rem;
 }
 
 .evaluaciones-styles .th-nombre-rubrica, 
 .evaluaciones-styles .td-nombre-rubrica {
   text-align: left;
-  padding-left: 15px !important;
+  padding-left: 12px !important;
+  padding-right: 8px !important;
 }
+
 
 .evaluaciones-styles .th-estado-rubrica, 
 .evaluaciones-styles .td-estado-rubrica {
@@ -392,6 +444,7 @@
 
 .evaluaciones-styles .td-estado-rubrica {
   font-weight: 500;
+  font-size: 0.8rem;
 }
 
 .evaluaciones-styles .td-estado-rubrica.estado-evaluado {
@@ -400,6 +453,38 @@
 
 .evaluaciones-styles .td-estado-rubrica.estado-sin-evaluar {
   color: #94a3b8;
+}
+
+/* Estilos para la columna de paralelo */
+.evaluaciones-styles .th-paralelo-rubrica, 
+.evaluaciones-styles .td-paralelo-rubrica {
+  text-align: center;
+}
+
+.evaluaciones-styles .paralelo-badge-estudiante-rubrica {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  padding: 3px 7px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border: 1px solid #c7d2fe;
+}
+
+.evaluaciones-styles .paralelo-badge-estudiante-rubrica.ciencias-basicas {
+  background-color: #fff7ed;
+  color: #ea580c;
+  border-color: #fed7aa;
+}
+.evaluaciones-styles .paralelo-badge-estudiante-rubrica.otras-carreras {
+  background-color: #f0f9ff;
+  color: #0369a1;
+  border-color: #bae6fd;
 }
 
 .evaluaciones-styles .th-nota-rubrica, 
@@ -415,11 +500,13 @@
 .evaluaciones-styles .nota-visible-rubrica {
   background-color: #f0f9ff;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid #bae6fd;
   display: inline-block;
-  min-width: 40px;
+  min-width: 45px;
   transition: all 0.2s ease;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .evaluaciones-styles .table-row-rubricas:hover .nota-visible-rubrica {
@@ -434,6 +521,13 @@
   text-align: center;
   color: #5c6b80;
   animation: evaluaciones-fadeIn 0.4s ease-out forwards;
+}
+
+.evaluaciones-styles .helper-text-paralelo {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 8px 0;
+  font-style: italic;
 }
 
 .evaluaciones-styles .btn-asignar-empty {
@@ -546,6 +640,12 @@
   min-width: 150px;
   max-width: 200px;
   position: relative;
+}
+
+/* Filtro específico para paralelos - más estrecho */
+.evaluaciones-styles .filter-container.paralelo-filter {
+  min-width: 130px;
+  max-width: 160px;
 }
 
 .evaluaciones-styles .filter-label {
@@ -745,18 +845,11 @@
 }
 
 /* Responsive para tablas de rubricas */
-@media (max-width: 1200px) {
+@media (max-width: 1300px) {
   .evaluaciones-styles .search-filters-row {
     flex-wrap: wrap;
     row-gap: 0.8rem;
   }
-  
-  .evaluaciones-styles .search-input-container,
-  .evaluaciones-styles .filter-container {
-    flex: 1 1 200px;
-    max-width: none;
-  }
-  
 }
 
 /* Responsive ajustado para pantallas medianas */
@@ -799,8 +892,34 @@
     min-width: 120px;
   }
 
-}
+  /* Ajustar grid para tablets */
+  .evaluaciones-styles .table-header-rubricas,
+  .evaluaciones-styles .table-row-rubricas {
+    grid-template-columns: 30px 80px 180px 90px 90px 90px 90px 90px 100px;
+    min-width: 940px;
+  }
 
+  .evaluaciones-styles .table-header-rubricas.con-paralelo,
+  .evaluaciones-styles .table-row-rubricas.con-paralelo {
+    grid-template-columns: 30px 75px 160px 85px 65px 85px 85px 85px 85px 95px;
+    min-width: 1005px;
+  }
+
+}
+@media (max-width: 1280px) {
+  /* Ajustar grid para tablets */
+  .evaluaciones-styles .table-header-rubricas,
+  .evaluaciones-styles .table-row-rubricas {
+    grid-template-columns: 35px 85px 200px 100px 100px 100px 100px 100px 110px;
+    min-width: 1030px;
+  }
+
+  .evaluaciones-styles .table-header-rubricas.con-paralelo,
+  .evaluaciones-styles .table-row-rubricas.con-paralelo {
+    grid-template-columns: 35px 80px 180px 90px 70px 90px 90px 90px 90px 105px;
+    min-width: 1120px;
+  }
+}
 /* Responsive para móviles */
 @media (max-width: 768px) {
   .evaluaciones-styles .grupos-header {
@@ -845,6 +964,8 @@
   
   .evaluaciones-styles .grupo-details {
     font-size: 0.8rem;
+    flex-direction: column;
+    align-items: flex-start;
   }
   
   .evaluaciones-styles .btn-evaluar, 
@@ -861,6 +982,38 @@
   .evaluaciones-styles .search-input::placeholder {
     font-size: 0.85rem;
   }
+
+  .evaluaciones-styles .table-header-rubricas,
+  .evaluaciones-styles .table-row-rubricas {
+    grid-template-columns: 25px 70px 150px 80px 80px 80px 80px 80px 85px;
+    min-width: 730px;
+  }
+
+  .evaluaciones-styles .table-header-rubricas.con-paralelo,
+  .evaluaciones-styles .table-row-rubricas.con-paralelo {
+    grid-template-columns: 25px 65px 130px 75px 50px 75px 75px 75px 75px 80px;
+    min-width: 795px;
+  }
+
+  .evaluaciones-styles .table-header-rubricas > div,
+  .evaluaciones-styles .table-row-rubricas > div {
+    padding: 10px 6px;
+    font-size: 0.78rem;
+  }
+
+  .evaluaciones-styles .nota-visible-rubrica {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+    min-width: 35px;
+  }
+
+  .evaluaciones-styles .paralelo-badge-estudiante-rubrica {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    min-width: 18px;
+    height: 18px;
+  }
+
 }
 
 /* Más ajustes específicos para móviles pequeños */
@@ -894,5 +1047,28 @@
   
   .evaluaciones-styles .message-container::before {
     left: 0.75rem;
+  }
+  .evaluaciones-styles .table-header-rubricas,
+  .evaluaciones-styles .table-row-rubricas {
+    grid-template-columns: 20px 60px 120px 70px 70px 70px 70px 70px 75px;
+    min-width: 625px;
+  }
+
+  .evaluaciones-styles .table-header-rubricas.con-paralelo,
+  .evaluaciones-styles .table-row-rubricas.con-paralelo {
+    grid-template-columns: 20px 55px 110px 65px 45px 65px 65px 65px 65px 70px;
+    min-width: 685px;
+  }
+
+  .evaluaciones-styles .table-header-rubricas > div,
+  .evaluaciones-styles .table-row-rubricas > div {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+  }
+
+  .evaluaciones-styles .nota-visible-rubrica {
+    padding: 2px 4px;
+    font-size: 0.7rem;
+    min-width: 30px;
   }
 }

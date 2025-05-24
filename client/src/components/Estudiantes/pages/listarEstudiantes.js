@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/listarEstudiantes.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getEstudiantesConEstadoGrupo } from '../../../service/estudianteService';
+import { 
+  getEstudiantesConEstadoGrupo,
+  getSemestresDisponibles,
+} from '../../../service/estudianteService';
 import EliminarEstudianteModal from './eliminarEstudiante';
 
 function ListarEstudiantes() {
@@ -13,9 +16,10 @@ function ListarEstudiantes() {
   const [estudiantes, setEstudiantes] = useState([]);
   const [estudiantesFiltrados, setEstudiantesFiltrados] = useState([]);
   
-  // Estados para filtros
+  // Estados para filtros básicos
   const [carreraSeleccionada, setCarreraSeleccionada] = useState('');
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('');
+  const [paraleloSeleccionado, setParaleloSeleccionado] = useState('');
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   
   // Estados para paginación
@@ -26,11 +30,10 @@ function ListarEstudiantes() {
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [estudianteSeleccionado, setEstudianteSeleccionado] = useState(null);
   
-  // Estado para las carreras asignadas al docente
+  // Estados para carreras y paralelos
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
-  
-  // Estado para mostrar errores de carga
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
   const [errorCarga, setErrorCarga] = useState('');
   
   // Obtener las carreras del docente desde sessionStorage
@@ -49,16 +52,13 @@ function ListarEstudiantes() {
       }
       
       if (!Array.isArray(usuario.carreras)) {
-        // Si es un string, intentar convertirlo a array
         if (typeof usuario.carreras === 'string') {
           return [usuario.carreras];
         }
         return [];
       }
       
-      // Asegurar que no hay elementos vacíos
       const carrerasFiltradas = usuario.carreras.filter(carrera => carrera && carrera.trim() !== '');
-      
       return carrerasFiltradas;
     } catch (error) {
       console.error("Error al obtener carreras del docente:", error);
@@ -70,6 +70,10 @@ function ListarEstudiantes() {
   useEffect(() => {
     const carreras = obtenerCarrerasDocente();
     setCarrerasAsignadas(carreras);
+    
+    // Verificar si el docente tiene Ciencias Básicas asignada
+    const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+    setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
     
     // Filtrar las opciones de carreras para el selector
     const opcionesCarreras = carreras.map(carrera => ({
@@ -88,7 +92,7 @@ function ListarEstudiantes() {
       // Solo cargar estudiantes si hay carreras asignadas
       cargarEstudiantes(carreras);
     }
-  }, []); // Este efecto solo debe ejecutarse una vez al montar el componente
+  }, []);
   
   const cargarEstudiantes = async (carreras) => {
     try {
@@ -112,29 +116,34 @@ function ListarEstudiantes() {
         setLoading(false);
         return;
       }      
+      
       // Normalizar nombres de carreras para comparación consistente
       const carrerasNormalizadas = carrerasParaFiltrar.map(c => c.toLowerCase().trim());
       
       // Filtrar solo los estudiantes de las carreras asignadas al docente
       const estudiantesCarrerasAsignadas = response.filter(estudiante => {
-        // Asegurar que el estudiante tiene una carrera definida
         if (!estudiante || !estudiante.carrera) return false;
         
-        // Normalizar el nombre de la carrera del estudiante
         const carreraEstudiante = estudiante.carrera.toLowerCase().trim();
-        
-        // Verificar si la carrera del estudiante está entre las asignadas al docente
         return carrerasNormalizadas.includes(carreraEstudiante);
       });
-      
       
       // Si después de filtrar no hay estudiantes, establecer un mensaje
       if (estudiantesCarrerasAsignadas.length === 0) {
         setErrorCarga(`No se encontraron estudiantes para las carreras: ${carrerasParaFiltrar.join(', ')}`);
+      } else {
+        setErrorCarga(''); // Limpiar error si hay estudiantes
       }
       
-      setEstudiantes(estudiantesCarrerasAsignadas);
-      setEstudiantesFiltrados(estudiantesCarrerasAsignadas);
+      // Asegurar que todos los estudiantes tengan paralelo
+      const estudiantesConParalelo = estudiantesCarrerasAsignadas.map(estudiante => ({
+        ...estudiante,
+        paralelo: estudiante.paralelo || 'A'
+      }));
+      
+      setEstudiantes(estudiantesConParalelo);
+      setEstudiantesFiltrados(estudiantesConParalelo); // Inicializar filtrados
+      
     } catch (error) {
       setErrorCarga('Error al cargar la lista de estudiantes: ' + (error.message || 'Error desconocido'));
       toast.error('Error al cargar la lista de estudiantes');
@@ -143,10 +152,52 @@ function ListarEstudiantes() {
     }
   };
 
-  // Aplicar filtros cuando cambian
+  // Calcular elementos dinámicos usando useMemo para optimizar performance
+  const elementosCalculados = useMemo(() => {
+    // Determinar si mostrar columna de paralelo
+    const hayEstudiantesCienciasBasicas = estudiantes.some(e => e.carrera === 'Ciencias Básicas');
+    const mostrarColumnaParalelo = docenteTieneCienciasBasicas && hayEstudiantesCienciasBasicas;
+    
+    // Determinar si mostrar filtro de paralelo
+    const estudiantesAMostrar = carreraSeleccionada 
+      ? estudiantes.filter(e => e.carrera === carreraSeleccionada)
+      : estudiantes;
+    
+    const hayCBEnFiltro = estudiantesAMostrar.some(e => e.carrera === 'Ciencias Básicas');
+    const mostrarFiltroParalelo = docenteTieneCienciasBasicas && hayCBEnFiltro;
+    
+    // Obtener paralelos dinámicos (solo los que realmente existen)
+    const paralelosExistentes = [...new Set(
+      estudiantes
+        .filter(e => e.carrera === 'Ciencias Básicas')
+        .map(e => e.paralelo || 'A')
+    )].sort();
+    
+    // Asegurar que siempre esté el paralelo A
+    if (!paralelosExistentes.includes('A')) {
+      paralelosExistentes.unshift('A');
+    }
+    
+    const paralelosDisponibles = paralelosExistentes.map(paralelo => ({
+      value: paralelo,
+      label: `Paralelo ${paralelo}`
+    }));
+    
+    return {
+      mostrarColumnaParalelo,
+      mostrarFiltroParalelo,
+      paralelosDisponibles
+    };
+  }, [estudiantes, carreraSeleccionada, docenteTieneCienciasBasicas]);
+
+  // Aplicar filtros cuando cambian - CORREGIDO
   useEffect(() => {
-    // Solo aplicar filtros si hay estudiantes cargados
-    if (!estudiantes || estudiantes.length === 0) return;
+    
+    if (!estudiantes || estudiantes.length === 0) {
+      setEstudiantesFiltrados([]);
+      return;
+    }
+    
     let resultado = [...estudiantes];
     
     // Filtrar por carrera
@@ -157,20 +208,25 @@ function ListarEstudiantes() {
       });
     }
     
-    // Filtrar por semestre (asegurarse de comparar números con números)
+    // Filtrar por semestre
     if (semestreSeleccionado) {
-      // Convertir el semestre seleccionado a número para comparar correctamente
       const semestreNum = parseInt(semestreSeleccionado, 10);
       resultado = resultado.filter(e => {
         if (!e.semestre) return false;
         
-        // Si el semestre en la base de datos ya es un número, comparar directamente
-        // Si es un string, intentar extraer el número
         const estudianteSemestre = typeof e.semestre === 'number' 
           ? e.semestre 
           : parseInt(e.semestre, 10);
           
         return !isNaN(estudianteSemestre) && estudianteSemestre === semestreNum;
+      });
+    }
+    
+    // Filtrar por paralelo
+    if (paraleloSeleccionado) {
+      resultado = resultado.filter(e => {
+        const paraleloEstudiante = e.paralelo || 'A';
+        return paraleloEstudiante === paraleloSeleccionado;
       });
     }
     
@@ -184,11 +240,11 @@ function ListarEstudiantes() {
       );
     }
     
-    console.log(`Filtrado completado: ${resultado.length} estudiantes coinciden con los criterios`);
-    setEstudiantesFiltrados(resultado);
+    setEstudiantesFiltrados(resultado); // ← ESTA LÍNEA FALTABA
+    
     // Resetear a la primera página cuando se aplican filtros
     setPaginaActual(1);
-  }, [carreraSeleccionada, semestreSeleccionado, terminoBusqueda, estudiantes]);
+  }, [carreraSeleccionada, semestreSeleccionado, paraleloSeleccionado, terminoBusqueda, estudiantes]);
 
   // Calcular estudiantes a mostrar en la página actual
   const indexUltimoEstudiante = paginaActual * estudiantesPorPagina;
@@ -214,30 +270,43 @@ function ListarEstudiantes() {
 
   // Manejar cambio en filtro de carrera
   const handleCarreraChange = (e) => {
-    setCarreraSeleccionada(e.target.value);
-    // Resetear el semestre seleccionado cuando se cambia la carrera
+    const nuevaCarrera = e.target.value;
+    setCarreraSeleccionada(nuevaCarrera);
+    
+    // Resetear otros filtros relacionados
     setSemestreSeleccionado('');
-    setErrorCarga(''); // Limpiar cualquier mensaje de error
+    setParaleloSeleccionado('');
+    setErrorCarga('');
   };
 
   // Manejar cambio en filtro de semestre
   const handleSemestreChange = (e) => {
-    setSemestreSeleccionado(e.target.value);
-    setErrorCarga(''); // Limpiar cualquier mensaje de error
+    const nuevoSemestre = e.target.value;
+    setSemestreSeleccionado(nuevoSemestre);
+    setErrorCarga('');
+  };
+
+  // Manejar cambio en filtro de paralelo
+  const handleParaleloChange = (e) => {
+    const nuevoParalelo = e.target.value;
+    setParaleloSeleccionado(nuevoParalelo);
+    setErrorCarga('');
   };
 
   // Manejar cambio en término de búsqueda
   const handleSearchChange = (e) => {
-    setTerminoBusqueda(e.target.value);
-    setErrorCarga(''); // Limpiar cualquier mensaje de error
+    const nuevoTermino = e.target.value;
+    setTerminoBusqueda(nuevoTermino);
+    setErrorCarga('');
   };
 
   // Función para limpiar todos los filtros
   const limpiarFiltros = () => {
     setCarreraSeleccionada('');
     setSemestreSeleccionado('');
+    setParaleloSeleccionado('');
     setTerminoBusqueda('');
-    setErrorCarga(''); // Limpiar cualquier mensaje de error
+    setErrorCarga('');
   };
 
   // Redirigir a página de crear estudiante
@@ -297,29 +366,6 @@ function ListarEstudiantes() {
     if (paginaActual < totalPaginas) {
       setPaginaActual(paginaActual + 1);
     }
-  };
-
-  // Obtener semestres disponibles según la carrera
-  const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Ciencias Básicas') {
-      return [
-        { value: '1', label: '1º Semestre' },
-        { value: '2', label: '2º Semestre' }
-      ];
-    }
-    
-    // Para el resto de carreras (3ro a 10mo)
-    return [
-      { value: '3', label: '3º Semestre' },
-      { value: '4', label: '4º Semestre' },
-      { value: '5', label: '5º Semestre' },
-      { value: '6', label: '6º Semestre' },
-      { value: '7', label: '7º Semestre' },
-      { value: '8', label: '8º Semestre' },
-      { value: '9', label: '9º Semestre' },
-      { value: '10', label: '10º Semestre' }
-    ];
   };
 
   // Renderizar controles de paginación
@@ -416,6 +462,26 @@ function ListarEstudiantes() {
     );
   };
 
+  // Renderizar información de paralelo en la celda
+  const renderParaleloEstudiante = (estudiante) => {
+    if (!elementosCalculados.mostrarColumnaParalelo) return null;
+    
+    // Todos los estudiantes tienen paralelo (por defecto 'A')
+    const paralelo = estudiante.paralelo || 'A';
+    
+    // Para estudiantes de Ciencias Básicas, mostrar con estilo especial
+    if (estudiante.carrera === 'Ciencias Básicas') {
+      return (
+        <span className="paralelo-badge ciencias-basicas">
+          {paralelo}
+        </span>
+      );
+    }
+    
+    // Para otras carreras, mostrar el paralelo pero con estilo sutil
+    return <span className="paralelo-badge otras-carreras">{paralelo}</span>;
+  };
+
   // Obtener semestres disponibles para filtro según carrera seleccionada
   const semestresDisponibles = carreraSeleccionada 
     ? getSemestresDisponibles(carreraSeleccionada)
@@ -437,7 +503,6 @@ function ListarEstudiantes() {
               </button>
             )}
           </div>
-          
           {carrerasAsignadas.length === 0 ? (
             <div className="error-message">
               No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.
@@ -477,6 +542,30 @@ function ListarEstudiantes() {
                       ))}
                     </select>
                   </div>
+
+                  {/* Filtro de paralelo INTELIGENTE - Solo los paralelos que existen */}
+                  {elementosCalculados.mostrarFiltroParalelo && (
+                    <div className="filtro filtro-paralelo">
+                      <label htmlFor="paralelo-filter">
+                        Paralelo:
+                        <span className="filtro-info" title="Paralelos disponibles según estudiantes registrados">
+                           ({elementosCalculados.paralelosDisponibles.length})
+                        </span>
+                      </label>
+                      <select
+                        id="paralelo-filter"
+                        value={paraleloSeleccionado}
+                        onChange={handleParaleloChange}
+                      >
+                        <option value="">Todos los paralelos</option>
+                        {elementosCalculados.paralelosDisponibles.map((paralelo) => (
+                          <option key={paralelo.value} value={paralelo.value}>
+                            {paralelo.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   
                   <button className="btn-limpiar-filtros" onClick={limpiarFiltros}>
                     Limpiar Filtros
@@ -509,6 +598,9 @@ function ListarEstudiantes() {
                     {renderPaginacion()}
                     <div className="resultados-info">
                       Mostrando {estudiantesActuales.length} de {estudiantesFiltrados.length} estudiantes
+                      {elementosCalculados.mostrarFiltroParalelo && paraleloSeleccionado && (
+                        <span className="filtro-activo"> (Paralelo {paraleloSeleccionado})</span>
+                      )}
                     </div>
                   </div>
                   
@@ -521,6 +613,15 @@ function ListarEstudiantes() {
                           <th className="col-nombre">Nombre Completo</th>
                           <th className="col-carrera">Carrera</th>
                           <th className="col-semestre">Semestre</th>
+                          {/* Columna de paralelo - Solo visible cuando es relevante */}
+                          {elementosCalculados.mostrarColumnaParalelo && (
+                            <th className="col-paralelo">
+                              Paralelo
+                              <span className="header-info" title="Paralelos disponibles en sus estudiantes">
+                                
+                              </span>
+                            </th>
+                          )}
                           <th className="col-grupo">Grupo</th>
                           <th className="col-acciones">Acciones</th>
                         </tr>
@@ -533,6 +634,12 @@ function ListarEstudiantes() {
                             <td className="col-nombre">{`${estudiante.nombre} ${estudiante.apellido}`}</td>
                             <td className="col-carrera">{estudiante.carrera}</td>
                             <td className="col-semestre">{estudiante.semestre}º Semestre</td>
+                            {/* Celda de paralelo - Solo visible cuando es relevante */}
+                            {elementosCalculados.mostrarColumnaParalelo && (
+                              <td className="col-paralelo">
+                                {renderParaleloEstudiante(estudiante)}
+                              </td>
+                            )}
                             <td className="col-grupo">
                               {estudiante.en_grupo_del_docente ? (
                                 <span className="badge badge-success">Asignado</span>
@@ -556,7 +663,7 @@ function ListarEstudiantes() {
               ) : (
                 <div className="empty-state">
                   <p>No se encontraron estudiantes con los criterios seleccionados.</p>
-                  {(carreraSeleccionada || semestreSeleccionado || terminoBusqueda) && (
+                  {(carreraSeleccionada || semestreSeleccionado || paraleloSeleccionado || terminoBusqueda) && (
                     <button className="btn-limpiar-filtros" onClick={limpiarFiltros}>
                       Limpiar Filtros
                     </button>

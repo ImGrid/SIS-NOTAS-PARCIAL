@@ -8,7 +8,13 @@ import {
   updateEstudiante, 
   verificarDependenciasEstudiante,
   obtenerResumenDependencias,
-  createEstudiante
+  createEstudiante,
+  getSemestresDisponibles,
+  getParalelosDisponibles,
+  carreraNecesitaParalelo,
+  getParaleloPorDefecto,
+  validarDatosEstudiante,
+  verificarCodigoDisponible
 } from '../../../service/estudianteService';
 import '../style/editarEstudiante.css';
 
@@ -16,13 +22,14 @@ function EditarEstudiante() {
   const navigate = useNavigate();
   const { id } = useParams();
   
-  // Estado para formulario de edición principal
+  // Estado para formulario de edición principal (incluye paralelo)
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
     codigo: '',
     carrera: '',
     semestre: '',
+    paralelo: '', // Nuevo campo para paralelos
     unidad_educativa: ''
   });
   
@@ -35,6 +42,7 @@ function EditarEstudiante() {
     codigo: false,
     carrera: false,
     semestre: false,
+    paralelo: true, // Inicialmente true porque puede no ser requerido
     unidad_educativa: false,
     semestre2: true,
     semestre3: true
@@ -59,14 +67,20 @@ function EditarEstudiante() {
   const [requiereConfirmacion, setRequiereConfirmacion] = useState(false);
   const [cambiosCriticos, setCambiosCriticos] = useState({
     carrera: false,
-    semestre: false
+    semestre: false,
+    paralelo: false // Nuevo campo para detectar cambios de paralelo
   });
 
-  // Estado para carreras asignadas al docente
+  // Estados para carreras y paralelos
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
   const [errorAcceso, setErrorAcceso] = useState('');
   const [estudiantePropio, setEstudiantePropio] = useState(false);
+  
+  // Estados para validación de código
+  const [validandoCodigo, setValidandoCodigo] = useState(false);
+  const [codigoDisponible, setCodigoDisponible] = useState(true);
   
   // Obtener las carreras del docente desde sessionStorage
   const obtenerCarrerasDocente = () => {
@@ -85,45 +99,18 @@ function EditarEstudiante() {
       }
       
       if (!Array.isArray(usuario.carreras)) {
-        console.error("Las carreras del usuario no son un array:", usuario.carreras);
-        // Si es un string, intentar convertirlo a array
         if (typeof usuario.carreras === 'string') {
           return [usuario.carreras];
         }
         return [];
       }
       
-      // Asegurar que no hay elementos vacíos
       const carrerasFiltradas = usuario.carreras.filter(carrera => carrera && carrera.trim() !== '');
-      
       return carrerasFiltradas;
     } catch (error) {
       console.error("Error al obtener carreras del docente:", error);
       return [];
     }
-  };
-
-  // Obtener semestres disponibles según la carrera
-  const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Ciencias Básicas') {
-      return [
-        { value: '1', label: 'Primer Semestre' },
-        { value: '2', label: 'Segundo Semestre' }
-      ];
-    }
-    
-    // Para el resto de carreras (3ro a 10mo)
-    return [
-      { value: '3', label: 'Tercer Semestre' },
-      { value: '4', label: 'Cuarto Semestre' },
-      { value: '5', label: 'Quinto Semestre' },
-      { value: '6', label: 'Sexto Semestre' },
-      { value: '7', label: 'Séptimo Semestre' },
-      { value: '8', label: 'Octavo Semestre' },
-      { value: '9', label: 'Noveno Semestre' },
-      { value: '10', label: 'Décimo Semestre' }
-    ];
   };
   
   // Cargar datos del estudiante y carreras del docente
@@ -135,6 +122,10 @@ function EditarEstudiante() {
         // Primero cargamos las carreras del docente
         const carreras = obtenerCarrerasDocente();
         setCarrerasAsignadas(carreras);
+        
+        // Verificar si el docente tiene Ciencias Básicas asignada
+        const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+        setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
         
         // Filtrar las opciones de carreras para el selector
         const opcionesCarreras = carreras.map(carrera => ({
@@ -174,6 +165,9 @@ function EditarEstudiante() {
         // Guardar los datos originales para comparación
         setDatosOriginales(estudiante);
         
+        // Normalizar paralelo - si no existe, asignar por defecto
+        const paraleloNormalizado = estudiante.paralelo || getParaleloPorDefecto(estudiante.carrera);
+        
         // Actualizar el formulario
         setFormData({
           nombre: estudiante.nombre || '',
@@ -181,6 +175,7 @@ function EditarEstudiante() {
           codigo: estudiante.codigo || '',
           carrera: estudiante.carrera || '',
           semestre: estudiante.semestre?.toString() || '',
+          paralelo: paraleloNormalizado,
           unidad_educativa: estudiante.unidad_educativa || ''
         });
         
@@ -205,7 +200,10 @@ function EditarEstudiante() {
 
   // Efecto para verificar si todos los campos requeridos están llenos
   useEffect(() => {
-    const { nombre, apellido, codigo, carrera, semestre, unidad_educativa } = formData;
+    const { nombre, apellido, codigo, carrera, semestre, paralelo, unidad_educativa } = formData;
+    
+    // Determinar si el paralelo es requerido
+    const paraleloRequerido = carreraNecesitaParalelo(carrera);
     
     setValidFields(prevState => ({
       ...prevState,
@@ -214,14 +212,18 @@ function EditarEstudiante() {
       codigo: codigo.trim() !== '',
       carrera: carrera !== '',
       semestre: semestre !== '',
+      paralelo: paraleloRequerido ? (paralelo !== '') : true,
       unidad_educativa: unidad_educativa.trim() !== ''
     }));
     
-    // Verificar si hay cambios críticos (carrera o semestre)
+    // Verificar si hay cambios críticos (carrera, semestre o paralelo)
     if (datosOriginales) {
+      const paraleloOriginal = datosOriginales.paralelo || getParaleloPorDefecto(datosOriginales.carrera);
+      
       setCambiosCriticos({
         carrera: carrera !== datosOriginales.carrera,
-        semestre: semestre !== datosOriginales.semestre?.toString()
+        semestre: semestre !== datosOriginales.semestre?.toString(),
+        paralelo: paralelo !== paraleloOriginal
       });
     }
   }, [formData, datosOriginales]);
@@ -235,7 +237,6 @@ function EditarEstudiante() {
         semestre3: cantidadSemestres === 3 ? semestresAdicionales.semestre3 !== '' : true
       }));
     } else {
-      // Si no es multi-semestre, estos campos siempre son válidos
       setValidFields(prevState => ({
         ...prevState,
         semestre2: true,
@@ -244,11 +245,68 @@ function EditarEstudiante() {
     }
   }, [multiSemestre, cantidadSemestres, semestresAdicionales]);
 
+  // Efecto para auto-asignar paralelo por defecto cuando cambia la carrera
+  useEffect(() => {
+    if (formData.carrera && datosOriginales) {
+      // Si cambió de una carrera que no necesita paralelo a una que sí (o viceversa)
+      const carreraAnteriorNecesitaParalelo = carreraNecesitaParalelo(datosOriginales.carrera);
+      const carreraNuevaNecesitaParalelo = carreraNecesitaParalelo(formData.carrera);
+      
+      if (carreraAnteriorNecesitaParalelo !== carreraNuevaNecesitaParalelo) {
+        if (!carreraNuevaNecesitaParalelo) {
+          // Si la nueva carrera no necesita paralelo, asignar 'A'
+          setFormData(prev => ({
+            ...prev,
+            paralelo: getParaleloPorDefecto(formData.carrera)
+          }));
+        } else {
+          // Si la nueva carrera necesita paralelo, limpiar para forzar selección
+          setFormData(prev => ({
+            ...prev,
+            paralelo: ''
+          }));
+        }
+      }
+    }
+  }, [formData.carrera, datosOriginales]);
+
+  // Efecto para validar código en tiempo real (excluyendo el estudiante actual)
+  useEffect(() => {
+    const validarCodigoDisponible = async () => {
+      if (formData.codigo && formData.semestre && formData.paralelo && datosOriginales) {
+        // Solo validar si los datos han cambiado
+        const codigoCambio = formData.codigo !== datosOriginales.codigo;
+        const semestreCambio = formData.semestre !== datosOriginales.semestre?.toString();
+        const paraleloCambio = formData.paralelo !== (datosOriginales.paralelo || getParaleloPorDefecto(datosOriginales.carrera));
+        
+        if (codigoCambio || semestreCambio || paraleloCambio) {
+          setValidandoCodigo(true);
+          try {
+            const respuesta = await verificarCodigoDisponible(
+              formData.codigo,
+              formData.semestre,
+              formData.paralelo,
+              id // Excluir el estudiante actual
+            );
+            setCodigoDisponible(respuesta.disponible);
+          } catch (error) {
+            console.error('Error al verificar código:', error);
+            setCodigoDisponible(true);
+          } finally {
+            setValidandoCodigo(false);
+          }
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(validarCodigoDisponible, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.codigo, formData.semestre, formData.paralelo, datosOriginales, id]);
+
   // Manejar cambio en checkbox de múltiples semestres
   const handleMultiSemestreChange = () => {
     setMultiSemestre(!multiSemestre);
     
-    // Si se desactiva, resetear cantidad y semestres adicionales
     if (multiSemestre) {
       setCantidadSemestres(1);
       setSemestresAdicionales({
@@ -258,7 +316,7 @@ function EditarEstudiante() {
       setCreacionExitosa(0);
       setCreacionFallida(false);
     } else {
-      setCantidadSemestres(2); // Por defecto, seleccionar 2 semestres
+      setCantidadSemestres(2);
     }
   };
 
@@ -267,7 +325,6 @@ function EditarEstudiante() {
     const cantidad = parseInt(e.target.value);
     setCantidadSemestres(cantidad);
     
-    // Si se reduce de 3 a 2, limpiar el semestre3
     if (cantidad === 2) {
       setSemestresAdicionales(prev => ({
         ...prev,
@@ -289,11 +346,12 @@ function EditarEstudiante() {
         return;
       }
       
-      // Si cambia la carrera, resetear el semestre y semestres adicionales
+      // Si cambia la carrera, resetear el semestre y paralelo si es necesario
       setFormData({
         ...formData,
         [name]: value,
-        semestre: multiSemestre ? formData.semestre : '' // Si es multisemestre, mantener el semestre original
+        semestre: multiSemestre ? formData.semestre : '',
+        paralelo: '' // Limpiar paralelo para que se asigne automáticamente
       });
       
       // Resetear semestres adicionales si cambia la carrera
@@ -326,28 +384,30 @@ function EditarEstudiante() {
 
   // Función para crear un estudiante en un semestre específico
   const crearEstudianteEnSemestre = async (semestreValue) => {
-    // Construir datos del estudiante para el nuevo semestre
-    const estudianteData = {
-      nombre: formData.nombre,
-      apellido: formData.apellido,
-      codigo: formData.codigo.toUpperCase(),
-      carrera: formData.carrera,
-      semestre: semestreValue,
-      unidad_educativa: formData.unidad_educativa,
-      grupo_id: null // El estudiante se crea sin grupo
-    };
-    
     try {
+      const datosEstudiante = {
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        codigo: formData.codigo.toUpperCase(),
+        carrera: formData.carrera,
+        semestre: semestreValue,
+        paralelo: formData.paralelo || getParaleloPorDefecto(formData.carrera),
+        unidad_educativa: formData.unidad_educativa
+      };
+      
       // Verificar que la carrera seleccionada esté entre las asignadas al docente
-      const carreraEstudiante = estudianteData.carrera.toLowerCase().trim();
+      const carreraEstudiante = datosEstudiante.carrera.toLowerCase().trim();
       const carrerasNormalizadas = carrerasAsignadas.map(c => c.toLowerCase().trim());
       
       if (!carrerasNormalizadas.includes(carreraEstudiante)) {
         throw new Error('No tiene permiso para crear estudiantes en esta carrera');
       }
       
-      // Usar el servicio para crear un nuevo estudiante
-      await createEstudiante(estudianteData);
+      // Validar datos usando el servicio
+      const datosValidados = validarDatosEstudiante(datosEstudiante);
+      
+      // Crear el estudiante
+      await createEstudiante(datosValidados);
       return true;
     } catch (error) {
       console.error(`Error al crear estudiante en semestre ${semestreValue}:`, error);
@@ -360,8 +420,13 @@ function EditarEstudiante() {
     try {
       // Preparar datos a enviar
       const datosActualizados = {
-        ...formData,
-        codigo: formData.codigo.toUpperCase()
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        codigo: formData.codigo.toUpperCase(),
+        carrera: formData.carrera,
+        semestre: formData.semestre,
+        paralelo: formData.paralelo || getParaleloPorDefecto(formData.carrera),
+        unidad_educativa: formData.unidad_educativa
       };
       
       // Verificar que la carrera seleccionada esté entre las asignadas al docente
@@ -373,8 +438,11 @@ function EditarEstudiante() {
         return false;
       }
       
-      // Si requiere confirmación, enviar flag confirmarLimpieza
-      const resultado = await updateEstudiante(id, datosActualizados, confirmar);
+      // Validar datos usando el servicio
+      const datosValidados = validarDatosEstudiante(datosActualizados);
+      
+      // Actualizar el estudiante
+      const resultado = await updateEstudiante(id, datosValidados, confirmar);
       
       // Notificación de éxito
       toast.success('Estudiante actualizado exitosamente');
@@ -400,7 +468,6 @@ function EditarEstudiante() {
         
         return false;
       } 
-      // Si el error ya fue procesado por estudianteService
       else if (error.requiereConfirmacion) {
         setRequiereConfirmacion(true);
         setDependencias(error.dependencias || {});
@@ -421,20 +488,11 @@ function EditarEstudiante() {
   // Manejador para errores
   const handleError = (err) => {
     if (err.response && err.response.data && err.response.data.error) {
-      // Mostrar el mensaje de error exacto que viene del servidor
-      toast.error(err.response.data.error, {
-        className: 'toast-notification'
-      });
+      toast.error(err.response.data.error);
     } else if (err.message && err.message !== 'An error occurred') {
-      // Si hay un mensaje de error pero no es el genérico
-      toast.error(err.message, {
-        className: 'toast-notification'
-      });
+      toast.error(err.message);
     } else {
-      // Fallback genérico
-      toast.error("Error al crear el estudiante en semestres adicionales", {
-        className: 'toast-notification'
-      });
+      toast.error("Error al crear el estudiante en semestres adicionales");
     }
   };
 
@@ -445,10 +503,17 @@ function EditarEstudiante() {
 
     try {
       // Validar que todos los campos requeridos estén presentes
-      const { nombre, apellido, codigo, carrera, semestre, unidad_educativa } = formData;
+      const { nombre, apellido, codigo, carrera, semestre, paralelo, unidad_educativa } = formData;
       
       if (!nombre || !apellido || !codigo || !carrera || !semestre || !unidad_educativa) {
-        toast.error('Todos los campos son obligatorios');
+        toast.error('Todos los campos básicos son obligatorios');
+        setSaving(false);
+        return;
+      }
+
+      // Validar paralelo para Ciencias Básicas
+      if (carreraNecesitaParalelo(carrera) && !paralelo) {
+        toast.error('El paralelo es obligatorio para Ciencias Básicas');
         setSaving(false);
         return;
       }
@@ -459,6 +524,13 @@ function EditarEstudiante() {
       
       if (!carrerasNormalizadas.includes(carreraEstudiante)) {
         toast.error('No tiene permiso para asignar estudiantes a esta carrera');
+        setSaving(false);
+        return;
+      }
+
+      // Verificar disponibilidad de código
+      if (!codigoDisponible) {
+        toast.error('El código ya está en uso para este semestre y paralelo');
         setSaving(false);
         return;
       }
@@ -489,9 +561,7 @@ function EditarEstudiante() {
         const semestresUnicos = [...new Set(todosLosSemestres)];
         
         if (semestresUnicos.length !== todosLosSemestres.length) {
-          toast.error('No se puede registrar al estudiante en el mismo semestre más de una vez', {
-            className: 'toast-notification'
-          });
+          toast.error('No se puede registrar al estudiante en el mismo semestre más de una vez');
           setSaving(false);
           return;
         }
@@ -544,15 +614,24 @@ function EditarEstudiante() {
 
   // Función para determinar la clase CSS de cada campo del formulario
   const getFieldClass = (fieldName) => {
-    // Si el campo tiene contenido, verificamos si es válido
+    // Validación especial para código
+    if (fieldName === 'codigo') {
+      if (formData[fieldName] && formData[fieldName].trim() !== '') {
+        if (validandoCodigo) return 'validating';
+        return codigoDisponible ? 'valid' : 'invalid';
+      }
+      return '';
+    }
+
+    // Para otros campos
     if (formData[fieldName] && formData[fieldName].trim() !== '') {
       return validFields[fieldName] ? 'valid' : '';
     }
     return '';
   };
   
-  // Determina si hay cambios críticos de carrera o semestre
-  const hayCambiosCriticos = cambiosCriticos.carrera || cambiosCriticos.semestre;
+  // Determina si hay cambios críticos de carrera, semestre o paralelo
+  const hayCambiosCriticos = cambiosCriticos.carrera || cambiosCriticos.semestre || cambiosCriticos.paralelo;
   
   // Verificar si todos los campos son válidos para habilitar el botón de envío
   const formIsValid = () => {
@@ -563,12 +642,9 @@ function EditarEstudiante() {
     }
     
     // Verificar campos principales
-    return validFields.nombre && 
-           validFields.apellido && 
-           validFields.codigo && 
-           validFields.carrera && 
-           validFields.semestre && 
-           validFields.unidad_educativa;
+    return Object.values(validFields).every(valid => valid === true) && 
+           codigoDisponible && 
+           !validandoCodigo;
   };
   
   // Verificar si hay semestres seleccionados repetidos
@@ -583,15 +659,16 @@ function EditarEstudiante() {
       semestres.push(semestresAdicionales.semestre3);
     }
     
-    // Filtrar valores vacíos
     const semestresValidos = semestres.filter(s => s !== '');
-    
-    // Verificar duplicados
     return new Set(semestresValidos).size !== semestresValidos.length;
   };
   
-  // Obtener los semestres disponibles según la carrera seleccionada
+  // Determinar si mostrar el campo de paralelo
+  const mostrarCampoParalelo = docenteTieneCienciasBasicas && carreraNecesitaParalelo(formData.carrera);
+  
+  // Obtener los semestres y paralelos disponibles según la carrera seleccionada
   const semestresDisponibles = getSemestresDisponibles(formData.carrera);
+  const paralelosDisponibles = getParalelosDisponibles(formData.carrera);
 
   return (
     <Layout>
@@ -670,7 +747,7 @@ function EditarEstudiante() {
                 )}
               </div>
                           
-              {/* Alerta de dependencias mejorada - solo visible si no está en modo multisemestre */}
+              {/* Alerta de dependencias mejorada - incluye paralelo */}
               {!multiSemestre && ((tieneDependencias && hayCambiosCriticos) || requiereConfirmacion) ? (
                 <div className={`alerta-dependencias ${requiereConfirmacion ? 'confirmacion-activa' : ''}`}>
                   <h3>⚠️ {requiereConfirmacion ? 'Confirmación Requerida' : 'Cambios con Impacto'}</h3>
@@ -687,10 +764,10 @@ function EditarEstudiante() {
                     </>
                   ) : (
                     <>
-                      <p>Este estudiante tiene datos asociados que se verán afectados si cambia la carrera o semestre:</p>
+                      <p>Este estudiante tiene datos asociados que se verán afectados si cambia la carrera, semestre o paralelo:</p>
                       <p className="dependencias-detalle">{obtenerResumenDependencias(dependencias)}</p>
                       <p className="advertencia-media">
-                        Si modifica la carrera o semestre, se le pedirá confirmación adicional.
+                        Si modifica estos campos críticos, se le pedirá confirmación adicional.
                       </p>
                     </>
                   )}
@@ -725,7 +802,11 @@ function EditarEstudiante() {
                 </div>
                 
                 <div className={`form-group ${getFieldClass('codigo')}`}>
-                  <label htmlFor="codigo">Código:</label>
+                  <label htmlFor="codigo">
+                    Código:
+                    {validandoCodigo && <span className="validating-indicator">Verificando...</span>}
+                    {!validandoCodigo && !codigoDisponible && <span className="error-indicator">Código en uso</span>}
+                  </label>
                   <input
                     type="text"
                     id="codigo"
@@ -736,6 +817,9 @@ function EditarEstudiante() {
                     placeholder="Ingrese el código único del estudiante"
                     style={{textTransform: 'uppercase'}}
                   />
+                  {!codigoDisponible && (
+                    <p className="help-text error">Este código ya está en uso para el semestre y paralelo seleccionados.</p>
+                  )}
                   <p className="help-text">El código se convertirá automáticamente a mayúsculas.</p>
                 </div>
                 
@@ -761,6 +845,37 @@ function EditarEstudiante() {
                     ))}
                   </select>
                 </div>
+
+                {/* Campo de paralelo - Solo visible cuando es relevante */}
+                {mostrarCampoParalelo && (
+                  <div className={`form-group ${getFieldClass('paralelo')} paralelo-field ${!multiSemestre && cambiosCriticos.paralelo ? 'cambio-critico' : ''}`}>
+                    <label htmlFor="paralelo">
+                      Paralelo:
+                      <span className="required-indicator">*</span>
+                      {!multiSemestre && cambiosCriticos.paralelo && 
+                        <span className="badge-cambio-critico">Cambio crítico</span>
+                      }
+                    </label>
+                    <select
+                      id="paralelo"
+                      name="paralelo"
+                      value={formData.paralelo}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccione un paralelo</option>
+                      {paralelosDisponibles.map((paralelo, index) => (
+                        <option key={index} value={paralelo.value}>
+                          {paralelo.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="help-text">
+                      Los paralelos organizan a los estudiantes de Ciencias Básicas en grupos separados (A-G).
+                      {cambiosCriticos.paralelo && " Cambiar el paralelo puede afectar datos relacionados."}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Sección de semestres - varía según modo */}
                 {!multiSemestre ? (
@@ -879,7 +994,7 @@ function EditarEstudiante() {
                 )}
                 
                 <div className={`form-group ${getFieldClass('unidad_educativa')}`}>
-                  <label htmlFor="unidad_educativa">Unidad Academica:</label>
+                  <label htmlFor="unidad_educativa">Unidad Académica:</label>
                   <input
                     type="text"
                     id="unidad_educativa"
@@ -918,7 +1033,7 @@ function EditarEstudiante() {
                   <div className="confirmacion-explicacion">
                     <p>Al hacer clic en el botón de confirmación, acepta que se eliminarán todos los informes, 
                     rúbricas, calificaciones y asignaciones actuales del estudiante. Esta acción es necesaria 
-                    porque los datos académicos están vinculados a la carrera y semestre actual.</p>
+                    porque los datos académicos están vinculados a la carrera, semestre y paralelo actual.</p>
                   </div>
                 )}
               </form>

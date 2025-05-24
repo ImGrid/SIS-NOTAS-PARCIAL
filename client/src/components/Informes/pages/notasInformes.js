@@ -1,4 +1,4 @@
-// src/components/Rubricas/pages/notasInformes.js (Integración Final)
+// src/components/Rubricas/pages/notasInformes.js (Integración Final con Paralelos - CORREGIDO)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../Docentes/sidebar';
@@ -15,6 +15,9 @@ import { getRubricaPorId } from '../../../service/rubricaService';
 import { getDocenteById } from '../../../service/docenteService';
 import { getCalificacionPorId } from '../../../service/calificacionService';
 
+// Importar función para verificar si necesita paralelo
+import { carreraNecesitaParalelo } from '../../../service/grupoService';
+
 // Importar utilidades
 import { organizarDatosPorMateria, normalizarTexto, obtenerDatosFiltrados } from '../../../util/dataUtils/organizadorDatos';
 import { formatearNota, formatearFecha, obtenerFechaActual, calcularPorcentajeAprobacion } from '../../../util/helpers/formatHelper';
@@ -29,7 +32,7 @@ function NotasInformes() {
   const [rubricasPorInforme, setRubricasPorInforme] = useState({});
   const [calificacionesPorInforme, setCalificacionesPorInforme] = useState({});
   
-  // Estructura de datos para organizar por materia-carrera-semestre
+  // Estructura de datos para organizar por materia-carrera-semestre-paralelo
   const [datosPorMateria, setDatosPorMateria] = useState({});
   
   // Datos para los filtros
@@ -53,6 +56,9 @@ function NotasInformes() {
   
   // Estado para carreras asignadas al docente
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+
+  // Estado para controlar si el docente tiene Ciencias Básicas
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
 
   const navigate = useNavigate();
 
@@ -82,6 +88,10 @@ function NotasInformes() {
         // Obtener carreras asignadas al docente
         const carreras = obtenerCarrerasDocente();
         setCarrerasAsignadas(carreras);
+        
+        // Verificar si el docente tiene Ciencias Básicas asignada
+        const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+        setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
         
         // Si no hay carreras asignadas, mostrar mensaje
         if (carreras.length === 0) {
@@ -221,16 +231,14 @@ function NotasInformes() {
         setRubricasPorInforme(rubricasPorInformeTemp);
         setCalificacionesPorInforme(calificacionesPorInformeTemp);
 
-        // 8. Utilizar la función importada para organizar datos por materia
-        const datosPorMateriaTemp = organizarDatosPorMateria(
-          materiasSet,
+        // 8. VOLVER A LA LÓGICA ORIGINAL: Usar filtrarDatos que procesa TODOS los estudiantes
+        const datosPorMateriaTemp = prepararDatosEstadisticas(
           gruposFiltrados,
           estudiantesFiltrados,
           estudiantesPorGrupoTemp,
           informesPorGrupoTemp,
           rubricasPorInformeTemp,
           calificacionesPorInformeTemp,
-          materiasPorCarreraYSemestre,
           semestresPorCarreraObj
         );
         
@@ -247,51 +255,264 @@ function NotasInformes() {
     cargarDatos();
   }, []);
 
-  // Función para obtener datos filtrados (utilizando la utilidad importada)
+  // VOLVER A LA LÓGICA ORIGINAL: Función para preparar datos que usa filtrarDatos
+  const prepararDatosEstadisticas = (
+    grupos, 
+    todosLosEstudiantes, 
+    estudiantesPorGrupo, 
+    informesPorGrupo, 
+    rubricasPorInforme,
+    calificacionesPorInforme,
+    semestresPorCarrera
+  ) => {
+    return filtrarDatos(
+      grupos,
+      todosLosEstudiantes,
+      estudiantesPorGrupo,
+      informesPorGrupo,
+      rubricasPorInforme,
+      calificacionesPorInforme,
+      'TODAS', // carrera por defecto
+      'TODOS',  // semestre por defecto
+      'TODAS',  // materia por defecto
+      semestresPorCarrera
+    );
+  };
+
+  // FUNCIÓN ORIGINAL RESTAURADA: Filtrar datos que procesa TODOS los estudiantes
+  const filtrarDatos = (
+    grupos,
+    todosLosEstudiantes,
+    estudiantesPorGrupo,
+    informesPorGrupo,
+    rubricasPorInforme,
+    calificacionesPorInforme,
+    carrera,
+    semestre,
+    materia,
+    semestresPorCarrera
+  ) => {
+    const datosEstadisticas = [];
+
+    if (!semestresPorCarrera) {
+      console.warn("semestresPorCarrera no está definido");
+      return [];
+    }
+
+    // LÓGICA ORIGINAL: Recorrer TODOS los estudiantes
+    for (const estudiante of todosLosEstudiantes) {
+      const estudianteCarrera = estudiante.carrera;
+      const estudianteSemestre = estudiante.semestre;
+      
+      // LÓGICA ORIGINAL: Verificar si el estudiante pertenece a carreras/semestres del docente
+      let perteneceAGruposDocente = false;
+      
+      if (semestre === 'TODOS' && materia === 'TODAS') {
+        if (carrera === 'TODAS') {
+          perteneceAGruposDocente = 
+            semestresPorCarrera && 
+            semestresPorCarrera[estudianteCarrera] && 
+            Array.isArray(semestresPorCarrera[estudianteCarrera]) &&
+            semestresPorCarrera[estudianteCarrera].includes(estudianteSemestre);
+        } 
+        else if (estudianteCarrera === carrera) {
+          perteneceAGruposDocente = 
+            semestresPorCarrera && 
+            semestresPorCarrera[carrera] && 
+            Array.isArray(semestresPorCarrera[carrera]) &&
+            semestresPorCarrera[carrera].includes(estudianteSemestre);
+        }
+      }
+      else {
+        perteneceAGruposDocente = true;
+      }
+      
+      if (!perteneceAGruposDocente) {
+        continue;
+      }
+      
+      // Aplicar filtros de carrera y semestre si están seleccionados
+      if ((carrera !== 'TODAS' && estudianteCarrera !== carrera) ||
+          (semestre !== 'TODOS' && estudianteSemestre.toString() !== semestre)) {
+        continue;
+      }
+      
+      // LÓGICA ORIGINAL: Variables para almacenar las relaciones encontradas
+      let grupoDelEstudiante = null;
+      let informeDelEstudiante = null;
+      let rubricaDelEstudiante = null;
+      let calificacionDelEstudiante = null;
+      let cumpleFiltroMateria = (materia === 'TODAS');
+      
+      // LÓGICA ORIGINAL: Buscar si el estudiante pertenece a algún grupo
+      for (const grupo of grupos) {
+        if (grupo.carrera === estudianteCarrera && grupo.semestre === estudianteSemestre) {
+          const estudiantesDelGrupo = estudiantesPorGrupo[grupo.id] || [];
+          
+          if (estudiantesDelGrupo.some(est => est.id === estudiante.id)) {
+            if (materia === 'TODAS' || grupo.materia === materia) {
+              grupoDelEstudiante = grupo;
+              cumpleFiltroMateria = true;
+              
+              const informesDelGrupo = informesPorGrupo[grupo.id] || [];
+              informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
+              
+              if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
+                rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
+              }
+
+              if (informeDelEstudiante && informeDelEstudiante.calificacion_id) {
+                calificacionDelEstudiante = calificacionesPorInforme[informeDelEstudiante.id];
+              }
+              
+              break;
+            }
+            
+            if (!grupoDelEstudiante) {
+              grupoDelEstudiante = grupo;
+              
+              const informesDelGrupo = informesPorGrupo[grupo.id] || [];
+              informeDelEstudiante = informesDelGrupo.find(inf => inf.estudiante_id === estudiante.id);
+              
+              if (informeDelEstudiante && informeDelEstudiante.rubrica_id) {
+                rubricaDelEstudiante = rubricasPorInforme[informeDelEstudiante.id];
+              }
+
+              if (informeDelEstudiante && informeDelEstudiante.calificacion_id) {
+                calificacionDelEstudiante = calificacionesPorInforme[informeDelEstudiante.id];
+              }
+            }
+          }
+        }
+      }
+      
+      // LÓGICA ORIGINAL: Si hay filtro de materia pero el estudiante no cumple, omitirlo
+      if (materia !== 'TODAS' && !cumpleFiltroMateria) {
+        continue;
+      }
+      
+      // LÓGICA ORIGINAL: SIEMPRE agregar el estudiante (con o sin grupo)
+      if (!rubricaDelEstudiante) {
+        datosEstadisticas.push({
+          estudiante,
+          grupo: grupoDelEstudiante || { 
+            nombre_proyecto: 'Sin asignar',
+            carrera: estudianteCarrera,
+            semestre: estudianteSemestre,
+            paralelo: estudiante.paralelo || 'A', // Incluir paralelo del estudiante
+            materia: materia !== 'TODAS' ? materia : 'No asignada'
+          },
+          informe: informeDelEstudiante,
+          rubrica: rubricaDelEstudiante,
+          calificacion: calificacionDelEstudiante,
+          resultado: 'PENDIENTE'
+        });
+      } else {
+        const resultado = informeDelEstudiante?.resultado || 
+                         rubricaDelEstudiante?.observaciones || 
+                         'PENDIENTE';
+        
+        datosEstadisticas.push({
+          estudiante,
+          grupo: grupoDelEstudiante,
+          informe: informeDelEstudiante,
+          rubrica: rubricaDelEstudiante,
+          calificacion: calificacionDelEstudiante,
+          resultado
+        });
+      }
+    }
+
+    return datosEstadisticas;
+  };
+
+  // Función modificada para obtener datos filtrados con soporte para paralelos
   const obtenerDatosFiltradosActuales = () => {
-    let datosFiltrados = obtenerDatosFiltrados(
-      datosPorMateria,
-      materiaSeleccionada,
+    // Usar la función original filtrarDatos
+    let datosFiltrados = filtrarDatos(
+      grupos,
+      todosLosEstudiantes,
+      estudiantesPorGrupo,
+      informesPorGrupo,
+      rubricasPorInforme,
+      calificacionesPorInforme,
       carreraSeleccionada,
-      semestreSeleccionado
+      semestreSeleccionado,
+      materiaSeleccionada,
+      semestresPorCarrera
     );
     
-    // Si hay búsqueda de estudiante, filtramos los datos
+    // Aplicar filtro de búsqueda de estudiante si existe
     if (busquedaEstudiante.trim() !== '') {
       const busquedaLower = busquedaEstudiante.toLowerCase();
       
-      // Recorrer cada carrera
-      Object.keys(datosFiltrados).forEach(carrera => {
-        // Recorrer cada semestre
-        Object.keys(datosFiltrados[carrera]).forEach(semestre => {
-          // Filtrar estudiantes en cada sección
-          const seccion = datosFiltrados[carrera][semestre];
-          if (seccion && seccion.estudiantes) {
-            // Filtrar los estudiantes que coincidan con la búsqueda
-            const estudiantesFiltrados = seccion.estudiantes.filter(datos => {
-              const nombreCompleto = `${datos.estudiante.nombre || ''} ${datos.estudiante.apellido || ''}`.toLowerCase();
-              const codigo = (datos.estudiante.codigo || '').toLowerCase();
-              
-              return nombreCompleto.includes(busquedaLower) || 
-                     codigo.includes(busquedaLower);
-            });
-            
-            // Actualizar los datos de la sección
-            datosFiltrados[carrera][semestre] = {
-              ...seccion,
-              estudiantes: estudiantesFiltrados,
-              total: estudiantesFiltrados.length,
-              // Recalcular aprobados y reprobados
-              aprobados: estudiantesFiltrados.filter(e => e.resultado === 'APROBADO').length,
-              reprobados: estudiantesFiltrados.filter(e => e.resultado === 'REPROBADO').length,
-              pendientes: estudiantesFiltrados.filter(e => e.resultado === 'PENDIENTE').length
-            };
-          }
-        });
+      datosFiltrados = datosFiltrados.filter(datos => {
+        const nombreCompleto = `${datos.estudiante.nombre || ''} ${datos.estudiante.apellido || ''}`.toLowerCase();
+        const codigo = (datos.estudiante.codigo || '').toLowerCase();
+        
+        return nombreCompleto.includes(busquedaLower) || 
+               codigo.includes(busquedaLower);
       });
     }
     
-    return datosFiltrados;
+    // Organizar por carrera, semestre y paralelo
+    const datosOrganizados = {};
+    
+    datosFiltrados.forEach(datos => {
+      const carrera = datos.grupo.carrera;
+      const semestre = datos.grupo.semestre;
+      const paralelo = datos.estudiante.paralelo || 'A';
+      
+      if (!datosOrganizados[carrera]) {
+        datosOrganizados[carrera] = {};
+      }
+      if (!datosOrganizados[carrera][semestre]) {
+        datosOrganizados[carrera][semestre] = {};
+      }
+      
+      // Para Ciencias Básicas, organizar por paralelo
+      if (carreraNecesitaParalelo(carrera)) {
+        if (!datosOrganizados[carrera][semestre][paralelo]) {
+          datosOrganizados[carrera][semestre][paralelo] = {
+            estudiantes: [],
+            total: 0,
+            aprobados: 0,
+            reprobados: 0,
+            pendientes: 0
+          };
+        }
+        
+        datosOrganizados[carrera][semestre][paralelo].estudiantes.push(datos);
+      } else {
+        // Para otras carreras, usar clave 'general'
+        if (!datosOrganizados[carrera][semestre]['general']) {
+          datosOrganizados[carrera][semestre]['general'] = {
+            estudiantes: [],
+            total: 0,
+            aprobados: 0,
+            reprobados: 0,
+            pendientes: 0
+          };
+        }
+        
+        datosOrganizados[carrera][semestre]['general'].estudiantes.push(datos);
+      }
+    });
+    
+    // Calcular estadísticas
+    Object.keys(datosOrganizados).forEach(carrera => {
+      Object.keys(datosOrganizados[carrera]).forEach(semestre => {
+        Object.keys(datosOrganizados[carrera][semestre]).forEach(paraleloOGeneral => {
+          const seccion = datosOrganizados[carrera][semestre][paraleloOGeneral];
+          seccion.total = seccion.estudiantes.length;
+          seccion.aprobados = seccion.estudiantes.filter(e => e.resultado === 'APROBADO').length;
+          seccion.reprobados = seccion.estudiantes.filter(e => e.resultado === 'REPROBADO').length;
+          seccion.pendientes = seccion.estudiantes.filter(e => e.resultado === 'PENDIENTE').length;
+        });
+      });
+    });
+    
+    return datosOrganizados;
   };
 
   // Función para limpiar la búsqueda
@@ -570,90 +791,177 @@ function NotasInformes() {
               {/* Recorrer cada carrera y semestre para crear secciones separadas */}
               {Object.keys(obtenerDatosFiltradosActuales()).sort().map(carrera => (
                 Object.keys(obtenerDatosFiltradosActuales()[carrera]).sort((a, b) => parseInt(a) - parseInt(b)).map((semestre, semestreIndex) => {
-                  // Verificar si hay estudiantes para mostrar en esta carrera y semestre después del filtrado
-                  const datosSeccion = obtenerDatosFiltradosActuales()[carrera][semestre];
-                  if (!datosSeccion || datosSeccion.estudiantes.length === 0) return null;
+                  const datosCarreraSemestre = obtenerDatosFiltradosActuales()[carrera][semestre];
+                  
+                  // Para Ciencias Básicas, mostrar cada paralelo por separado
+                  if (carreraNecesitaParalelo(carrera)) {
+                    return Object.keys(datosCarreraSemestre).sort().map((paralelo, paraleloIndex) => {
+                      const datosSeccion = datosCarreraSemestre[paralelo];
+                      if (!datosSeccion || datosSeccion.estudiantes.length === 0) return null;
 
-                  // Determinar las asignaturas únicas en esta sección
-                  const asignaturasSeccion = new Set();
-                  datosSeccion.estudiantes.forEach(datos => {
-                    // La asignatura del grupo o de la calificación
-                    if (datos.grupo && datos.grupo.materia) {
-                      asignaturasSeccion.add(datos.grupo.materia);
-                    } else if (datos.calificacion && datos.calificacion.asignatura) {
-                      asignaturasSeccion.add(datos.calificacion.asignatura);
-                    }
-                  });
+                      // Determinar las asignaturas únicas en esta sección
+                      const asignaturasSeccion = new Set();
+                      datosSeccion.estudiantes.forEach(datos => {
+                        if (datos.grupo && datos.grupo.materia) {
+                          asignaturasSeccion.add(datos.grupo.materia);
+                        } else if (datos.calificacion && datos.calificacion.asignatura) {
+                          asignaturasSeccion.add(datos.calificacion.asignatura);
+                        }
+                      });
 
-                  // Convertir a array y formatear
-                  const asignaturasMostrar = Array.from(asignaturasSeccion).join(', ');
+                      const asignaturasMostrar = Array.from(asignaturasSeccion).join(', ');
 
-                  return (
-                    <div key={`${carrera}-${semestre}`} className={`seccion-carrera-semestre ${semestreIndex > 0 ? 'nueva-seccion-pdf' : 'primera-seccion-pdf'}`}>
-                      <h3 className="evitar-salto-pagina">{carrera} - {semestre}° Semestre</h3>
-                      
-                      {/* Información de la asignatura - CORREGIDO */}
-                      <div className="info-asignatura evitar-salto-pagina">
-                        <h4>Asignatura: {asignaturasMostrar}</h4>
-                      </div>
-                      
-                      <div className="estadisticas-seccion evitar-salto-pagina">
-                        <p>Estudiantes: {datosSeccion.total} | Aprobados: {datosSeccion.aprobados} | Reprobados: {datosSeccion.reprobados} | Pendientes: {datosSeccion.pendientes}</p>
-                      </div>
+                      return (
+                        <div key={`${carrera}-${semestre}-${paralelo}`} className={`seccion-carrera-semestre ${semestreIndex > 0 || paraleloIndex > 0 ? 'nueva-seccion-pdf' : 'primera-seccion-pdf'}`}>
+                          {/* TÍTULO MODIFICADO: Incluir paralelo para Ciencias Básicas */}
+                          <h3 className="evitar-salto-pagina">{carrera} - {semestre}° Semestre - Paralelo {paralelo}</h3>
+                          
+                          {/* Información de la asignatura */}
+                          <div className="info-asignatura evitar-salto-pagina">
+                            <h4>Asignatura: {asignaturasMostrar}</h4>
+                          </div>
+                          
+                          <div className="estadisticas-seccion evitar-salto-pagina">
+                            <p>Estudiantes: {datosSeccion.total} | Aprobados: {datosSeccion.aprobados} | Reprobados: {datosSeccion.reprobados} | Pendientes: {datosSeccion.pendientes}</p>
+                          </div>
 
-                      <div className="evaluacion-estudiantes">
-                        <table className="tabla-evaluacion">
-                          <thead>
-                            <tr>
-                              <th style={{width: '2%'}}>#</th>
-                              <th style={{width: '6%'}}>Código</th>
-                              <th style={{width: '13%'}}>Estudiante</th>
-                              <th style={{width: '10%'}}>Grupo</th>
-                              <th style={{width: '11%'}}>Presentación (30%)</th>
-                              <th style={{width: '11%'}}>Sustentación (30%)</th>
-                              <th style={{width: '11%'}}>Documentación (30%)</th>
-                              <th style={{width: '9%'}}>Innovación (10%)</th>
-                              <th style={{width: '7%'}}>Nota Final</th>
-                              <th style={{width: '10%'}}>Fecha Evaluación</th>
-                              <th style={{width: '10%'}}>Resultado</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {datosSeccion.estudiantes
-                              .sort((a, b) => {
-                                // Ordenar por apellido, luego por nombre
-                                const apellidoA = a.estudiante.apellido?.toLowerCase() || '';
-                                const apellidoB = b.estudiante.apellido?.toLowerCase() || '';
-                                if (apellidoA !== apellidoB) return apellidoA.localeCompare(apellidoB);
-                                return (a.estudiante.nombre?.toLowerCase() || '').localeCompare(b.estudiante.nombre?.toLowerCase() || '');
-                              })
-                              .map((datos, index) => (
-                                <tr key={`${datos.estudiante.id}-${index}`} className="fila-estudiante">
-                                  <td style={{width: '3%', textAlign: 'center'}}>{index + 1}</td>
-                                  <td style={{width: '8%'}}>{datos.estudiante.codigo}</td>
-                                  <td style={{width: '18%'}}>{`${datos.estudiante.nombre || ''} ${datos.estudiante.apellido || ''}`}</td>
-                                  <td style={{width: '10%'}}>{datos.grupo.nombre_proyecto}</td>
-                                  <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.presentacion)}</td>
-                                  <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.sustentacion)}</td>
-                                  <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.documentacion)}</td>
-                                  <td style={{width: '7%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.innovacion)}</td>
-                                  <td style={{width: '7%', textAlign: 'center'}}>
-                                    <strong>{formatearNota(datos.rubrica?.nota_final)}</strong>
-                                  </td>
-                                  <td style={{width: '10%', textAlign: 'center'}}>{formatearFecha(datos.calificacion?.fecha)}</td>
-                                  <td style={{width: '13%', textAlign: 'center', whiteSpace: 'nowrap'}}>
-                                    <strong className={datos.resultado === 'APROBADO' ? 'aprobado' : datos.resultado === 'REPROBADO' ? 'reprobado' : ''}>
-                                      {datos.resultado}
-                                    </strong>
-                                  </td>
+                          <div className="evaluacion-estudiantes">
+                            <table className="tabla-evaluacion">
+                              <thead>
+                                <tr>
+                                  <th style={{width: '2%'}}>#</th>
+                                  <th style={{width: '6%'}}>Código</th>
+                                  <th style={{width: '13%'}}>Estudiante</th>
+                                  <th style={{width: '10%'}}>Grupo</th>
+                                  <th style={{width: '11%'}}>Presentación (30%)</th>
+                                  <th style={{width: '11%'}}>Sustentación (30%)</th>
+                                  <th style={{width: '11%'}}>Documentación (30%)</th>
+                                  <th style={{width: '9%'}}>Innovación (10%)</th>
+                                  <th style={{width: '7%'}}>Nota Final</th>
+                                  <th style={{width: '10%'}}>Fecha Evaluación</th>
+                                  <th style={{width: '10%'}}>Resultado</th>
                                 </tr>
-                              ))
-                            }
-                          </tbody>
-                        </table>
+                              </thead>
+                              <tbody>
+                                {datosSeccion.estudiantes
+                                  .sort((a, b) => {
+                                    const apellidoA = a.estudiante.apellido?.toLowerCase() || '';
+                                    const apellidoB = b.estudiante.apellido?.toLowerCase() || '';
+                                    if (apellidoA !== apellidoB) return apellidoA.localeCompare(apellidoB);
+                                    return (a.estudiante.nombre?.toLowerCase() || '').localeCompare(b.estudiante.nombre?.toLowerCase() || '');
+                                  })
+                                  .map((datos, index) => (
+                                    <tr key={`${datos.estudiante.id}-${index}`} className="fila-estudiante">
+                                      <td style={{width: '3%', textAlign: 'center'}}>{index + 1}</td>
+                                      <td style={{width: '8%'}}>{datos.estudiante.codigo}</td>
+                                      <td style={{width: '18%'}}>{`${datos.estudiante.nombre || ''} ${datos.estudiante.apellido || ''}`}</td>
+                                      <td style={{width: '10%'}}>{datos.grupo.nombre_proyecto}</td>
+                                      <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.presentacion)}</td>
+                                      <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.sustentacion)}</td>
+                                      <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.documentacion)}</td>
+                                      <td style={{width: '7%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.innovacion)}</td>
+                                      <td style={{width: '7%', textAlign: 'center'}}>
+                                        <strong>{formatearNota(datos.rubrica?.nota_final)}</strong>
+                                      </td>
+                                      <td style={{width: '10%', textAlign: 'center'}}>{formatearFecha(datos.calificacion?.fecha)}</td>
+                                      <td style={{width: '13%', textAlign: 'center', whiteSpace: 'nowrap'}}>
+                                        <strong className={datos.resultado === 'APROBADO' ? 'aprobado' : datos.resultado === 'REPROBADO' ? 'reprobado' : ''}>
+                                          {datos.resultado}
+                                        </strong>
+                                      </td>
+                                    </tr>
+                                  ))
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    });
+                  } else {
+                    // Para otras carreras, mostrar sección normal sin paralelos
+                    const datosSeccion = datosCarreraSemestre['general'];
+                    if (!datosSeccion || datosSeccion.estudiantes.length === 0) return null;
+
+                    // Determinar las asignaturas únicas en esta sección
+                    const asignaturasSeccion = new Set();
+                    datosSeccion.estudiantes.forEach(datos => {
+                      if (datos.grupo && datos.grupo.materia) {
+                        asignaturasSeccion.add(datos.grupo.materia);
+                      } else if (datos.calificacion && datos.calificacion.asignatura) {
+                        asignaturasSeccion.add(datos.calificacion.asignatura);
+                      }
+                    });
+
+                    const asignaturasMostrar = Array.from(asignaturasSeccion).join(', ');
+
+                    return (
+                      <div key={`${carrera}-${semestre}`} className={`seccion-carrera-semestre ${semestreIndex > 0 ? 'nueva-seccion-pdf' : 'primera-seccion-pdf'}`}>
+                        {/* TÍTULO NORMAL: Sin paralelo para otras carreras */}
+                        <h3 className="evitar-salto-pagina">{carrera} - {semestre}° Semestre</h3>
+                        
+                        {/* Información de la asignatura */}
+                        <div className="info-asignatura evitar-salto-pagina">
+                          <h4>Asignatura: {asignaturasMostrar}</h4>
+                        </div>
+                        
+                        <div className="estadisticas-seccion evitar-salto-pagina">
+                          <p>Estudiantes: {datosSeccion.total} | Aprobados: {datosSeccion.aprobados} | Reprobados: {datosSeccion.reprobados} | Pendientes: {datosSeccion.pendientes}</p>
+                        </div>
+
+                        <div className="evaluacion-estudiantes">
+                          <table className="tabla-evaluacion">
+                            <thead>
+                              <tr>
+                                <th style={{width: '2%'}}>#</th>
+                                <th style={{width: '6%'}}>Código</th>
+                                <th style={{width: '13%'}}>Estudiante</th>
+                                <th style={{width: '10%'}}>Grupo</th>
+                                <th style={{width: '11%'}}>Presentación (30%)</th>
+                                <th style={{width: '11%'}}>Sustentación (30%)</th>
+                                <th style={{width: '11%'}}>Documentación (30%)</th>
+                                <th style={{width: '9%'}}>Innovación (10%)</th>
+                                <th style={{width: '7%'}}>Nota Final</th>
+                                <th style={{width: '10%'}}>Fecha Evaluación</th>
+                                <th style={{width: '10%'}}>Resultado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {datosSeccion.estudiantes
+                                .sort((a, b) => {
+                                  const apellidoA = a.estudiante.apellido?.toLowerCase() || '';
+                                  const apellidoB = b.estudiante.apellido?.toLowerCase() || '';
+                                  if (apellidoA !== apellidoB) return apellidoA.localeCompare(apellidoB);
+                                  return (a.estudiante.nombre?.toLowerCase() || '').localeCompare(b.estudiante.nombre?.toLowerCase() || '');
+                                })
+                                .map((datos, index) => (
+                                  <tr key={`${datos.estudiante.id}-${index}`} className="fila-estudiante">
+                                    <td style={{width: '3%', textAlign: 'center'}}>{index + 1}</td>
+                                    <td style={{width: '8%'}}>{datos.estudiante.codigo}</td>
+                                    <td style={{width: '18%'}}>{`${datos.estudiante.nombre || ''} ${datos.estudiante.apellido || ''}`}</td>
+                                    <td style={{width: '10%'}}>{datos.grupo.nombre_proyecto}</td>
+                                    <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.presentacion)}</td>
+                                    <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.sustentacion)}</td>
+                                    <td style={{width: '8%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.documentacion)}</td>
+                                    <td style={{width: '7%', textAlign: 'center'}}>{formatearNota(datos.rubrica?.innovacion)}</td>
+                                    <td style={{width: '7%', textAlign: 'center'}}>
+                                      <strong>{formatearNota(datos.rubrica?.nota_final)}</strong>
+                                    </td>
+                                    <td style={{width: '10%', textAlign: 'center'}}>{formatearFecha(datos.calificacion?.fecha)}</td>
+                                    <td style={{width: '13%', textAlign: 'center', whiteSpace: 'nowrap'}}>
+                                      <strong className={datos.resultado === 'APROBADO' ? 'aprobado' : datos.resultado === 'REPROBADO' ? 'reprobado' : ''}>
+                                        {datos.resultado}
+                                      </strong>
+                                    </td>
+                                  </tr>
+                                ))
+                              }
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  );
+                    );
+                  }
                 })
               ))}
 
@@ -661,7 +969,11 @@ function NotasInformes() {
               {Object.keys(obtenerDatosFiltradosActuales()).length === 0 || 
                Object.keys(obtenerDatosFiltradosActuales()).every(carrera => 
                   Object.keys(obtenerDatosFiltradosActuales()[carrera]).every(semestre => 
-                      !obtenerDatosFiltradosActuales()[carrera][semestre] || obtenerDatosFiltradosActuales()[carrera][semestre].estudiantes.length === 0
+                      !obtenerDatosFiltradosActuales()[carrera][semestre] || 
+                      Object.keys(obtenerDatosFiltradosActuales()[carrera][semestre]).every(paraleloOGeneral =>
+                        !obtenerDatosFiltradosActuales()[carrera][semestre][paraleloOGeneral] || 
+                        obtenerDatosFiltradosActuales()[carrera][semestre][paraleloOGeneral].estudiantes.length === 0
+                      )
                   )
                ) ? (
                 <div className="empty-state">

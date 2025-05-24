@@ -61,6 +61,17 @@
   text-align: left;
 }
 
+.header-asignacion {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.paralelos-info {
+  color: #f39c12;
+  font-weight: 600;
+}
+
 /* =================
    Filtros en línea
    ================= */
@@ -210,13 +221,14 @@
 }
 
 /* =================
-   Tabla de grupos
+   Tabla de grupos - SOLO CAMBIOS EN DISTRIBUCIÓN
    ================= */
 .sup-grupos-tabla {
   width: 100%;
   min-width: 800px; /* Asegura que la tabla tenga un ancho mínimo */
 }
 
+/* TABLA SIN PARALELOS (6 columnas) - ORIGINAL */
 .sup-tabla-header {
   display: grid;
   grid-template-columns: 3fr 1.2fr 0.5fr 1.5fr 1fr 1.2fr;
@@ -235,6 +247,17 @@
   border-bottom: 1px solid #eee;
   align-items: center;
   transition: background-color 0.3s ease;
+}
+
+/* TABLA CON PARALELOS (7 columnas) - NUEVA DISTRIBUCIÓN */
+.sup-grupos-tabla.con-paralelos .sup-tabla-header {
+  grid-template-columns: 2.8fr 1.2fr 0.5fr 0.6fr 1.4fr 1fr 1.2fr;
+  min-width: 900px;
+}
+
+.sup-grupos-tabla.con-paralelos .sup-tabla-fila {
+  grid-template-columns: 2.8fr 1.2fr 0.5fr 0.6fr 1.4fr 1fr 1.2fr;
+  min-width: 900px;
 }
 
 .sup-tabla-fila:hover {
@@ -265,6 +288,7 @@
 
 .sup-col-carrera,
 .sup-col-semestre,
+.sup-col-paralelo,
 .sup-col-materia,
 .sup-col-estado {
   text-align: center;

@@ -20,6 +20,54 @@ const validateGrupoId = (grupoId) => {
   // Nota: Ahora permitimos que grupoId sea null o undefined
 };
 
+/**
+ * Valida y normaliza el campo paralelo según la carrera
+ */
+export const validarYNormalizarParalelo = (carrera, paralelo) => {
+  if (carrera === 'Ciencias Básicas') {
+    // Para Ciencias Básicas, el paralelo es obligatorio y debe ser A-F
+    if (!paralelo || !['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(paralelo.toUpperCase())) {
+      throw new Error('Para Ciencias Básicas el paralelo es obligatorio y debe ser A, B, C, D, E, F o G');
+    }
+    return paralelo.toUpperCase();
+  } else {
+    // Para otras carreras, siempre usar 'A'
+    return 'A';
+  }
+};
+
+/**
+ * Valida los datos del estudiante incluyendo la lógica de paralelos
+ */
+export const validarDatosEstudiante = (datos) => {
+  const { nombre, apellido, codigo, carrera, semestre, unidad_educativa, paralelo } = datos;
+  
+  // Validar campos básicos
+  if (!nombre || !apellido || !codigo || !carrera || !semestre || !unidad_educativa) {
+    throw new Error('Todos los campos básicos son obligatorios: nombre, apellido, código, carrera, semestre, unidad_educativa');
+  }
+  
+  // Validar que el semestre sea apropiado para la carrera
+  const semestreNum = parseInt(semestre);
+  if (carrera === 'Ciencias Básicas') {
+    if (semestreNum !== 1 && semestreNum !== 2) {
+      throw new Error('Ciencias Básicas solo puede tener semestres 1 o 2');
+    }
+  } else {
+    if (semestreNum < 3 || semestreNum > 10) {
+      throw new Error('Las carreras regulares deben tener semestres entre 3 y 10');
+    }
+  }
+  
+  // Validar y normalizar paralelo
+  const paraleloValidado = validarYNormalizarParalelo(carrera, paralelo);
+  
+  return {
+    ...datos,
+    paralelo: paraleloValidado
+  };
+};
+
 // Función para obtener todos los estudiantes con paginación y filtrado opcional
 export const getEstudiantes = async (page = 1, limit = 10, filters = {}) => {
   try {
@@ -64,22 +112,11 @@ export const verificarDependenciasEstudiante = async (id) => {
 // Función para crear un nuevo estudiante con validación de datos
 export const createEstudiante = async (estudianteData) => {
   try {
-    // Validaciones de datos obligatorios
-    if (!estudianteData.nombre || !estudianteData.apellido || 
-        !estudianteData.codigo || !estudianteData.carrera || 
-        !estudianteData.semestre || !estudianteData.unidad_educativa) {
-      throw new Error('Todos los campos obligatorios deben estar presentes');
-    }
-    
-    validateCodigo(estudianteData.codigo);
-    
-    // Si grupo_id está presente, validarlo
-    if (estudianteData.grupo_id) {
-      validateGrupoId(estudianteData.grupo_id);
-    }
+    // Validar y normalizar datos
+    const datosValidados = validarDatosEstudiante(estudianteData);
     
     const response = await api.post('/api/estudiantes/create', {
-      ...estudianteData,
+      ...datosValidados,
       createdAt: new Date().toISOString() // Añadir timestamp de creación
     });
     return response.data;
@@ -94,28 +131,17 @@ export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = f
   try {
     validateId(id);
     
-    // Validar campos obligatorios si están presentes
-    if (estudianteData.codigo) {
-      validateCodigo(estudianteData.codigo);
-    }
+    // Validar y normalizar datos
+    const datosValidados = validarDatosEstudiante(estudianteData);
     
-    if (estudianteData.grupo_id !== null && estudianteData.grupo_id !== undefined) {
-      validateGrupoId(estudianteData.grupo_id);
-    }
-    
-    // Obtener el estudiante actual para detectar cambios críticos
-    const estudianteActual = await getEstudianteById(id);
-    const cambioSemestre = estudianteData.semestre && estudianteData.semestre.toString() !== estudianteActual.semestre.toString();
-    const cambioCarrera = estudianteData.carrera && estudianteData.carrera !== estudianteActual.carrera;
-    
-    // Si hay cambios críticos, añadir parámetro de confirmación
+    // Construir URL con parámetro de confirmación si es necesario
     let url = `/api/estudiantes/update/${id}`;
-    if ((cambioSemestre || cambioCarrera) && confirmarLimpieza) {
-      url += `?confirmar_limpieza=true`;
+    if (confirmarLimpieza) {
+      url += '?confirmar_limpieza=true';
     }
     
     const response = await api.put(url, {
-      ...estudianteData,
+      ...datosValidados,
       updatedAt: new Date().toISOString() // Añadir timestamp de actualización
     });
     
@@ -135,7 +161,6 @@ export const updateEstudiante = async (id, estudianteData, confirmarLimpieza = f
     throw error;
   }
 };
-
 
 // Función para eliminar un estudiante por su ID con validación y confirmación
 export const deleteEstudiante = async (id, confirmar = false) => {
@@ -207,6 +232,97 @@ export const getEstudiantesBySemestre = async (semestre) => {
     throw error;
   }
 };
+
+// ===== NUEVAS FUNCIONES PARA PARALELOS =====
+
+/**
+ * NUEVA FUNCIÓN: Obtener estudiantes por carrera y paralelo
+ */
+export const getEstudiantesByCarreraYParalelo = async (carrera, paralelo) => {
+  try {
+    if (!carrera || typeof carrera !== 'string') {
+      throw new Error('Carrera inválida');
+    }
+    if (!paralelo || typeof paralelo !== 'string') {
+      throw new Error('Paralelo inválido');
+    }
+    
+    const response = await api.get(`/api/estudiantes/carrera-paralelo/${carrera}/${paralelo}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error en getEstudiantesByCarreraYParalelo:', error);
+    throw error;
+  }
+};
+
+/**
+ * NUEVA FUNCIÓN: Obtener estudiantes por semestre, carrera y paralelo
+ */
+export const getEstudiantesBySemestreCarreraYParalelo = async (semestre, carrera, paralelo) => {
+  try {
+    if (!semestre || (typeof semestre !== 'number' && typeof semestre !== 'string')) {
+      throw new Error('Semestre inválido');
+    }
+    if (!carrera || typeof carrera !== 'string') {
+      throw new Error('Carrera inválida');
+    }
+    if (!paralelo || typeof paralelo !== 'string') {
+      throw new Error('Paralelo inválido');
+    }
+    
+    const response = await api.get(`/api/estudiantes/semestre-carrera-paralelo/${semestre}/${carrera}/${paralelo}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error en getEstudiantesBySemestreCarreraYParalelo:', error);
+    throw error;
+  }
+};
+
+/**
+ * NUEVA FUNCIÓN: Obtener paralelos disponibles para una carrera
+ */
+export const getParalelosDisponiblesByCarrera = async (carrera) => {
+  try {
+    if (!carrera || typeof carrera !== 'string') {
+      throw new Error('Carrera inválida');
+    }
+    
+    const response = await api.get(`/api/estudiantes/paralelos-disponibles/${carrera}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error en getParalelosDisponiblesByCarrera:', error);
+    throw error;
+  }
+};
+
+/**
+ * NUEVA FUNCIÓN: Verificar si un código está disponible
+ */
+export const verificarCodigoDisponible = async (codigo, semestre, paralelo, excludeId = null) => {
+  try {
+    if (!codigo || !semestre || !paralelo) {
+      throw new Error('Se requieren código, semestre y paralelo');
+    }
+    
+    const params = {
+      codigo,
+      semestre,
+      paralelo
+    };
+    
+    if (excludeId) {
+      params.exclude_id = excludeId;
+    }
+    
+    const response = await api.get('/api/estudiantes/verificar-codigo-disponible', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error en verificarCodigoDisponible:', error);
+    throw error;
+  }
+};
+
+// ===== FUNCIONES EXISTENTES ACTUALIZADAS =====
 
 export const asignarEstudianteAGrupo = async (estudianteId, grupoId) => {
   try {
@@ -310,6 +426,70 @@ export const obtenerResumenDependencias = (dependencias) => {
   return `El estudiante tiene: ${resumen.join(", ")}`;
 };
 
+// ===== FUNCIONES DE UTILIDAD PARA PARALELOS =====
+
+/**
+ * Obtener semestres disponibles según la carrera
+ */
+export const getSemestresDisponibles = (carrera) => {
+  // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
+  if (carrera === 'Ciencias Básicas') {
+    return [
+      { value: '1', label: 'Primer Semestre' },
+      { value: '2', label: 'Segundo Semestre' }
+    ];
+  }
+  
+  // Para el resto de carreras (3ro a 10mo)
+  return [
+    { value: '3', label: 'Tercer Semestre' },
+    { value: '4', label: 'Cuarto Semestre' },
+    { value: '5', label: 'Quinto Semestre' },
+    { value: '6', label: 'Sexto Semestre' },
+    { value: '7', label: 'Séptimo Semestre' },
+    { value: '8', label: 'Octavo Semestre' },
+    { value: '9', label: 'Noveno Semestre' },
+    { value: '10', label: 'Décimo Semestre' }
+  ];
+};
+
+/**
+ * Obtener paralelos disponibles según la carrera
+ */
+export const getParalelosDisponibles = (carrera) => {
+  if (carrera === 'Ciencias Básicas') {
+    return [
+      { value: 'A', label: 'Paralelo A' },
+      { value: 'B', label: 'Paralelo B' },
+      { value: 'C', label: 'Paralelo C' },
+      { value: 'D', label: 'Paralelo D' },
+      { value: 'E', label: 'Paralelo E' },
+      { value: 'F', label: 'Paralelo F' },
+      { value: 'G', label: 'Paralelo G' }
+    ];
+  }
+  
+  // Para otras carreras, solo paralelo A (pero generalmente no se muestra)
+  return [
+    { value: 'A', label: 'Paralelo A' }
+  ];
+};
+
+/**
+ * Verificar si una carrera necesita mostrar el selector de paralelo
+ */
+export const carreraNecesitaParalelo = (carrera) => {
+  return carrera === 'Ciencias Básicas';
+};
+
+/**
+ * Obtener el paralelo por defecto para una carrera
+ */
+export const getParaleloPorDefecto = (carrera) => {
+  // Todas las carreras usan 'A' por defecto
+  return 'A';
+};
+
 export default {
   getEstudiantes,
   getEstudianteById,
@@ -323,7 +503,20 @@ export default {
   getEstudiantesConEstadoGrupo,
   getEstudiantesBySemestreYCarrera,
   getEstudiantesByMateria,
-  // Nuevas funciones:
+  // Funciones de dependencias:
   verificarDependenciasEstudiante,
-  obtenerResumenDependencias
+  obtenerResumenDependencias,
+  // Nuevas funciones para paralelos:
+  getEstudiantesByCarreraYParalelo,
+  getEstudiantesBySemestreCarreraYParalelo,
+  getParalelosDisponiblesByCarrera,
+  verificarCodigoDisponible,
+  // Funciones de utilidad:
+  validarYNormalizarParalelo,
+  validarDatosEstudiante,
+  getSemestresDisponibles,
+  getParalelosDisponibles,
+  carreraNecesitaParalelo,
+  getParaleloPorDefecto,
+  validateCodigo
 };

@@ -3,7 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/crearGrupos.css';
-import { createGrupo } from '../../../service/grupoService';
+import { 
+  createGrupo,
+  getSemestresDisponibles,
+  getParalelosDisponibles,
+  carreraNecesitaParalelo,
+  getParaleloPorDefecto,
+  validarDatosGrupo
+} from '../../../service/grupoService';
 import MATERIAS_POR_SEMESTRE from '../../../util/materias/materias_sis';
 import MATERIAS_POR_SEMESTRE_ETN from '../../../util/materias/materias_etn';
 import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
@@ -16,10 +23,12 @@ import 'react-toastify/dist/ReactToastify.css';
 function CrearGrupos() {
   const navigate = useNavigate();
   
+  // Estado del formulario principal (incluye paralelo)
   const [formData, setFormData] = useState({
     nombre_proyecto: '',
     carrera: '',
     semestre: '',
+    paralelo: '', // Nuevo campo para paralelos
     materia: ''
   });
   
@@ -29,12 +38,14 @@ function CrearGrupos() {
     nombre_proyecto: false,
     carrera: false,
     semestre: false,
+    paralelo: true, // Inicialmente true porque puede no ser requerido
     materia: false
   });
   
-  // Estado para las carreras asignadas al docente
+  // Estados para carreras y paralelos
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
 
   // Mapa de todas las carreras disponibles en el sistema
   const TODAS_CARRERAS = [
@@ -46,62 +57,43 @@ function CrearGrupos() {
     { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
   ];
 
+  // Obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
+
   // Cargar las carreras asignadas al docente cuando el componente se monta
   useEffect(() => {
-    const obtenerCarrerasDocente = () => {
-      try {
-        const usuarioStr = sessionStorage.getItem('usuario');
-        if (usuarioStr) {
-          const usuario = JSON.parse(usuarioStr);
-          if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
-            setCarrerasAsignadas(usuario.carreras);
-            
-            // Filtrar las carreras disponibles basadas en las asignadas al docente
-            const carreras = TODAS_CARRERAS.filter(carrera => 
-              usuario.carreras.includes(carrera.value)
-            );
-            setCarrerasDisponibles(carreras);
-          } else {
-            toast.error("No tiene carreras asignadas. Contacte con el administrador.");
-          }
-        } else {
-          toast.error("No se pudo obtener la información del usuario. Por favor, vuelva a iniciar sesión.");
-          // Redireccionar al login si no hay datos de usuario
-          setTimeout(() => {
-            navigate('/login');
-          }, 2000);
-        }
-      } catch (error) {
-        console.error("Error al obtener carreras del docente:", error);
-        toast.error("Error al cargar sus datos. Por favor, vuelva a iniciar sesión.");
-      }
-    };
+    const carreras = obtenerCarrerasDocente();
+    setCarrerasAsignadas(carreras);
     
-    obtenerCarrerasDocente();
-  }, [navigate]);
-
-  // Función para obtener semestres disponibles según la carrera
-  const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Ciencias Básicas') {
-      return [
-        { value: '1', label: 'Primer Semestre' },
-        { value: '2', label: 'Segundo Semestre' }
-      ];
+    // Verificar si el docente tiene Ciencias Básicas asignada
+    const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+    setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
+    
+    // Filtrar las carreras disponibles basadas en las asignadas al docente
+    const carrerasFiltradas = TODAS_CARRERAS.filter(carrera => 
+  carreras.includes(carrera.value)
+);
+setCarrerasDisponibles(carrerasFiltradas);
+    
+    // Si no hay carreras asignadas, mostrar mensaje de error
+    if (carreras.length === 0) {
+      toast.error("No tiene carreras asignadas. Contacte con el administrador.");
     }
-    
-    // Para el resto de carreras (3ro a 10mo)
-    return [
-      { value: '3', label: 'Tercer Semestre' },
-      { value: '4', label: 'Cuarto Semestre' },
-      { value: '5', label: 'Quinto Semestre' },
-      { value: '6', label: 'Sexto Semestre' },
-      { value: '7', label: 'Séptimo Semestre' },
-      { value: '8', label: 'Octavo Semestre' },
-      { value: '9', label: 'Noveno Semestre' },
-      { value: '10', label: 'Décimo Semestre' }
-    ];
-  };
+  }, []);
 
   // Función para obtener el objeto de materias según la carrera
   const getMateriasCarrera = (carrera) => {
@@ -123,6 +115,44 @@ function CrearGrupos() {
     }
   };
 
+  // Efecto para validar los campos requeridos (incluye lógica de paralelo)
+  useEffect(() => {
+    const { nombre_proyecto, carrera, semestre, paralelo, materia } = formData;
+    
+    // Determinar si el paralelo es requerido
+    const paraleloRequerido = carreraNecesitaParalelo(carrera);
+    
+    setValidFields(prevState => ({
+      ...prevState,
+      nombre_proyecto: nombre_proyecto.trim() !== '',
+      carrera: carrera !== '',
+      semestre: semestre !== '',
+      paralelo: paraleloRequerido ? (paralelo !== '') : true, // Solo requerido para Ciencias Básicas
+      materia: materia !== ''
+    }));
+  }, [formData]);
+
+  // Efecto para auto-asignar paralelo por defecto cuando cambia la carrera
+  useEffect(() => {
+    if (formData.carrera) {
+      const paraleloDefecto = getParaleloPorDefecto(formData.carrera);
+      
+      // Solo auto-asignar si no es Ciencias Básicas (para Ciencias Básicas debe seleccionar manualmente)
+      if (!carreraNecesitaParalelo(formData.carrera)) {
+        setFormData(prev => ({
+          ...prev,
+          paralelo: paraleloDefecto
+        }));
+      } else if (!formData.paralelo) {
+        // Para Ciencias Básicas, limpiar el paralelo para forzar selección manual
+        setFormData(prev => ({
+          ...prev,
+          paralelo: ''
+        }));
+      }
+    }
+  }, [formData.carrera]);
+
   // Actualizar la lista de materias cuando cambia el semestre o la carrera
   useEffect(() => {
     if (formData.semestre && formData.carrera) {
@@ -142,16 +172,6 @@ function CrearGrupos() {
       setMaterias([]);
     }
   }, [formData.semestre, formData.carrera]);
-  
-  // Verificar validez de los campos
-  useEffect(() => {
-    setValidFields({
-      nombre_proyecto: formData.nombre_proyecto.trim() !== '',
-      carrera: formData.carrera !== '',
-      semestre: formData.semestre !== '',
-      materia: formData.materia !== ''
-    });
-  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -164,12 +184,13 @@ function CrearGrupos() {
       }
     }
     
-    // Si cambia la carrera, resetear también el semestre
+    // Si cambia la carrera, resetear también el semestre, paralelo y materia
     if (name === 'carrera') {
       setFormData({
         ...formData,
         [name]: value,
         semestre: '',
+        paralelo: '', // Resetear paralelo para que se auto-asigne o requiera selección
         materia: ''
       });
     } else {
@@ -189,9 +210,23 @@ function CrearGrupos() {
       if (!carrerasAsignadas.includes(formData.carrera)) {
         throw new Error("No tiene permisos para crear grupos en esta carrera");
       }
+
+      // Validar paralelo para Ciencias Básicas
+      if (carreraNecesitaParalelo(formData.carrera) && !formData.paralelo) {
+        toast.error('El paralelo es obligatorio para Ciencias Básicas');
+        setLoading(false);
+        return;
+      }
       
-      // La función createGrupo ya se encargará de obtener el ID del docente actual
-      const grupoCreado = await createGrupo(formData);
+      // Preparar datos del grupo usando validación del servicio
+      const datosGrupo = {
+        nombre_proyecto: formData.nombre_proyecto,
+        carrera: formData.carrera,
+        semestre: formData.semestre,
+        paralelo: formData.paralelo || getParaleloPorDefecto(formData.carrera),
+        materia: formData.materia
+      };
+      const grupoCreado = await createGrupo(datosGrupo);
       
       // Notificación de éxito
       toast.success('Grupo creado exitosamente. Redirigiendo a asignación de estudiantes...', {
@@ -210,6 +245,7 @@ function CrearGrupos() {
         nombre_proyecto: '',
         carrera: '',
         semestre: '',
+        paralelo: '',
         materia: ''
       });
       
@@ -236,8 +272,17 @@ function CrearGrupos() {
     return '';
   };
 
-  // Obtener los semestres disponibles según la carrera seleccionada
+  // Verificar si todos los campos son válidos para habilitar el botón de envío
+  const formIsValid = () => {
+    return Object.values(validFields).every(valid => valid === true);
+  };
+
+  // Determinar si mostrar el campo de paralelo
+  const mostrarCampoParalelo = docenteTieneCienciasBasicas && carreraNecesitaParalelo(formData.carrera);
+  
+  // Obtener los semestres y paralelos disponibles según la carrera seleccionada
   const semestresDisponibles = getSemestresDisponibles(formData.carrera);
+  const paralelosDisponibles = getParalelosDisponibles(formData.carrera);
 
   return (
     <Layout>
@@ -311,6 +356,33 @@ function CrearGrupos() {
                 <p className="help-text">Seleccione primero una carrera.</p>
               )}
             </div>
+
+            {/* Campo de paralelo - Solo visible cuando es relevante */}
+            {mostrarCampoParalelo && (
+              <div className={`form-group ${getFieldClass('paralelo')} paralelo-field`}>
+                <label htmlFor="paralelo">
+                  Paralelo:
+                  <span className="required-indicator">*</span>
+                </label>
+                <select
+                  id="paralelo"
+                  name="paralelo"
+                  value={formData.paralelo}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccione un paralelo</option>
+                  {paralelosDisponibles.map((paralelo, index) => (
+                    <option key={index} value={paralelo.value}>
+                      {paralelo.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="help-text">
+                  Solo podrá asignar estudiantes del mismo paralelo a este grupo.
+                </p>
+              </div>
+            )}
             
             {/* Campo para materia */}
             <div className={`form-group ${getFieldClass('materia')}`}>
@@ -343,13 +415,14 @@ function CrearGrupos() {
                 type="button" 
                 className="btn-cancelar" 
                 onClick={handleCancel}
+                disabled={loading}
               >
                 Cancelar
               </button>
               <button 
                 type="submit" 
                 className={`btn-guardar ${loading ? 'loading' : ''}`}
-                disabled={loading || Object.values(validFields).some(valid => !valid) || carrerasAsignadas.length === 0}
+                disabled={loading || !formIsValid() || carrerasAsignadas.length === 0}
               >
                 {loading ? 'Guardando...' : 'Guardar Grupo'}
               </button>

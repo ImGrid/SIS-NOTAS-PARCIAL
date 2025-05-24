@@ -1,29 +1,37 @@
-// src/components/Estudiantes/pages/crearEstudiante.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../Docentes/sidebar';
 import '../../Docentes/style/docente.css';
 import '../style/crearEstudiante.css';
-import api from '../../../service/api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { 
+  createEstudiante,
+  getSemestresDisponibles,
+  getParalelosDisponibles,
+  carreraNecesitaParalelo,
+  getParaleloPorDefecto,
+  validarDatosEstudiante,
+  verificarCodigoDisponible
+} from '../../../service/estudianteService';
 
 function CrearEstudiante() {
   const navigate = useNavigate();
   
-  // Estado base del formulario
+  // Estado base del formulario con paralelo
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
     codigo: '',
     carrera: '',
     semestre: '',
-    unidad_educativa: 'Cochabamba' // Valor predeterminado
+    paralelo: '', // Nuevo campo para paralelos
+    unidad_educativa: 'Cochabamba'
   });
   
   // Estados para estudiantes con múltiples semestres
   const [multiSemestre, setMultiSemestre] = useState(false);
-  const [cantidadSemestres, setCantidadSemestres] = useState(1); // Por defecto 1
+  const [cantidadSemestres, setCantidadSemestres] = useState(1);
   const [semestresAdicionales, setSemestresAdicionales] = useState({
     semestre2: '',
     semestre3: ''
@@ -31,24 +39,30 @@ function CrearEstudiante() {
   
   // Estados de carga y validación
   const [loading, setLoading] = useState(false);
-  const [creacionExitosa, setCreacionExitosa] = useState(0); // Contador de creaciones exitosas
+  const [creacionExitosa, setCreacionExitosa] = useState(0);
   const [creacionFallida, setCreacionFallida] = useState(false);
   
-  // Estado para validación de campos
+  // Estado para validación de campos (incluye paralelo)
   const [validFields, setValidFields] = useState({
     nombre: false,
     apellido: false,
     codigo: false,
     carrera: false,
     semestre: false,
-    semestre2: true, // Inicialmente true porque no se usa
-    semestre3: true, // Inicialmente true porque no se usa
-    unidad_educativa: true // Inicialmente verdadero ya que tiene valor predeterminado
+    paralelo: true, // Inicialmente true porque puede no ser requerido
+    semestre2: true,
+    semestre3: true,
+    unidad_educativa: true
   });
 
-  // Estado para carreras asignadas al docente
+  // Estados para carreras y paralelos
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
+  
+  // Estados para validación de código
+  const [validandoCodigo, setValidandoCodigo] = useState(false);
+  const [codigoDisponible, setCodigoDisponible] = useState(true);
 
   // Obtener las carreras del docente desde sessionStorage
   const obtenerCarrerasDocente = () => {
@@ -72,20 +86,19 @@ function CrearEstudiante() {
     const carreras = obtenerCarrerasDocente();
     setCarrerasAsignadas(carreras);
     
-    // Filtrar las opciones de carreras para el selector
-    const opcionesCarreras = [];
+    // Verificar si el docente tiene Ciencias Básicas asignada
+    const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+    setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
     
-    // Solo incluir carreras que el docente tenga asignadas
-    carreras.forEach(carrera => {
-      opcionesCarreras.push({
-        value: carrera,
-        label: carrera
-      });
-    });
+    // Filtrar las opciones de carreras para el selector
+    const opcionesCarreras = carreras.map(carrera => ({
+      value: carrera,
+      label: carrera
+    }));
     
     setCarrerasDisponibles(opcionesCarreras);
     
-    // Si no hay carreras asignadas, mostrar un mensaje y redirigir
+    // Si no hay carreras asignadas, mostrar mensaje y redirigir
     if (carreras.length === 0) {
       toast.error("No tiene carreras asignadas. Contacte con el administrador para que le asigne carreras.");
       setTimeout(() => {
@@ -94,32 +107,12 @@ function CrearEstudiante() {
     }
   }, [navigate]);
 
-  // Obtener semestres disponibles según la carrera
-  const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Ciencias Básicas') {
-      return [
-        { value: '1', label: 'Primer Semestre' },
-        { value: '2', label: 'Segundo Semestre' }
-      ];
-    }
-    
-    // Para el resto de carreras (3ro a 10mo)
-    return [
-      { value: '3', label: 'Tercer Semestre' },
-      { value: '4', label: 'Cuarto Semestre' },
-      { value: '5', label: 'Quinto Semestre' },
-      { value: '6', label: 'Sexto Semestre' },
-      { value: '7', label: 'Séptimo Semestre' },
-      { value: '8', label: 'Octavo Semestre' },
-      { value: '9', label: 'Noveno Semestre' },
-      { value: '10', label: 'Décimo Semestre' }
-    ];
-  };
-
-  // Efecto para validar los campos requeridos
+  // Efecto para validar los campos requeridos (incluye lógica de paralelo)
   useEffect(() => {
-    const { nombre, apellido, codigo, carrera, semestre, unidad_educativa } = formData;
+    const { nombre, apellido, codigo, carrera, semestre, paralelo, unidad_educativa } = formData;
+    
+    // Determinar si el paralelo es requerido
+    const paraleloRequerido = carreraNecesitaParalelo(carrera);
     
     // Actualizar validación de campos principales
     setValidFields(prevState => ({
@@ -129,6 +122,7 @@ function CrearEstudiante() {
       codigo: codigo.trim() !== '',
       carrera: carrera !== '',
       semestre: semestre !== '',
+      paralelo: paraleloRequerido ? (paralelo !== '') : true, // Solo requerido para Ciencias Básicas
       unidad_educativa: unidad_educativa.trim() !== ''
     }));
   }, [formData]);
@@ -142,7 +136,6 @@ function CrearEstudiante() {
         semestre3: cantidadSemestres === 3 ? semestresAdicionales.semestre3 !== '' : true
       }));
     } else {
-      // Si no es multi-semestre, estos campos siempre son válidos
       setValidFields(prevState => ({
         ...prevState,
         semestre2: true,
@@ -151,11 +144,57 @@ function CrearEstudiante() {
     }
   }, [multiSemestre, cantidadSemestres, semestresAdicionales]);
 
+  // Efecto para auto-asignar paralelo por defecto cuando cambia la carrera
+  useEffect(() => {
+    if (formData.carrera) {
+      const paraleloDefecto = getParaleloPorDefecto(formData.carrera);
+      
+      // Solo auto-asignar si no es Ciencias Básicas (para Ciencias Básicas debe seleccionar manualmente)
+      if (!carreraNecesitaParalelo(formData.carrera)) {
+        setFormData(prev => ({
+          ...prev,
+          paralelo: paraleloDefecto
+        }));
+      } else if (!formData.paralelo) {
+        // Para Ciencias Básicas, limpiar el paralelo para forzar selección manual
+        setFormData(prev => ({
+          ...prev,
+          paralelo: ''
+        }));
+      }
+    }
+  }, [formData.carrera]);
+
+  // Efecto para validar código en tiempo real
+  useEffect(() => {
+    const validarCodigoDisponible = async () => {
+      if (formData.codigo && formData.semestre && formData.paralelo) {
+        setValidandoCodigo(true);
+        try {
+          const respuesta = await verificarCodigoDisponible(
+            formData.codigo,
+            formData.semestre,
+            formData.paralelo
+          );
+          setCodigoDisponible(respuesta.disponible);
+        } catch (error) {
+          console.error('Error al verificar código:', error);
+          setCodigoDisponible(true); // Asumir disponible en caso de error
+        } finally {
+          setValidandoCodigo(false);
+        }
+      }
+    };
+
+    // Debounce la validación para evitar demasiadas peticiones
+    const timeoutId = setTimeout(validarCodigoDisponible, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.codigo, formData.semestre, formData.paralelo]);
+
   // Manejar cambio en checkbox de múltiples semestres
   const handleMultiSemestreChange = () => {
     setMultiSemestre(!multiSemestre);
     
-    // Si se desactiva, resetear cantidad y semestres adicionales
     if (multiSemestre) {
       setCantidadSemestres(1);
       setSemestresAdicionales({
@@ -163,7 +202,7 @@ function CrearEstudiante() {
         semestre3: ''
       });
     } else {
-      setCantidadSemestres(2); // Por defecto, seleccionar 2 semestres
+      setCantidadSemestres(2);
     }
   };
 
@@ -172,7 +211,6 @@ function CrearEstudiante() {
     const cantidad = parseInt(e.target.value);
     setCantidadSemestres(cantidad);
     
-    // Si se reduce de 3 a 2, limpiar el semestre3
     if (cantidad === 2) {
       setSemestresAdicionales(prev => ({
         ...prev,
@@ -186,11 +224,12 @@ function CrearEstudiante() {
     const { name, value } = e.target;
     
     if (name === 'carrera') {
-      // Si cambia la carrera, resetear todos los semestres
+      // Si cambia la carrera, resetear semestre y paralelo
       setFormData({
         ...formData,
         [name]: value,
-        semestre: '' // Resetear semestre cuando cambia la carrera
+        semestre: '',
+        paralelo: '' // Resetear paralelo para que se auto-asigne o requiera selección
       });
       
       setSemestresAdicionales({
@@ -223,15 +262,23 @@ function CrearEstudiante() {
 
   // Función para crear un estudiante en un semestre específico
   const crearEstudianteEnSemestre = async (semestreValue) => {
-    const estudianteData = {
-      ...formData,
-      semestre: semestreValue,
-      codigo: formData.codigo.toUpperCase(),
-      grupo_id: null // El estudiante se crea sin grupo
-    };
-    
     try {
-      await api.post('/api/estudiantes/create', estudianteData);
+      // Validar datos antes de enviar
+      const datosEstudiante = {
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        codigo: formData.codigo.toUpperCase(),
+        carrera: formData.carrera,
+        semestre: semestreValue,
+        paralelo: formData.paralelo || getParaleloPorDefecto(formData.carrera),
+        unidad_educativa: formData.unidad_educativa
+      };
+
+      // Usar la función de validación del servicio
+      const datosValidados = validarDatosEstudiante(datosEstudiante);
+      
+      // Crear el estudiante
+      await createEstudiante(datosValidados);
       return true;
     } catch (error) {
       console.error(`Error al crear estudiante en semestre ${semestreValue}:`, error);
@@ -251,18 +298,28 @@ function CrearEstudiante() {
       const { nombre, apellido, codigo, carrera, semestre, unidad_educativa } = formData;
       
       if (!nombre || !apellido || !codigo || !carrera || !semestre || !unidad_educativa) {
-        toast.error('Todos los campos son obligatorios', {
-          className: 'toast-notification'
-        });
+        toast.error('Todos los campos básicos son obligatorios');
+        setLoading(false);
+        return;
+      }
+
+      // Validar paralelo para Ciencias Básicas
+      if (carreraNecesitaParalelo(carrera) && !formData.paralelo) {
+        toast.error('El paralelo es obligatorio para Ciencias Básicas');
         setLoading(false);
         return;
       }
       
       // Verificar que la carrera esté entre las asignadas al docente
       if (!carrerasAsignadas.includes(carrera)) {
-        toast.error('No tiene permiso para crear estudiantes en esta carrera', {
-          className: 'toast-notification'
-        });
+        toast.error('No tiene permiso para crear estudiantes en esta carrera');
+        setLoading(false);
+        return;
+      }
+
+      // Verificar disponibilidad de código
+      if (!codigoDisponible) {
+        toast.error('El código ya está en uso para este semestre y paralelo');
         setLoading(false);
         return;
       }
@@ -272,11 +329,7 @@ function CrearEstudiante() {
         await crearEstudianteEnSemestre(semestre);
         setCreacionExitosa(1);
         
-        toast.success('Estudiante registrado exitosamente', {
-          className: 'toast-notification'
-        });
-        
-        // Resetear el formulario
+        toast.success('Estudiante registrado exitosamente');
         resetForm();
       } else {
         // Para multi-semestre, crear un estudiante por cada semestre seleccionado
@@ -293,9 +346,7 @@ function CrearEstudiante() {
         // Verificar que no haya semestres duplicados
         const semestresUnicos = [...new Set(semestresSeleccionados)];
         if (semestresUnicos.length !== semestresSeleccionados.length) {
-          toast.error('No se puede registrar al estudiante en el mismo semestre más de una vez', {
-            className: 'toast-notification'
-          });
+          toast.error('No se puede registrar al estudiante en el mismo semestre más de una vez');
           setLoading(false);
           return;
         }
@@ -308,10 +359,8 @@ function CrearEstudiante() {
             await crearEstudianteEnSemestre(semestreValue);
             exitosos++;
           } catch (error) {
-            // Si falla uno, continuar con los siguientes
             setCreacionFallida(true);
             
-            // Mostrar error específico solo para el primer semestre
             if (exitosos === 0) {
               handleError(error);
             }
@@ -322,20 +371,12 @@ function CrearEstudiante() {
         setCreacionExitosa(exitosos);
         
         if (exitosos === semestresSeleccionados.length) {
-          toast.success(`Estudiante registrado exitosamente en ${exitosos} semestres`, {
-            className: 'toast-notification'
-          });
-          
-          // Resetear formulario solo si todos fueron exitosos
+          toast.success(`Estudiante registrado exitosamente en ${exitosos} semestres`);
           resetForm();
         } else if (exitosos > 0) {
-          toast.warning(`Se registró al estudiante en ${exitosos} de ${semestresSeleccionados.length} semestres`, {
-            className: 'toast-notification'
-          });
+          toast.warning(`Se registró al estudiante en ${exitosos} de ${semestresSeleccionados.length} semestres`);
         } else {
-          toast.error('No se pudo registrar al estudiante en ningún semestre', {
-            className: 'toast-notification'
-          });
+          toast.error('No se pudo registrar al estudiante en ningún semestre');
         }
       }
     } catch (err) {
@@ -349,20 +390,11 @@ function CrearEstudiante() {
   // Función auxiliar para manejar errores
   const handleError = (err) => {
     if (err.response && err.response.data && err.response.data.error) {
-      // Mostrar el mensaje de error exacto que viene del servidor
-      toast.error(err.response.data.error, {
-        className: 'toast-notification'
-      });
+      toast.error(err.response.data.error);
     } else if (err.message && err.message !== 'An error occurred') {
-      // Si hay un mensaje de error pero no es el genérico
-      toast.error(err.message, {
-        className: 'toast-notification'
-      });
+      toast.error(err.message);
     } else {
-      // Fallback genérico
-      toast.error("Error al crear el estudiante, el código de este ya está en uso", {
-        className: 'toast-notification'
-      });
+      toast.error("Error al crear el estudiante");
     }
   };
 
@@ -374,6 +406,7 @@ function CrearEstudiante() {
       codigo: '',
       carrera: '',
       semestre: '',
+      paralelo: '',
       unidad_educativa: 'Cochabamba'
     });
     
@@ -383,27 +416,37 @@ function CrearEstudiante() {
         semestre3: ''
       });
     }
+    
+    setCodigoDisponible(true);
   };
 
   const handleCancel = () => {
-    navigate('/docentes'); // Redirigir al dashboard
+    navigate('/docentes');
   };
 
   // Función para determinar la clase CSS de cada campo del formulario
   const getFieldClass = (fieldName) => {
-    // Si el campo tiene contenido, verificamos si es válido
+    // Validación especial para código
+    if (fieldName === 'codigo') {
+      if (formData[fieldName] && formData[fieldName].trim() !== '') {
+        if (validandoCodigo) return 'validating';
+        return codigoDisponible ? 'valid' : 'invalid';
+      }
+      return '';
+    }
+
+    // Para otros campos
     if (formData[fieldName] && formData[fieldName].trim() !== '') {
       return validFields[fieldName] ? 'valid' : '';
     }
     return '';
   };
 
-  // Obtener los semestres disponibles según la carrera seleccionada
-  const semestresDisponibles = getSemestresDisponibles(formData.carrera);
-
   // Verificar si todos los campos son válidos para habilitar el botón de envío
   const formIsValid = () => {
-    return Object.values(validFields).every(valid => valid === true);
+    return Object.values(validFields).every(valid => valid === true) && 
+           codigoDisponible && 
+           !validandoCodigo;
   };
 
   // Verificar si hay semestres seleccionados repetidos
@@ -414,14 +457,18 @@ function CrearEstudiante() {
     if (cantidadSemestres >= 2) semestres.push(semestresAdicionales.semestre2);
     if (cantidadSemestres === 3) semestres.push(semestresAdicionales.semestre3);
     
-    // Filtrar valores vacíos
     const semestresValidos = semestres.filter(s => s !== '');
-    
-    // Verificar duplicados
     return new Set(semestresValidos).size !== semestresValidos.length;
   };
 
-  // Si no hay carreras asignadas, mostrar mensaje y redirigir
+  // Determinar si mostrar el campo de paralelo
+  const mostrarCampoParalelo = docenteTieneCienciasBasicas && carreraNecesitaParalelo(formData.carrera);
+  
+  // Obtener los semestres y paralelos disponibles según la carrera seleccionada
+  const semestresDisponibles = getSemestresDisponibles(formData.carrera);
+  const paralelosDisponibles = getParalelosDisponibles(formData.carrera);
+
+  // Si no hay carreras asignadas, mostrar mensaje
   if (carrerasAsignadas.length === 0) {
     return (
       <div className="docentes-container">
@@ -461,7 +508,6 @@ function CrearEstudiante() {
     <div className="docentes-container">
       <Sidebar />
       <main className="content">
-        {/* Contenedor de notificaciones */}
         <ToastContainer 
           position="top-right"
           autoClose={3000}
@@ -474,11 +520,9 @@ function CrearEstudiante() {
           pauseOnHover
         />
         
-        {/* Contenedor principal con la clase de namespace */}
         <div className="estudiante-form-styles">
           <div className="crear-estudiante-container">
             <h1>Registrar Nuevo Estudiante</h1>
-            
             {/* Opciones de múltiples semestres */}
             <div className="multi-semestre-options">
               <div className="checkbox-container">
@@ -552,7 +596,11 @@ function CrearEstudiante() {
               </div>
               
               <div className={`form-group ${getFieldClass('codigo')}`}>
-                <label htmlFor="codigo">Código:</label>
+                <label htmlFor="codigo">
+                  Código:
+                  {validandoCodigo && <span className="validating-indicator">Verificando...</span>}
+                  {!validandoCodigo && !codigoDisponible && <span className="error-indicator">Código en uso</span>}
+                </label>
                 <input
                   type="text"
                   id="codigo"
@@ -563,6 +611,9 @@ function CrearEstudiante() {
                   placeholder="Ingrese el código único del estudiante"
                   style={{textTransform: 'uppercase'}}
                 />
+                {!codigoDisponible && (
+                  <p className="help-text error">Este código ya está en uso para el semestre y paralelo seleccionados.</p>
+                )}
               </div>
               
               <div className={`form-group ${getFieldClass('carrera')}`}>
@@ -582,6 +633,33 @@ function CrearEstudiante() {
                   ))}
                 </select>
               </div>
+
+              {/* Campo de paralelo - Solo visible cuando es relevante */}
+              {mostrarCampoParalelo && (
+                <div className={`form-group ${getFieldClass('paralelo')} paralelo-field`}>
+                  <label htmlFor="paralelo">
+                    Paralelo:
+                    <span className="required-indicator">*</span>
+                  </label>
+                  <select
+                    id="paralelo"
+                    name="paralelo"
+                    value={formData.paralelo}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Seleccione un paralelo</option>
+                    {paralelosDisponibles.map((paralelo, index) => (
+                      <option key={index} value={paralelo.value}>
+                        {paralelo.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="help-text">
+                    Los paralelos organizan a los estudiantes de Ciencias Básicas en grupos separados (A-G).
+                  </p>
+                </div>
+              )}
               
               {/* Sección de semestres */}
               {!multiSemestre ? (
@@ -610,9 +688,8 @@ function CrearEstudiante() {
               ) : (
                 // Vista múltiples semestres
                 <div className="semestres-container">                  
-                  {/* Selector de semestres */}
                   <div className="semestres-selectors">
-                    {/* Semestre #1 (siempre visible) */}
+                    {/* Semestre #1 */}
                     <div className="semestre-item">
                       <div className={`form-group ${getFieldClass('semestre')}`}>
                         <label htmlFor="semestre">Semestre #1:</label>
@@ -635,7 +712,7 @@ function CrearEstudiante() {
                       </div>
                     </div>
                     
-                    {/* Semestre #2 (visible si cantidadSemestres >= 2) */}
+                    {/* Semestre #2 */}
                     {cantidadSemestres >= 2 && (
                       <div className="semestre-item">
                         <div className={`form-group ${semestresAdicionales.semestre2 && !tieneSemestresRepetidos() ? 'valid' : ''}`}>
@@ -660,7 +737,7 @@ function CrearEstudiante() {
                       </div>
                     )}
                     
-                    {/* Semestre #3 (visible si cantidadSemestres === 3) */}
+                    {/* Semestre #3 */}
                     {cantidadSemestres === 3 && (
                       <div className="semestre-item">
                         <div className={`form-group ${semestresAdicionales.semestre3 && !tieneSemestresRepetidos() ? 'valid' : ''}`}>
@@ -696,7 +773,7 @@ function CrearEstudiante() {
               )}
               
               <div className={`form-group ${getFieldClass('unidad_educativa')}`}>
-                <label htmlFor="unidad_educativa">Unidad Academica:</label>
+                <label htmlFor="unidad_educativa">Unidad Académica:</label>
                 <input
                   type="text"
                   id="unidad_educativa"

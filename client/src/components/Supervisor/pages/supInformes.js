@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LayoutSup from './LayoutSup';
 import { ToastContainer, toast } from 'react-toastify';
@@ -6,8 +6,21 @@ import 'react-toastify/dist/ReactToastify.css';
 import '../style/supInforme.css';
 
 // Importar servicios
-import { getEstudiantes, getEstudiantesBySemestreYCarrera, getEstudiantesByGrupoId } from '../../../service/estudianteService';
-import { getGrupos, getGruposPorCarrera, getGruposPorSemestre, getGruposPorMateria } from '../../../service/grupoService';
+import { 
+  getEstudiantes, 
+  getEstudiantesBySemestreYCarrera, 
+  getEstudiantesByGrupoId,
+  getEstudiantesByCarreraYParalelo,
+  getEstudiantesBySemestreCarreraYParalelo
+} from '../../../service/estudianteService';
+import { 
+  getGrupos, 
+  getGruposPorCarrera, 
+  getGruposPorSemestre, 
+  getGruposPorMateria,
+  getGruposPorCarreraYParalelo,
+  getGruposPorSemestreCarreraYParalelo
+} from '../../../service/grupoService';
 import { getInformesPorGrupoId } from '../../../service/informeService';
 import { getRubricaPorId } from '../../../service/rubricaService';
 import { getCalificacionPorId } from '../../../service/calificacionService';
@@ -27,14 +40,17 @@ import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
 import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
 
 const SupervisorInformes = () => {
-  // Estados para almacenar datos cargados
-  const [carreras, setCarreras] = useState([]);
+  // Estados para configuración del supervisor
+  const [supervisor, setSupervisor] = useState(null);
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
+  const [manejaParalelos, setManejaParalelos] = useState(false);
+  
+  // Estados para datos cargados
+  const [carreras, setCarreras] = useState([]);
   const [semestres, setSemestres] = useState({});
   const [asignaturas, setAsignaturas] = useState([]);
   const [estudiantes, setEstudiantes] = useState([]);
   const [grupos, setGrupos] = useState([]);
-  const [supervisor, setSupervisor] = useState(null);
   
   // Catálogos de materias
   const [catalogoMaterias, setCatalogoMaterias] = useState({});
@@ -43,6 +59,7 @@ const SupervisorInformes = () => {
   const [carreraSeleccionada, setCarreraSeleccionada] = useState('');
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('');
   const [asignaturaSeleccionada, setAsignaturaSeleccionada] = useState('TODAS');
+  const [paraleloSeleccionado, setParaleloSeleccionado] = useState(''); // Nuevo filtro
   
   // Estado para búsqueda de estudiantes
   const [busquedaEstudiante, setBusquedaEstudiante] = useState('');
@@ -56,123 +73,182 @@ const SupervisorInformes = () => {
   const [generandoPDF, setGenerandoPDF] = useState(false);
   
   const navigate = useNavigate();
-  
+
+  // Configuración del catálogo de materias (memoizado)
+  const catalogoCompleto = useMemo(() => ({
+    'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
+    'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
+    'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
+    'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
+    'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
+    'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
+  }), []);
+
+  // Paralelos disponibles para Ciencias Básicas
+  const paralelosDisponibles = useMemo(() => [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G'
+  ], []);
+
+  // Función para detectar si el supervisor maneja paralelos
+  const detectarManejoParalelos = useCallback((carreras) => {
+    return carreras.includes('Ciencias Básicas');
+  }, []);
+
+  // Función optimizada para cargar datos del supervisor
+  const cargarDatosSupervisor = useCallback(async () => {
+    const usuarioStr = sessionStorage.getItem('usuario');
+    if (!usuarioStr) {
+      throw new Error('No se encontraron datos del supervisor. Por favor, inicie sesión nuevamente.');
+    }
+
+    const usuario = JSON.parse(usuarioStr);
+    setSupervisor(usuario);
+
+    // Obtener carreras asignadas
+    let carrerasDelSupervisor = [];
+    if (usuario.carreras && Array.isArray(usuario.carreras)) {
+      carrerasDelSupervisor = usuario.carreras;
+    } else if (usuario.id) {
+      const supervisorData = await getSupervisorById(usuario.id);
+      if (supervisorData?.carreras) {
+        carrerasDelSupervisor = supervisorData.carreras;
+      } else {
+        throw new Error('No se pudieron obtener las carreras asignadas');
+      }
+    }
+
+    setCarrerasAsignadas(carrerasDelSupervisor);
+    
+    // Detectar si maneja paralelos
+    const requiereParalelos = detectarManejoParalelos(carrerasDelSupervisor);
+    setManejaParalelos(requiereParalelos);
+
+    return { carrerasDelSupervisor, requiereParalelos };
+  }, [detectarManejoParalelos]);
+
+  // Función para configurar catálogos basado en carreras asignadas
+  const configurarCatalogos = useCallback((carrerasDelSupervisor) => {
+    setCatalogoMaterias(catalogoCompleto);
+    
+    // Filtrar carreras disponibles
+    const carrerasFiltradas = Object.keys(catalogoCompleto).filter(
+      carrera => carrerasDelSupervisor.includes(carrera)
+    );
+    setCarreras(carrerasFiltradas);
+    
+    // Preparar semestres por carrera
+    const semestresObj = {};
+    carrerasFiltradas.forEach(carrera => {
+      semestresObj[carrera] = Object.keys(catalogoCompleto[carrera])
+        .sort((a, b) => parseInt(a) - parseInt(b));
+    });
+    setSemestres(semestresObj);
+
+    return { carrerasFiltradas, semestresObj };
+  }, [catalogoCompleto]);
+
   // Cargar datos iniciales y carreras asignadas al supervisor al montar el componente
   useEffect(() => {
     const cargarDatosIniciales = async () => {
       try {
         setLoading(true);
         
-        // 1. Obtener datos del supervisor y sus carreras asignadas
-        const usuarioStr = sessionStorage.getItem('usuario');
-        if (usuarioStr) {
-          try {
-            const usuario = JSON.parse(usuarioStr);
-            setSupervisor(usuario);
-            
-            // Obtener carreras asignadas desde el objeto de usuario
-            let carrerasDelSupervisor = [];
-            if (usuario.carreras && Array.isArray(usuario.carreras)) {
-              carrerasDelSupervisor = usuario.carreras;
-            } else if (usuario.id) {
-              // Si no hay carreras en el objeto de usuario, intentar obtenerlas desde el servidor
-              const supervisorData = await getSupervisorById(usuario.id);
-              if (supervisorData && supervisorData.carreras) {
-                carrerasDelSupervisor = supervisorData.carreras;
-              } else {
-                toast.error('No se pudieron obtener las carreras asignadas');
-                setLoading(false);
-                return;
-              }
+        // 1. Cargar datos del supervisor y detectar configuración
+        const { carrerasDelSupervisor, requiereParalelos } = await cargarDatosSupervisor();
+        
+        // 2. Configurar catálogos
+        const { carrerasFiltradas, semestresObj } = configurarCatalogos(carrerasDelSupervisor);
+        
+        // 3. Seleccionar valores por defecto
+        if (carrerasFiltradas.length > 0) {
+          const primeraCarrera = carrerasFiltradas[0];
+          setCarreraSeleccionada(primeraCarrera);
+          
+          // Para Ciencias Básicas, seleccionar primer paralelo
+          if (requiereParalelos && primeraCarrera === 'Ciencias Básicas') {
+            setParaleloSeleccionado('A');
+            // Para Ciencias Básicas, usar semestre 1 por defecto
+            setSemestreSeleccionado('1');
+          } else {
+            // Para otras carreras, seleccionar primer semestre
+            if (semestresObj[primeraCarrera]?.length > 0) {
+              const primerSemestre = semestresObj[primeraCarrera][0];
+              setSemestreSeleccionado(primerSemestre);
             }
+          }
+          
+          // Cargar asignaturas para la configuración inicial
+          const primerSemestre = requiereParalelos && primeraCarrera === 'Ciencias Básicas' 
+            ? '1' 
+            : semestresObj[primeraCarrera]?.[0];
             
-            setCarrerasAsignadas(carrerasDelSupervisor);
-            
-            // 2. Configurar catálogos de materias
-            const catalogoCompleto = {
-              'Ingeniería de Sistemas': MATERIAS_POR_SEMESTRE,
-              'Ingeniería de Sistemas Electronicos': MATERIAS_POR_SEMESTRE_ETN,
-              'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
-              'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
-              'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
-              'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
-            };
-            setCatalogoMaterias(catalogoCompleto);
-            
-            // 3. Filtrar catálogos para mostrar solo las carreras asignadas al supervisor
-            const carrerasFiltradas = Object.keys(catalogoCompleto).filter(
-              carrera => carrerasDelSupervisor.includes(carrera)
-            );
-            
-            setCarreras(carrerasFiltradas);
-            
-            // 4. Preparar semestres disponibles por carrera
-            const semestresObj = {};
-            carrerasFiltradas.forEach(carrera => {
-              semestresObj[carrera] = Object.keys(catalogoCompleto[carrera]).sort((a, b) => parseInt(a) - parseInt(b));
-            });
-            setSemestres(semestresObj);
-            
-            // 5. Seleccionar primera carrera por defecto (solo si hay carreras asignadas)
-            if (carrerasFiltradas.length > 0) {
-              const primeraCarrera = carrerasFiltradas[0];
-              setCarreraSeleccionada(primeraCarrera);
-              
-              // 6. Seleccionar primer semestre por defecto
-              if (semestresObj[primeraCarrera] && semestresObj[primeraCarrera].length > 0) {
-                const primerSemestre = semestresObj[primeraCarrera][0];
-                setSemestreSeleccionado(primerSemestre);
-                
-                // 7. Cargar asignaturas para este semestre
-                const asignaturasSemestre = catalogoCompleto[primeraCarrera][primerSemestre];
-                setAsignaturas(['TODAS', ...asignaturasSemestre]);
-              }
-            } else {
-              setError('No tiene carreras asignadas. Comuníquese con el administrador.');
-            }
-          } catch (error) {
-            console.error('Error al parsear datos del supervisor:', error);
-            setError('Error al procesar datos del supervisor');
+          if (primerSemestre && catalogoCompleto[primeraCarrera]?.[primerSemestre]) {
+            const asignaturasSemestre = catalogoCompleto[primeraCarrera][primerSemestre];
+            setAsignaturas(['TODAS', ...asignaturasSemestre]);
           }
         } else {
-          setError('No se encontraron datos del supervisor. Por favor, inicie sesión nuevamente.');
+          setError('No tiene carreras asignadas. Comuníquese con el administrador.');
         }
         
         setLoading(false);
       } catch (error) {
         console.error('Error al cargar datos iniciales:', error);
-        setError('Error al cargar los datos. Por favor, intente de nuevo más tarde.');
+        setError(error.message);
         setLoading(false);
         toast.error('Error al cargar datos iniciales. Por favor, intente nuevamente.');
       }
     };
     
     cargarDatosIniciales();
-  }, []);
+  }, [cargarDatosSupervisor, configurarCatalogos, catalogoCompleto]);
   
   // Actualizar asignaturas cuando cambia carrera o semestre
   useEffect(() => {
     if (!carreraSeleccionada || !semestreSeleccionado) return;
     
     // Actualizar lista de asignaturas
-    if (catalogoMaterias[carreraSeleccionada] && catalogoMaterias[carreraSeleccionada][semestreSeleccionado]) {
+    if (catalogoMaterias[carreraSeleccionada]?.[semestreSeleccionado]) {
       const asignaturasSemestre = catalogoMaterias[carreraSeleccionada][semestreSeleccionado];
       setAsignaturas(['TODAS', ...asignaturasSemestre]);
-      setAsignaturaSeleccionada('TODAS'); // Resetear a TODAS cuando cambia carrera o semestre
+      setAsignaturaSeleccionada('TODAS');
     }
     
     // Generar datos del informe con los nuevos filtros
-    generarDatosInforme(carreraSeleccionada, semestreSeleccionado, 'TODAS');
-  }, [carreraSeleccionada, semestreSeleccionado]);
+    if (manejaParalelos && carreraSeleccionada === 'Ciencias Básicas') {
+      // Para Ciencias Básicas necesitamos paralelo
+      if (paraleloSeleccionado) {
+        generarDatosInforme(carreraSeleccionada, semestreSeleccionado, 'TODAS', paraleloSeleccionado);
+      }
+    } else {
+      // Para otras carreras, generar normalmente
+      generarDatosInforme(carreraSeleccionada, semestreSeleccionado, 'TODAS');
+    }
+  }, [carreraSeleccionada, semestreSeleccionado, catalogoMaterias, manejaParalelos, paraleloSeleccionado]);
   
   // Generar informe cuando cambia la asignatura seleccionada
   useEffect(() => {
     if (!carreraSeleccionada || !semestreSeleccionado || !asignaturaSeleccionada) return;
-    generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada);
-  }, [asignaturaSeleccionada]);
+    
+    if (manejaParalelos && carreraSeleccionada === 'Ciencias Básicas') {
+      if (paraleloSeleccionado) {
+        generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada, paraleloSeleccionado);
+      }
+    } else {
+      generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada);
+    }
+  }, [asignaturaSeleccionada, manejaParalelos, carreraSeleccionada, semestreSeleccionado, paraleloSeleccionado]);
+
+  // Generar informe cuando cambia el paralelo (solo para Ciencias Básicas)
+  useEffect(() => {
+    if (!manejaParalelos || carreraSeleccionada !== 'Ciencias Básicas' || !paraleloSeleccionado) return;
+    
+    if (carreraSeleccionada && semestreSeleccionado && asignaturaSeleccionada) {
+      generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada, paraleloSeleccionado);
+    }
+  }, [paraleloSeleccionado, manejaParalelos, carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada]);
   
-  // Función principal para generar datos del informe
-  const generarDatosInforme = async (carrera, semestre, asignaturaFiltro) => {
+  // Función principal para generar datos del informe (LÓGICA CRÍTICA MANTENIDA)
+  const generarDatosInforme = async (carrera, semestre, asignaturaFiltro, paralelo = null) => {
     try {
       setLoading(true);
       
@@ -183,8 +259,17 @@ const SupervisorInformes = () => {
         return;
       }
       
-      // 1. Obtener todos los estudiantes de esta carrera y semestre
-      const estudiantesFiltrados = await getEstudiantesBySemestreYCarrera(semestre, carrera);
+      // 1. LÓGICA CRÍTICA: Obtener TODOS los estudiantes (condicional para paralelos)
+      let estudiantesFiltrados = [];
+      
+      if (manejaParalelos && carrera === 'Ciencias Básicas' && paralelo) {
+        // Para Ciencias Básicas con paralelos
+        estudiantesFiltrados = await getEstudiantesBySemestreCarreraYParalelo(semestre, carrera, paralelo);
+      } else {
+        // Para carreras regulares (lógica original mantenida)
+        estudiantesFiltrados = await getEstudiantesBySemestreYCarrera(semestre, carrera);
+      }
+      
       setEstudiantes(estudiantesFiltrados);
       
       if (estudiantesFiltrados.length === 0) {
@@ -193,14 +278,29 @@ const SupervisorInformes = () => {
         return;
       }
       
-      // 2. Obtener todos los grupos de esta carrera y semestre
-      const gruposCarrera = await getGruposPorCarrera(carrera);
-      const gruposSemestre = await getGruposPorSemestre(semestre);
+      // 2. Obtener todos los grupos (condicional para paralelos)
+      let gruposFiltrados = [];
       
-      // Filtrar por carrera Y semestre
-      const gruposFiltrados = gruposCarrera.filter(grupo => 
-        gruposSemestre.some(g => g.id === grupo.id)
-      );
+      if (manejaParalelos && carrera === 'Ciencias Básicas' && paralelo) {
+        // Para Ciencias Básicas con paralelos
+        const gruposCarreraParalelo = await getGruposPorCarreraYParalelo(carrera, paralelo);
+        const gruposSemestreCarreraParalelo = await getGruposPorSemestreCarreraYParalelo(semestre, carrera, paralelo);
+        
+        // Filtrar por carrera, semestre Y paralelo
+        gruposFiltrados = gruposCarreraParalelo.filter(grupo => 
+          gruposSemestreCarreraParalelo.some(g => g.id === grupo.id)
+        );
+      } else {
+        // Para carreras regulares (lógica original mantenida)
+        const gruposCarrera = await getGruposPorCarrera(carrera);
+        const gruposSemestre = await getGruposPorSemestre(semestre);
+        
+        // Filtrar por carrera Y semestre
+        gruposFiltrados = gruposCarrera.filter(grupo => 
+          gruposSemestre.some(g => g.id === grupo.id)
+        );
+      }
+      
       setGrupos(gruposFiltrados);
       
       // 3. Determinar qué asignaturas vamos a procesar
@@ -216,15 +316,25 @@ const SupervisorInformes = () => {
         // 6. Obtener grupos específicos para esta asignatura
         const gruposAsignatura = await getGruposPorMateria(asignatura);
         
-        // Filtrar grupos por asignatura, carrera Y semestre
-        const gruposAsignaturaFiltrados = gruposAsignatura.filter(grupo => 
-          grupo.carrera === carrera && grupo.semestre.toString() === semestre
-        );
+        // Filtrar grupos por asignatura y aplicar filtros de carrera/semestre/paralelo
+        let gruposAsignaturaFiltrados = [];
         
-        // 7. Preparar estructura para estudiantes de esta asignatura
+        if (manejaParalelos && carrera === 'Ciencias Básicas' && paralelo) {
+          gruposAsignaturaFiltrados = gruposAsignatura.filter(grupo => 
+            grupo.carrera === carrera && 
+            grupo.semestre.toString() === semestre &&
+            grupo.paralelo === paralelo
+          );
+        } else {
+          gruposAsignaturaFiltrados = gruposAsignatura.filter(grupo => 
+            grupo.carrera === carrera && grupo.semestre.toString() === semestre
+          );
+        }
+        
+        // 7. LÓGICA CRÍTICA MANTENIDA: Preparar estructura para estudiantes de esta asignatura
         const estudiantesConDatos = [];
         
-        // 8. Procesar cada estudiante
+        // 8. LÓGICA CRÍTICA MANTENIDA: Procesar cada estudiante
         for (const estudiante of estudiantesFiltrados) {
           // Buscar en cada grupo si el estudiante está asignado
           let estudianteAsignado = false;
@@ -294,7 +404,7 @@ const SupervisorInformes = () => {
             resultado = parseFloat(rubricaEstudiante.nota_final) >= 5.1 ? 'APROBADO' : 'REPROBADO';
           }
           
-          // Añadir datos del estudiante al array
+          // LÓGICA CRÍTICA MANTENIDA: Añadir datos del estudiante al array
           estudiantesConDatos.push({
             estudiante,
             grupo: grupoAsignado,
@@ -317,6 +427,7 @@ const SupervisorInformes = () => {
           asignatura,
           carrera,
           semestre,
+          paralelo, // Nuevo campo para paralelos
           estudiantes: estudiantesConDatos,
           estadisticas: {
             total: totalEstudiantes,
@@ -360,23 +471,29 @@ const SupervisorInformes = () => {
   };
   
   // Función para limpiar búsqueda y filtros
-  const limpiarBusqueda = () => {
+  const limpiarBusqueda = useCallback(() => {
     setBusquedaEstudiante('');
+    
     // Obtener primera carrera y primer semestre por defecto (solo de las asignadas)
     if (carrerasAsignadas.length > 0) {
       const primeraCarrera = carrerasAsignadas[0];
       setCarreraSeleccionada(primeraCarrera);
       
-      if (semestres[primeraCarrera] && semestres[primeraCarrera].length > 0) {
-        const primerSemestre = semestres[primeraCarrera][0];
-        setSemestreSeleccionado(primerSemestre);
+      if (manejaParalelos && primeraCarrera === 'Ciencias Básicas') {
+        setParaleloSeleccionado('A');
+        setSemestreSeleccionado('1');
+      } else {
+        if (semestres[primeraCarrera]?.length > 0) {
+          const primerSemestre = semestres[primeraCarrera][0];
+          setSemestreSeleccionado(primerSemestre);
+        }
       }
     }
     setAsignaturaSeleccionada('TODAS');
-  };
+  }, [carrerasAsignadas, manejaParalelos, semestres]);
   
   // Función para generar PDF
-  const generarPDF = () => {
+  const generarPDF = useCallback(() => {
     const contenido = document.getElementById('contenido-para-pdf');
     
     if (contenido) {
@@ -389,9 +506,10 @@ const SupervisorInformes = () => {
           carrera: carreraSeleccionada,
           semestre: semestreSeleccionado,
           materia: asignaturaSeleccionada,
+          paralelo: manejaParalelos ? paraleloSeleccionado : null,
           busqueda: busquedaEstudiante
         },
-        supervisor: true, // Indicar que es un informe de supervisor
+        supervisor: true,
         datosFiltrados: datosInforme
       })
       .then(() => {
@@ -406,8 +524,143 @@ const SupervisorInformes = () => {
     } else {
       toast.error('No se pudo generar el PDF. Contenido no encontrado.');
     }
-  };
-  
+  }, [carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada, paraleloSeleccionado, busquedaEstudiante, manejaParalelos, datosInforme]);
+
+  // Renderizar filtros (condicional para paralelos)
+  const renderizarFiltros = useCallback(() => (
+    <div className="filters-search-row">
+      {/* Barra de búsqueda */}
+      <div className="search-input-container">
+        <label className="search-label">Búsqueda</label>
+        <div className="search-input-field">
+          <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o código de estudiante..."
+            value={busquedaEstudiante}
+            onChange={(e) => {
+              setBusquedaEstudiante(e.target.value);
+              // Si se borra completamente, recargar datos
+              if (e.target.value === '') {
+                if (manejaParalelos && carreraSeleccionada === 'Ciencias Básicas') {
+                  generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada, paraleloSeleccionado);
+                } else {
+                  generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada);
+                }
+              }
+            }}
+            className="search-input"
+          />
+          {busquedaEstudiante && (
+            <button 
+              onClick={limpiarBusqueda} 
+              className="clear-search"
+              title="Limpiar búsqueda"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Filtro de carrera */}
+      <div className="filtro">
+        <label className="filtro-label">Carrera</label>
+        <select 
+          id="carrera-select" 
+          value={carreraSeleccionada}
+          onChange={(e) => {
+            setCarreraSeleccionada(e.target.value);
+            // Resetear semestre y paralelo al cambiar carrera
+            if (manejaParalelos && e.target.value === 'Ciencias Básicas') {
+              setParaleloSeleccionado('A');
+              setSemestreSeleccionado('1');
+            } else {
+              if (semestres[e.target.value]?.length > 0) {
+                setSemestreSeleccionado(semestres[e.target.value][0]);
+              } else {
+                setSemestreSeleccionado('');
+              }
+            }
+          }}
+        >
+          {carreras.map(carrera => (
+            <option key={carrera} value={carrera}>{carrera}</option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Filtro de semestre */}
+      <div className="filtro">
+        <label className="filtro-label">Semestre</label>
+        <select 
+          id="semestre-select" 
+          value={semestreSeleccionado}
+          onChange={(e) => setSemestreSeleccionado(e.target.value)}
+          disabled={!carreraSeleccionada}
+        >
+          {carreraSeleccionada && semestres[carreraSeleccionada] ? 
+            semestres[carreraSeleccionada].map(semestre => (
+              <option key={semestre} value={semestre}>{`${semestre}° Semestre`}</option>
+            )) : 
+            <option value="">No hay semestres disponibles</option>
+          }
+        </select>
+      </div>
+      
+      {/* Filtro de paralelo (solo si maneja paralelos) */}
+      {manejaParalelos && carreraSeleccionada === 'Ciencias Básicas' && (
+        <div className="filtro">
+          <label className="filtro-label">Paralelo</label>
+          <select 
+            id="paralelo-select" 
+            value={paraleloSeleccionado}
+            onChange={(e) => setParaleloSeleccionado(e.target.value)}
+          >
+            {paralelosDisponibles.map(paralelo => (
+              <option key={paralelo} value={paralelo}>Paralelo {paralelo}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      
+      {/* Filtro de asignatura */}
+      <div className="filtro">
+        <label className="filtro-label">Asignatura</label>
+        <select 
+          id="materia-select" 
+          value={asignaturaSeleccionada}
+          onChange={(e) => setAsignaturaSeleccionada(e.target.value)}
+          disabled={!carreraSeleccionada || !semestreSeleccionado}
+        >
+          {asignaturas.map(asignatura => (
+            <option key={asignatura} value={asignatura}>{asignatura}</option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Botón limpiar */}
+      <button 
+        onClick={limpiarBusqueda} 
+        className="btn-limpiar-busqueda"
+        title="Limpiar búsqueda"
+        disabled={!busquedaEstudiante && asignaturaSeleccionada === 'TODAS'}
+      >
+        X
+      </button>
+    </div>
+  ), [
+    busquedaEstudiante, carreraSeleccionada, semestreSeleccionado, paraleloSeleccionado, 
+    asignaturaSeleccionada, manejaParalelos, carreras, semestres, asignaturas, 
+    paralelosDisponibles, limpiarBusqueda, generarDatosInforme
+  ]);
+
   // Renderizado para estado de carga
   if (loading) {
     return (
@@ -489,109 +742,8 @@ const SupervisorInformes = () => {
         </div>
         
         <div className="evaluacion-container">
-          {/* Filtros y búsqueda en una sola línea */}
-          <div className="filters-search-row">
-            {/* Barra de búsqueda */}
-            <div className="search-input-container">
-              <label className="search-label">Búsqueda</label>
-              <div className="search-input-field">
-                <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o código de estudiante..."
-                  value={busquedaEstudiante}
-                  onChange={(e) => {
-                    setBusquedaEstudiante(e.target.value);
-                    // Si se borra completamente, recargar datos
-                    if (e.target.value === '') {
-                      generarDatosInforme(carreraSeleccionada, semestreSeleccionado, asignaturaSeleccionada);
-                    }
-                  }}
-                  className="search-input"
-                />
-                {busquedaEstudiante && (
-                  <button 
-                    onClick={limpiarBusqueda} 
-                    className="clear-search"
-                    title="Limpiar búsqueda"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {/* Filtro de carrera */}
-            <div className="filtro">
-              <label className="filtro-label">Carrera</label>
-              <select 
-                id="carrera-select" 
-                value={carreraSeleccionada}
-                onChange={(e) => {
-                  setCarreraSeleccionada(e.target.value);
-                  // Resetear semestre al cambiar carrera
-                  if (semestres[e.target.value] && semestres[e.target.value].length > 0) {
-                    setSemestreSeleccionado(semestres[e.target.value][0]);
-                  } else {
-                    setSemestreSeleccionado('');
-                  }
-                }}
-              >
-                {carreras.map(carrera => (
-                  <option key={carrera} value={carrera}>{carrera}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Filtro de semestre */}
-            <div className="filtro">
-              <label className="filtro-label">Semestre</label>
-              <select 
-                id="semestre-select" 
-                value={semestreSeleccionado}
-                onChange={(e) => setSemestreSeleccionado(e.target.value)}
-                disabled={!carreraSeleccionada}
-              >
-                {carreraSeleccionada && semestres[carreraSeleccionada] ? 
-                  semestres[carreraSeleccionada].map(semestre => (
-                    <option key={semestre} value={semestre}>{`${semestre}° Semestre`}</option>
-                  )) : 
-                  <option value="">No hay semestres disponibles</option>
-                }
-              </select>
-            </div>
-            
-            {/* Filtro de materia */}
-            <div className="filtro">
-              <label className="filtro-label">Asignatura</label>
-              <select 
-                id="materia-select" 
-                value={asignaturaSeleccionada}
-                onChange={(e) => setAsignaturaSeleccionada(e.target.value)}
-                disabled={!carreraSeleccionada || !semestreSeleccionado}
-              >
-                {asignaturas.map(asignatura => (
-                  <option key={asignatura} value={asignatura}>{asignatura}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Botón X para limpiar todos los filtros */}
-            <button 
-              onClick={limpiarBusqueda} 
-              className="btn-limpiar-busqueda"
-              title="Limpiar búsqueda"
-              disabled={!busquedaEstudiante && asignaturaSeleccionada === 'TODAS'}
-            >
-              X
-            </button>
-          </div>
+          {/* Filtros */}
+          {renderizarFiltros()}
           
           {/* Contenido para PDF */}
           <div id="contenido-para-pdf" className="contenido-pdf-wrapper">
@@ -603,6 +755,9 @@ const SupervisorInformes = () => {
                 <div>Fecha del informe: {obtenerFechaActual()}</div>
                 <div>Carrera: {carreraSeleccionada}</div>
                 <div>Semestre: {semestreSeleccionado}° Semestre</div>
+                {manejaParalelos && carreraSeleccionada === 'Ciencias Básicas' && paraleloSeleccionado && (
+                  <div>Paralelo: {paraleloSeleccionado}</div>
+                )}
                 {asignaturaSeleccionada !== 'TODAS' && <div>Asignatura: {asignaturaSeleccionada}</div>}
                 {busquedaEstudiante && <div>Filtro estudiante: {busquedaEstudiante}</div>}
               </div>
@@ -611,7 +766,13 @@ const SupervisorInformes = () => {
             {/* Mostrar cada informe por asignatura */}
             {datosInforme.map((informe, index) => (
               <div key={informe.asignatura} className={`seccion-informe ${index > 0 ? 'nueva-seccion-pdf' : 'primera-seccion-pdf'}`}>
-                <h3 className="evitar-salto-pagina">Asignatura: {informe.asignatura}</h3>
+                {/* TÍTULO CONDICIONAL - Sin reestructurar tabla */}
+                <h3 className="evitar-salto-pagina">
+                  Asignatura: {informe.asignatura}
+                  {manejaParalelos && carreraSeleccionada === 'Ciencias Básicas' && informe.paralelo && (
+                    <span> - Paralelo: {informe.paralelo}</span>
+                  )}
+                </h3>
                 
                 <div className="estadisticas-seccion evitar-salto-pagina">
                   <p>

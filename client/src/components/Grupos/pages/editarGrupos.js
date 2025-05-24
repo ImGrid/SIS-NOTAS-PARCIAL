@@ -3,7 +3,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../Docentes/Layout';
 import '../style/editarGrupos.css';
-import { getGrupoPorId, updateGrupo } from '../../../service/grupoService';
+import { 
+  getGrupoPorId, 
+  updateGrupo,
+  getSemestresDisponibles,
+  getParalelosDisponibles,
+  carreraNecesitaParalelo,
+  getParaleloPorDefecto,
+  validarDatosGrupo
+} from '../../../service/grupoService';
 import { getDocenteById } from '../../../service/docenteService';
 import { getEstudiantesByGrupoId, desasignarEstudianteDeGrupo, asignarEstudianteAGrupo } from '../../../service/estudianteService';
 import informeService from '../../../service/informeService';
@@ -18,13 +26,15 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function EditarGrupos() {
-  const { id } = useParams(); // Obtenemos el ID del grupo de la URL
+  const { id } = useParams();
   const navigate = useNavigate();
   
+  // Estado del formulario principal (incluye paralelo)
   const [formData, setFormData] = useState({
     nombre_proyecto: '',
     carrera: '',
     semestre: '',
+    paralelo: '', // Campo para paralelos
     materia: ''
   });
   
@@ -33,6 +43,7 @@ function EditarGrupos() {
     nombre_proyecto: '',
     carrera: '',
     semestre: '',
+    paralelo: '',
     materia: ''
   });
   
@@ -52,12 +63,13 @@ function EditarGrupos() {
     nombre_proyecto: false,
     carrera: false,
     semestre: false,
+    paralelo: true, // Inicialmente true porque puede no ser requerido
     materia: false
   });
   
-  // Estado para el modal de confirmación
+  // Estados para el modal de confirmación
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [changeType, setChangeType] = useState(''); // 'semestre', 'carrera' o ''
+  const [changeType, setChangeType] = useState(''); // 'semestre', 'carrera', 'paralelo' o ''
   const [pendingChange, setPendingChange] = useState(null);
   const [estudiantesDesasignados, setEstudiantesDesasignados] = useState(false);
   const [evaluacionesEliminadas, setEvaluacionesEliminadas] = useState(false);
@@ -69,6 +81,9 @@ function EditarGrupos() {
   const [docente, setDocente] = useState(null);
   const [carrerasAsignadas, setCarrerasAsignadas] = useState([]);
   const [carrerasDisponibles, setCarrerasDisponibles] = useState([]);
+  
+  // Estados para paralelos
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
   
   const formRef = useRef(null);
 
@@ -125,14 +140,16 @@ function EditarGrupos() {
         
         setCarrerasAsignadas(carreras);
         
+        // Verificar si el docente tiene Ciencias Básicas asignada
+        const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+        setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
+        
         // Filtrar las carreras disponibles basadas en las asignadas al docente
         const carrerasFiltradas = TODAS_CARRERAS.filter(carrera => 
           carreras.includes(carrera.value)
         );
         setCarrerasDisponibles(carrerasFiltradas);
-        
-        console.log(`Docente ${docenteData.nombre_completo} - Carreras asignadas:`, carreras);
-        
+
       } catch (error) {
         console.error("Error al obtener datos del docente:", error);
         setError("Error al cargar sus datos. Por favor, vuelva a iniciar sesión.");
@@ -144,29 +161,6 @@ function EditarGrupos() {
     
     cargarDatosDocente();
   }, [navigate]);
-
-  // Función para obtener semestres disponibles según la carrera
-  const getSemestresDisponibles = (carrera) => {
-    // Caso especial para Ciencias Básicas (solo 1er y 2do semestre)
-    if (carrera === 'Ciencias Básicas') {
-      return [
-        { value: '1', label: 'Primer Semestre' },
-        { value: '2', label: 'Segundo Semestre' }
-      ];
-    }
-    
-    // Para el resto de carreras (3ro a 10mo)
-    return [
-      { value: '3', label: 'Tercer Semestre' },
-      { value: '4', label: 'Cuarto Semestre' },
-      { value: '5', label: 'Quinto Semestre' },
-      { value: '6', label: 'Sexto Semestre' },
-      { value: '7', label: 'Séptimo Semestre' },
-      { value: '8', label: 'Octavo Semestre' },
-      { value: '9', label: 'Noveno Semestre' },
-      { value: '10', label: 'Décimo Semestre' }
-    ];
-  };
 
   // Función para obtener el objeto de materias según la carrera
   const getMateriasCarrera = (carrera) => {
@@ -202,12 +196,13 @@ function EditarGrupos() {
           return;
         }
         
-        // Actualizamos el formData con los datos del grupo
+        // Actualizamos el formData con los datos del grupo (incluye paralelo)
         setFormData({
           nombre_proyecto: data.nombre_proyecto,
           carrera: data.carrera,
           semestre: data.semestre,
-          materia: data.materia || '' // Por si algún grupo antiguo no tiene materia
+          paralelo: data.paralelo || 'A', // Asegurar que siempre tenga un paralelo
+          materia: data.materia || ''
         });
         
         // Guardar los valores originales completos para poder restaurarlos si es necesario
@@ -215,6 +210,7 @@ function EditarGrupos() {
           nombre_proyecto: data.nombre_proyecto,
           carrera: data.carrera,
           semestre: data.semestre,
+          paralelo: data.paralelo || 'A',
           materia: data.materia || ''
         });
         
@@ -248,6 +244,38 @@ function EditarGrupos() {
     }
   }, [id, carrerasAsignadas, loadingCarreras]);
 
+  // Efecto para validar los campos requeridos (incluye lógica de paralelo)
+  useEffect(() => {
+    const { nombre_proyecto, carrera, semestre, paralelo, materia } = formData;
+    
+    // Determinar si el paralelo es requerido
+    const paraleloRequerido = carreraNecesitaParalelo(carrera);
+    
+    setValidFields(prevState => ({
+      ...prevState,
+      nombre_proyecto: nombre_proyecto.trim() !== '',
+      carrera: carrera !== '' && carrerasAsignadas.includes(carrera),
+      semestre: semestre !== '',
+      paralelo: paraleloRequerido ? (paralelo !== '') : true, // Solo requerido para Ciencias Básicas
+      materia: materia !== ''
+    }));
+  }, [formData, carrerasAsignadas]);
+
+  // Efecto para auto-asignar paralelo por defecto cuando cambia la carrera
+  useEffect(() => {
+    if (formData.carrera) {
+      const paraleloDefecto = getParaleloPorDefecto(formData.carrera);
+      
+      // Solo auto-asignar si no es Ciencias Básicas (para Ciencias Básicas debe mantener el valor actual o permitir selección manual)
+      if (!carreraNecesitaParalelo(formData.carrera)) {
+        setFormData(prev => ({
+          ...prev,
+          paralelo: paraleloDefecto
+        }));
+      }
+    }
+  }, [formData.carrera]);
+
   // Actualizar la lista de materias cuando cambia el semestre o la carrera
   useEffect(() => {
     if (formData.semestre && formData.carrera) {
@@ -274,22 +302,13 @@ function EditarGrupos() {
       setMaterias([]);
     }
   }, [formData.semestre, formData.carrera, carrerasAsignadas]);
-  
-  // Verificar validez de los campos
-  useEffect(() => {
-    setValidFields({
-      nombre_proyecto: formData.nombre_proyecto.trim() !== '',
-      carrera: formData.carrera !== '' && carrerasAsignadas.includes(formData.carrera),
-      semestre: formData.semestre !== '',
-      materia: formData.materia !== ''
-    });
-  }, [formData, carrerasAsignadas]);
 
   // Verificar si hay cambios importantes que requieran eliminar evaluaciones
   useEffect(() => {
     if (tieneEvaluaciones && 
         (formData.semestre !== originalData.semestre || 
          formData.carrera !== originalData.carrera ||
+         formData.paralelo !== originalData.paralelo ||
          formData.materia !== originalData.materia)) {
       // Si hay cambios y no se han mostrado las advertencias
       if (!showEvaluacionesModal && !evaluacionesEliminadas) {
@@ -309,15 +328,18 @@ function EditarGrupos() {
       }
     }
     
-    // Si cambió semestre o carrera, mostremos una advertencia
+    // Si cambió semestre, carrera o paralelo, mostremos una advertencia
     if ((name === 'semestre' && value !== originalData.semestre) || 
-        (name === 'carrera' && value !== originalData.carrera)) {
+        (name === 'carrera' && value !== originalData.carrera) ||
+        (name === 'paralelo' && value !== originalData.paralelo)) {
       
-      // Si el usuario cambia de carrera o semestre mientras edita
+      // Si el usuario cambia de carrera, semestre o paralelo mientras edita
       if (name === 'carrera') {
         setChangeType('carrera');
       } else if (name === 'semestre') {
         setChangeType('semestre');
+      } else if (name === 'paralelo') {
+        setChangeType('paralelo');
       }
       
       // Guardar los cambios pendientes
@@ -428,7 +450,7 @@ function EditarGrupos() {
     }
   };
 
-  // Función para confirmar el cambio de semestre o carrera
+  // Función para confirmar el cambio de semestre, carrera o paralelo
   const handleConfirmChange = async () => {
     if (!pendingChange) return;
     
@@ -447,8 +469,12 @@ function EditarGrupos() {
       setFormData(prev => ({
         ...prev,
         [pendingChange.name]: pendingChange.value,
-        // Si cambiamos la carrera, resetear también el semestre y la materia
-        ...(pendingChange.name === 'carrera' ? { semestre: '', materia: '' } : {})
+        // Si cambiamos la carrera, resetear también el semestre, paralelo y la materia
+        ...(pendingChange.name === 'carrera' ? { 
+          semestre: '', 
+          paralelo: getParaleloPorDefecto(pendingChange.value), 
+          materia: '' 
+        } : {})
       }));
       
       // Limpiar cambio pendiente
@@ -459,7 +485,7 @@ function EditarGrupos() {
     }
   };
 
-  // Función para cancelar el cambio de semestre o carrera
+  // Función para cancelar el cambio de semestre, carrera o paralelo
   const handleCancelChange = () => {
     // El usuario canceló, descartamos el cambio pendiente
     setPendingChange(null);
@@ -496,10 +522,18 @@ function EditarGrupos() {
         throw new Error("No tiene permisos para editar grupos en esta carrera");
       }
       
-      // Verificar si hay cambios en semestre o carrera que requieran desasignar estudiantes
+      // Validar paralelo para Ciencias Básicas
+      if (carreraNecesitaParalelo(formData.carrera) && !formData.paralelo) {
+        toast.error('El paralelo es obligatorio para Ciencias Básicas');
+        setSubmitting(false);
+        return;
+      }
+      
+      // Verificar si hay cambios en semestre, carrera o paralelo que requieran desasignar estudiantes
       const requiereDesasignar = 
         formData.semestre !== originalData.semestre || 
-        formData.carrera !== originalData.carrera;
+        formData.carrera !== originalData.carrera ||
+        formData.paralelo !== originalData.paralelo;
       
       // Si requiere desasignar y no se han desasignado ya mediante el modal
       if (requiereDesasignar && !estudiantesDesasignados) {
@@ -513,6 +547,7 @@ function EditarGrupos() {
       const cambiosImportantes = 
         formData.semestre !== originalData.semestre || 
         formData.carrera !== originalData.carrera ||
+        formData.paralelo !== originalData.paralelo ||
         formData.materia !== originalData.materia;
       
       if (tieneEvaluaciones && cambiosImportantes && !evaluacionesEliminadas) {
@@ -522,8 +557,19 @@ function EditarGrupos() {
         }
       }
       
+      // Preparar datos del grupo usando validación del servicio
+      const datosGrupo = {
+        nombre_proyecto: formData.nombre_proyecto,
+        carrera: formData.carrera,
+        semestre: formData.semestre,
+        paralelo: formData.paralelo || getParaleloPorDefecto(formData.carrera),
+        materia: formData.materia,
+        docente_id: docente?.id || (sessionStorage.getItem('usuario') ? 
+          JSON.parse(sessionStorage.getItem('usuario')).id : null)
+      };
+
       // Actualizar el grupo
-      await updateGrupo(id, formData);
+      await updateGrupo(id, datosGrupo);
       setSuccess(true);
       
       toast.success('Grupo actualizado exitosamente. Redirigiendo a gestión de grupos...');
@@ -557,6 +603,20 @@ function EditarGrupos() {
       return validFields[fieldName] ? 'valid' : '';
     }
     return '';
+  };
+
+  // Función para obtener el mensaje de cambio según el tipo
+  const getMensajeCambio = () => {
+    switch (changeType) {
+      case 'carrera':
+        return 'Cambiar la carrera del grupo desasignará a todos los estudiantes actuales.';
+      case 'semestre':
+        return 'Cambiar el semestre del grupo desasignará a todos los estudiantes actuales.';
+      case 'paralelo':
+        return 'Cambiar el paralelo del grupo desasignará a todos los estudiantes actuales.';
+      default:
+        return 'Este cambio desasignará a todos los estudiantes actuales.';
+    }
   };
 
   // Renderizar información del docente
@@ -593,23 +653,25 @@ function EditarGrupos() {
     );
   }
 
-  // Obtener los semestres disponibles según la carrera seleccionada
+  // Obtener los semestres y paralelos disponibles según la carrera seleccionada
   const semestresDisponibles = getSemestresDisponibles(formData.carrera);
+  const paralelosDisponibles = getParalelosDisponibles(formData.carrera);
+
+  // Determinar si mostrar el campo de paralelo
+  const mostrarCampoParalelo = docenteTieneCienciasBasicas && carreraNecesitaParalelo(formData.carrera);
 
   return (
     <Layout>
       <ToastContainer position="top-right" autoClose={3000} />
       
-      {/* Modal de confirmación para cambio de semestre o carrera */}
+      {/* Modal de confirmación para cambio de semestre, carrera o paralelo */}
       {showConfirmModal && (
         <div className="grupo-edit-styles">
           <div className="grupo-modal-overlay">
             <div className="grupo-modal-content">
               <h2>Advertencia</h2>
               <p className="grupo-modal-message">
-                {changeType === 'carrera' 
-                  ? 'Cambiar la carrera del grupo desasignará a todos los estudiantes actuales.' 
-                  : 'Cambiar el semestre del grupo desasignará a todos los estudiantes actuales.'}
+                {getMensajeCambio()}
               </p>
               <p>Los estudiantes deberán ser reasignados manualmente después de guardar los cambios.</p>
               
@@ -697,7 +759,7 @@ function EditarGrupos() {
           
           {tieneEvaluaciones && !evaluacionesEliminadas && (
             <div className="danger-message">
-              Este grupo ya tiene evaluaciones finalizadas. Cambiar semestre, carrera o materia eliminará todas las evaluaciones.
+              Este grupo ya tiene evaluaciones finalizadas. Cambiar semestre, carrera, paralelo o materia eliminará todas las evaluaciones.
             </div>
           )}
           
@@ -777,6 +839,39 @@ function EditarGrupos() {
                 <p className="danger-text">Cambiar el semestre eliminará todas las evaluaciones del grupo.</p>
               )}
             </div>
+
+            {/* Campo de paralelo - Solo visible cuando es relevante */}
+            {mostrarCampoParalelo && (
+              <div className={`form-group ${getFieldClass('paralelo')} paralelo-field`}>
+                <label htmlFor="paralelo">
+                  Paralelo:
+                  <span className="required-indicator">*</span>
+                </label>
+                <select
+                  id="paralelo"
+                  name="paralelo"
+                  value={formData.paralelo}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccione un paralelo</option>
+                  {paralelosDisponibles.map((paralelo, index) => (
+                    <option key={index} value={paralelo.value}>
+                      {paralelo.label}
+                    </option>
+                  ))}
+                </select>
+                {formData.paralelo !== originalData.paralelo && (
+                  <p className="warning-text">Atención: Cambiar el paralelo desasignará a todos los estudiantes.</p>
+                )}
+                {tieneEvaluaciones && formData.paralelo !== originalData.paralelo && !evaluacionesEliminadas && (
+                  <p className="danger-text">Cambiar el paralelo eliminará todas las evaluaciones del grupo.</p>
+                )}
+                <p className="help-text">
+                  Solo podrá asignar estudiantes del mismo paralelo a este grupo.
+                </p>
+              </div>
+            )}
             
             {/* Campo para materia */}
             <div className={`form-group ${getFieldClass('materia')}`}>
@@ -884,6 +979,35 @@ function EditarGrupos() {
           color: #721c24;
           margin-top: 5px;
           font-weight: 500;
+        }
+        .required-indicator {
+          color: #dc3545;
+          margin-left: 4px;
+        }
+
+        .info-paralelos {
+          margin-top: 2rem;
+          padding: 20px;
+          background-color: #e8f4fd;
+          border-radius: 8px;
+          border-left: 4px solid #2196f3;
+        }
+
+        .info-paralelos h3 {
+          margin-top: 0;
+          color: #1976d2;
+          font-size: 16px;
+        }
+
+        .info-paralelos ul {
+          margin-bottom: 0;
+          padding-left: 20px;
+        }
+
+        .info-paralelos li {
+          margin-bottom: 8px;
+          font-size: 14px;
+          color: #495057;
         }
       `}</style>
     </Layout>

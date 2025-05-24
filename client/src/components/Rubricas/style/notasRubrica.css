@@ -178,6 +178,76 @@
     border-radius: 4px;
     display: inline-block;
   }
+
+  /* Estilos para paralelos */
+  .notas-evaluacion .paralelo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-align: center;
+    min-width: 24px;
+    height: 24px;
+  }
+  
+  .notas-evaluacion .paralelo-badge.ciencias-basicas {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+  }
+  
+  /* Ajustes para tabla con paralelo */
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(3),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(3) {
+    text-align: center;
+    width: 80px;
+  }
+  
+  /* Ajustar los nth-child cuando hay columna de paralelo */
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(4),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(4),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(5),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(5),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(6),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(6),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(7),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(7),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(8),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(8),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo td:nth-child(9),
+  .notas-evaluacion .tabla-evaluacion.con-paralelo th:nth-child(9) {
+    text-align: center;
+  }
+
+  /* Estilos para comentarios */
+  .notas-evaluacion .comentarios-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    animation: notas-fadeInUp 0.5s ease-out;
+  }
+
+  .notas-evaluacion .comentarios-container h3 {
+    font-size: 1.2rem;
+    color: #2c3e50;
+    margin: 0 0 1rem 0;
+    font-weight: 600;
+  }
+
+  .notas-evaluacion .comentarios-content {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1rem;
+    color: #475569;
+    line-height: 1.6;
+    font-style: italic;
+  }
   
   /* Estilos para los botones de acción */
   .notas-evaluacion .acciones-container {
@@ -296,27 +366,23 @@
     animation: notas-spin 1s linear infinite;
     margin: 20px auto 0;
   }
-  .notas-evaluacion .proyecto-info {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
 
-/* Responsive para tabletas */
-@media (max-width: 992px) {
-  .notas-evaluacion .proyecto-info {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.8rem;
+  /* Responsive para tabletas */
+  @media (max-width: 992px) {
+    .notas-evaluacion .proyecto-info {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+    }
   }
-}
 
-/* Responsive para móviles */
-@media (max-width: 768px) {
-  .notas-evaluacion .proyecto-info {
-    grid-template-columns: 1fr;
-    gap: 0.8rem;
+  /* Responsive para móviles */
+  @media (max-width: 768px) {
+    .notas-evaluacion .proyecto-info {
+      grid-template-columns: 1fr;
+      gap: 0.8rem;
+    }
   }
-}
+  
   /* Animaciones con prefijo para evitar conflictos */
   @keyframes notas-fadeIn {
     0% { opacity: 0; }
@@ -422,6 +488,13 @@
       font-weight: bold !important;
       border: 1px solid #000000 !important;
     }
+
+    /* Estilos de paralelo para impresión */
+    .notas-evaluacion .paralelo-badge {
+      background-color: transparent !important;
+      color: #000000 !important;
+      border: 1px solid #000000 !important;
+    }
   }
   
   /* Responsive para tabletas */
@@ -446,6 +519,11 @@
     .notas-evaluacion .tabla-evaluacion thead th,
     .notas-evaluacion .tabla-evaluacion tbody td {
       padding: 0.7rem 0.5rem;
+    }
+
+    /* Ajustes de paralelo para tablet */
+    .notas-evaluacion .tabla-evaluacion.con-paralelo {
+      min-width: 800px;
     }
   }
   
@@ -481,6 +559,11 @@
       font-size: 0.8rem;
       min-width: 700px;
     }
+
+    /* Tabla con paralelo necesita más ancho en móvil */
+    .notas-evaluacion .tabla-evaluacion.con-paralelo {
+      min-width: 780px;
+    }
     
     .notas-evaluacion .tabla-evaluacion thead th,
     .notas-evaluacion .tabla-evaluacion tbody td {
@@ -498,6 +581,14 @@
       justify-content: center;
       padding: 0.7rem;
       font-size: 0.9rem;
+    }
+
+    /* Paralelo más pequeño en móvil */
+    .notas-evaluacion .paralelo-badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+      min-width: 20px;
+      height: 20px;
     }
     
     @keyframes notas-fadeInOut {
@@ -530,5 +621,10 @@
     
     .notas-evaluacion .evaluacion-estudiantes h3 {
       font-size: 1.2rem;
+    }
+
+    /* Tabla con paralelo aún más ancha en móviles pequeños */
+    .notas-evaluacion .tabla-evaluacion.con-paralelo {
+      min-width: 820px;
     }
   }

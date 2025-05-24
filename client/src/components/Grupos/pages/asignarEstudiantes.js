@@ -1,5 +1,5 @@
 // src/components/Grupos/pages/asignarEstudiantes.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../../Docentes/sidebar';
 import '../../Docentes/style/docente.css';
@@ -12,9 +12,15 @@ import {
   desasignarEstudianteDeGrupo,  
   getEstudiantesByGrupoId,
   estudianteYaAsignadoAMateria,
-  getEstudiantesBySemestreYCarrera,  
+  getEstudiantesBySemestreYCarrera,
+  getEstudiantesBySemestreCarreraYParalelo,
+  carreraNecesitaParalelo
 } from '../../../service/estudianteService';
-import { getGrupoPorId } from '../../../service/grupoService';
+import { 
+  getGrupoPorId,
+  verificarCompatibilidadEstudianteGrupo,
+  carreraNecesitaParalelo as grupoCarreraNecesitaParalelo
+} from '../../../service/grupoService';
 
 function AsignarEstudiantes() {
   const navigate = useNavigate();
@@ -33,10 +39,38 @@ function AsignarEstudiantes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
 
+  // Estados para manejo de paralelos
+  const [docenteTieneCienciasBasicas, setDocenteTieneCienciasBasicas] = useState(false);
+  const [mostrarInfoParalelo, setMostrarInfoParalelo] = useState(false);
+
   // Obtener el ID del grupo de los parámetros de la URL o del state
   const grupoId = new URLSearchParams(location.search).get('id') || 
     (location.state && location.state.grupoId);
-  
+
+  // Obtener las carreras del docente desde sessionStorage
+  const obtenerCarrerasDocente = () => {
+    try {
+      const usuarioStr = sessionStorage.getItem('usuario');
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario && usuario.carreras && Array.isArray(usuario.carreras)) {
+          return usuario.carreras;
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener carreras del docente:", error);
+      return [];
+    }
+  };
+
+  // Efecto para verificar si el docente tiene Ciencias Básicas
+  useEffect(() => {
+    const carreras = obtenerCarrerasDocente();
+    const tieneCienciasBasicas = carreras.includes('Ciencias Básicas');
+    setDocenteTieneCienciasBasicas(tieneCienciasBasicas);
+  }, []);
+
   // Cargar los datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
@@ -53,13 +87,30 @@ function AsignarEstudiantes() {
         const grupoData = await getGrupoPorId(grupoId);
         setGrupo(grupoData);
         
+        // Determinar si mostrar información de paralelo
+        const esGrupoCienciasBasicas = grupoCarreraNecesitaParalelo(grupoData.carrera);
+        setMostrarInfoParalelo(docenteTieneCienciasBasicas && esGrupoCienciasBasicas);
+        
         // Paso 2: Obtener estudiantes que YA están asignados a este grupo
         const estudiantesAsignados = await getEstudiantesByGrupoId(grupoId);
         setEstudiantesSeleccionados(estudiantesAsignados);
         setEstudiantesOriginales(estudiantesAsignados);
         
-        // Paso 3: Obtener todos los estudiantes del mismo semestre
-        const estudiantesSemestre = await getEstudiantesBySemestreYCarrera(grupoData.semestre, grupoData.carrera);
+        // Paso 3: Obtener estudiantes compatibles según la carrera y paralelo del grupo
+        let estudiantesSemestre = [];
+        
+        if (grupoCarreraNecesitaParalelo(grupoData.carrera)) {
+          // Para Ciencias Básicas: buscar estudiantes del mismo paralelo específico
+          const paraleloGrupo = grupoData.paralelo || 'A';
+          estudiantesSemestre = await getEstudiantesBySemestreCarreraYParalelo(
+            grupoData.semestre, 
+            grupoData.carrera, 
+            paraleloGrupo
+          );
+        } else {
+          // Para otras carreras: buscar estudiantes sin restricción de paralelo
+          estudiantesSemestre = await getEstudiantesBySemestreYCarrera(grupoData.semestre, grupoData.carrera);
+        }
         
         // Paso 4: Filtrar estudiantes según disponibilidad por materia y si ya están asignados a este grupo
         const estudiantesYaAsignados = new Set(estudiantesAsignados.map(e => e.id));
@@ -70,6 +121,19 @@ function AsignarEstudiantes() {
           // Si ya está en este grupo, no lo incluimos en ninguna de las listas
           if (estudiantesYaAsignados.has(estudiante.id)) {
             continue;
+          }
+          
+          // Verificar compatibilidad usando el servicio (doble verificación)
+          try {
+            const compatibilidad = await verificarCompatibilidadEstudianteGrupo(estudiante.id, grupoId);
+            
+            if (!compatibilidad.compatible) {
+              console.log(`Estudiante ${estudiante.codigo} no compatible: ${compatibilidad.razon}`);
+              continue; // Saltar estudiantes no compatibles
+            }
+          } catch (compatibilidadError) {
+            console.error(`Error verificando compatibilidad para estudiante ${estudiante.codigo}:`, compatibilidadError);
+            continue; // En caso de error, saltar el estudiante por seguridad
           }
           
           // Verificar si ya está en un grupo de la misma materia
@@ -84,7 +148,6 @@ function AsignarEstudiantes() {
         
         setEstudiantesConGrupo(estudiantesConGrupoMismaMateria);
         setEstudiantesDisponibles(estudiantesDisponiblesParaGrupo);
-        
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar datos:', err);
@@ -93,12 +156,36 @@ function AsignarEstudiantes() {
       }
     };
     
-    cargarDatos();
-  }, [grupoId]);
+    if (docenteTieneCienciasBasicas !== null) { // Esperar a que se determine si tiene Ciencias Básicas
+      cargarDatos();
+    }
+  }, [grupoId, docenteTieneCienciasBasicas]);
+
+  // Cálculos dinámicos para la UI
+  const elementosCalculados = useMemo(() => {
+    // Determinar si mostrar columna de paralelo en la tabla
+    const hayEstudiantesCienciasBasicas = estudiantesDisponibles.some(e => e.carrera === 'Ciencias Básicas') ||
+                                         estudiantesConGrupo.some(e => e.carrera === 'Ciencias Básicas') ||
+                                         estudiantesSeleccionados.some(e => e.carrera === 'Ciencias Básicas');
+    
+    const mostrarColumnaParalelo = docenteTieneCienciasBasicas && hayEstudiantesCienciasBasicas;
+    
+    return {
+      mostrarColumnaParalelo
+    };
+  }, [estudiantesDisponibles, estudiantesConGrupo, estudiantesSeleccionados, docenteTieneCienciasBasicas]);
   
   // Función para asignar un estudiante al grupo actual
   const asignarEstudianteAlGrupo = async (estudiante) => {
     try {
+      // Verificar compatibilidad una vez más antes de asignar
+      const compatibilidad = await verificarCompatibilidadEstudianteGrupo(estudiante.id, grupoId);
+      
+      if (!compatibilidad.compatible) {
+        toast.error(`No se puede asignar: ${compatibilidad.razon}`);
+        return false;
+      }
+      
       await asignarEstudianteAGrupo(estudiante.id, grupoId);
       return true;
     } catch (err) {
@@ -119,7 +206,6 @@ function AsignarEstudiantes() {
       return false;
     }
   };
-  
   
   // Función para manejar clic en estudiante disponible
   const handleClickEstudianteDisponible = async (estudiante) => {
@@ -264,6 +350,26 @@ function AsignarEstudiantes() {
     });
   };
 
+  // Función para renderizar información de paralelo en la celda
+  const renderParaleloEstudiante = (estudiante) => {
+    if (!elementosCalculados.mostrarColumnaParalelo) return null;
+    
+    // Todos los estudiantes tienen paralelo (por defecto 'A')
+    const paralelo = estudiante.paralelo || 'A';
+    
+    // Para estudiantes de Ciencias Básicas, mostrar con estilo especial
+    if (estudiante.carrera === 'Ciencias Básicas') {
+      return (
+        <span className="paralelo-badge ciencias-basicas" title={`Paralelo ${paralelo} - Ciencias Básicas`}>
+          {paralelo}
+        </span>
+      );
+    }
+    
+    // Para otras carreras, mostrar el paralelo pero con estilo sutil
+    return <span className="paralelo-badge otras-carreras" title={`Paralelo ${paralelo}`}>{paralelo}</span>;
+  };
+
   // Obtener estudiantes filtrados y ordenados
   const { disponibles: filteredDisponibles, ocupados: filteredOcupados } = filteredEstudiantes();
   const sortedDisponibles = sortedEstudiantes(filteredDisponibles);
@@ -317,9 +423,20 @@ function AsignarEstudiantes() {
               {grupo && (
                 <div className="grupo-info">
                   <h2>{grupo.nombre_proyecto}</h2>
-                  <p><strong>Carrera:</strong> {grupo.carrera}</p>
-                  <p><strong>Semestre:</strong> {grupo.semestre}</p>
-                  <p><strong>Materia:</strong> {grupo.materia}</p>
+                  <div className="grupo-detalles">
+                    <p><strong>Carrera:</strong> {grupo.carrera}</p>
+                    <p><strong>Semestre:</strong> {grupo.semestre}</p>
+                    <p><strong>Materia:</strong> {grupo.materia}</p>
+                    {/* Mostrar paralelo solo cuando es relevante */}
+                    {mostrarInfoParalelo && (
+                      <p><strong>Paralelo:</strong> 
+                        <span className="paralelo-badge-grupo ciencias-basicas">
+                          {grupo.paralelo || 'A'}
+                        </span>
+                        <span className="paralelo-info-grupo"></span>
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
               
@@ -371,6 +488,10 @@ function AsignarEstudiantes() {
                           <th>Código</th>
                           <th>Nombre Completo</th>
                           <th>Semestre</th>
+                          {/* Columna de paralelo - Solo visible cuando es relevante */}
+                          {elementosCalculados.mostrarColumnaParalelo && (
+                            <th>Paralelo</th>
+                          )}
                           <th>Estado</th>
                         </tr>
                       </thead>
@@ -385,6 +506,10 @@ function AsignarEstudiantes() {
                             <td>{estudiante.codigo}</td>
                             <td>{`${estudiante.nombre} ${estudiante.apellido}`}</td>
                             <td>{estudiante.semestre}</td>
+                            {/* Celda de paralelo - Solo visible cuando es relevante */}
+                            {elementosCalculados.mostrarColumnaParalelo && (
+                              <td>{renderParaleloEstudiante(estudiante)}</td>
+                            )}
                             <td>
                               <span className="estado-disponible">Disponible</span>
                             </td>
@@ -401,6 +526,10 @@ function AsignarEstudiantes() {
                             <td>{estudiante.codigo}</td>
                             <td>{`${estudiante.nombre} ${estudiante.apellido}`}</td>
                             <td>{estudiante.semestre}</td>
+                            {/* Celda de paralelo - Solo visible cuando es relevante */}
+                            {elementosCalculados.mostrarColumnaParalelo && (
+                              <td>{renderParaleloEstudiante(estudiante)}</td>
+                            )}
                             <td>
                               <span className="estado-ocupado">Asignado a otro grupo</span>
                             </td>
@@ -417,6 +546,11 @@ function AsignarEstudiantes() {
                     {estudiantesSeleccionados.length === 0 ? (
                       <div className="empty-seleccionados">
                         <p>Haz clic en los estudiantes disponibles para asignarlos al grupo</p>
+                        {mostrarInfoParalelo && (
+                          <p className="helper-text">
+                            Solo aparecerán estudiantes del Paralelo {grupo?.paralelo || 'A'}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       estudiantesSeleccionados.map((estudiante, index) => (
@@ -430,10 +564,17 @@ function AsignarEstudiantes() {
                             <span className="estudiante-nombre">
                               {`${estudiante.nombre} ${estudiante.apellido}`}
                             </span>
+                            {/* Mostrar paralelo del estudiante cuando es relevante */}
+                            {mostrarInfoParalelo && (
+                              <span className="estudiante-paralelo">
+                                {renderParaleloEstudiante(estudiante)}
+                              </span>
+                            )}
                           </div>
                           <button
                             className="btn-eliminar-estudiante"
                             onClick={() => handleRemoveEstudiante(estudiante)}
+                            title="Eliminar del grupo"
                           >
                             ×
                           </button>

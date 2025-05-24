@@ -14,6 +14,9 @@ import { getRubricaPorId } from '../../../service/rubricaService';
 import { getDocenteById } from '../../../service/docenteService';
 import { getCalificacionPorId } from '../../../service/calificacionService';
 
+// Importar función para verificar si necesita paralelo
+import { carreraNecesitaParalelo } from '../../../service/grupoService';
+
 // Importar utilidades para PDF
 import { 
   generarPDFEvaluacion, 
@@ -36,6 +39,9 @@ function NotasRubrica() {
   // Estados para fecha y comentarios
   const [fechaEvaluacion, setFechaEvaluacion] = useState('');
   const [comentariosGrupo, setComentariosGrupo] = useState('');
+  
+  // Estado para controlar si mostrar columna de paralelo
+  const [mostrarColumnaParalelo, setMostrarColumnaParalelo] = useState(false);
 
   // Ref para el contenedor del PDF
   const pdfRef = useRef(null);
@@ -65,6 +71,10 @@ function NotasRubrica() {
 
         const grupoData = await getGrupoPorId(id);
         setGrupo(grupoData);
+        
+        // Determinar si mostrar columna de paralelo basado en la carrera del grupo
+        const necesitaParalelo = carreraNecesitaParalelo(grupoData.carrera);
+        setMostrarColumnaParalelo(necesitaParalelo);
 
         const estudiantesData = await getEstudiantesByGrupoId(id);
         setEstudiantes(estudiantesData);
@@ -313,6 +323,13 @@ function NotasRubrica() {
                   <div className="proyecto-info-label">Semestre:</div>
                   <div className="proyecto-info-value">{grupo?.semestre || 'Sin semestre especificado'}</div>
                 </div>
+                {/* Mostrar paralelo solo si es Ciencias Básicas */}
+                {mostrarColumnaParalelo && (
+                  <div className="proyecto-info-item">
+                    <div className="proyecto-info-label">Paralelo:</div>
+                    <div className="proyecto-info-value">{grupo?.paralelo || 'A'}</div>
+                  </div>
+                )}
                 <div className="proyecto-info-item">
                   <div className="proyecto-info-label">Fecha de evaluación:</div>
                   <div className="proyecto-info-value">{fechaEvaluacion}</div>
@@ -327,11 +344,13 @@ function NotasRubrica() {
             <div className="evaluacion-estudiantes">
               <h3>Evaluación de estudiantes</h3>
               
-              <table className="tabla-evaluacion">
+              <table className={`tabla-evaluacion ${mostrarColumnaParalelo ? 'con-paralelo' : ''}`}>
                 <thead>
                   <tr>
                     <th>Código</th>
                     <th>Estudiante</th>
+                    {/* Mostrar columna de paralelo solo si es necesario */}
+                    {mostrarColumnaParalelo && <th>Paralelo</th>}
                     <th>Presentación (30%)</th>
                     <th>Sustentación (30%)</th>
                     <th>Documentación (30%)</th>
@@ -345,6 +364,14 @@ function NotasRubrica() {
                   <tr key={`${datos.estudiante.id}-${datos.informe.id}`}>
                     <td>{datos.estudiante.codigo}</td>
                     <td>{`${datos.estudiante.nombre} ${datos.estudiante.apellido}`}</td>
+                    {/* Mostrar paralelo del estudiante solo si es necesario */}
+                    {mostrarColumnaParalelo && (
+                      <td>
+                        <span className="paralelo-badge ciencias-basicas">
+                          {datos.estudiante.paralelo || 'A'}
+                        </span>
+                      </td>
+                    )}
                     <td>
                       <span className="nota-valor">{formatearNota(datos.rubrica?.presentacion)}</span>
                     </td>
