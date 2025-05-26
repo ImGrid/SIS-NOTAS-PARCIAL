@@ -9,7 +9,7 @@ import {
   getSemestresDisponibles,
 } from '../../../service/estudianteService';
 import EliminarEstudianteModal from './eliminarEstudiante';
-
+import ImportarEstudiantes from '../pages/importEstudiantes';
 function ListarEstudiantes() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ function ListarEstudiantes() {
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('');
   const [paraleloSeleccionado, setParaleloSeleccionado] = useState('');
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
-  
+  const [mostrarModalImportar, setMostrarModalImportar] = useState(false);
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const estudiantesPorPagina = 25;
@@ -313,7 +313,13 @@ function ListarEstudiantes() {
   const irACrearEstudiante = () => {
     navigate('/estudiantes/crear');
   };
-  
+
+  const irAImportarEstudiantes = () => {
+    setMostrarModalImportar(true);
+  };
+  const cerrarModalImportar = () => {
+    setMostrarModalImportar(false);
+  };
   // Redirigir a página de editar estudiante
   const irAEditarEstudiante = (id) => {
     // Verificar si el estudiante pertenece a una carrera asignada al docente
@@ -498,9 +504,19 @@ function ListarEstudiantes() {
           <div className="estudiantes-header">
             <h1>Lista de Estudiantes</h1>
             {carrerasAsignadas.length > 0 && (
-              <button className="btn-crear-estudiante" onClick={irACrearEstudiante}>
-                + Registrar Nuevo Estudiante
-              </button>
+              <div className="header-buttons">
+                <button className="btn-importar-estudiante" onClick={irAImportarEstudiantes}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  Importar
+                </button>
+                <button className="btn-crear-estudiante" onClick={irACrearEstudiante}>
+                  + Registrar Nuevo Estudiante
+                </button>
+              </div>
             )}
           </div>
           {carrerasAsignadas.length === 0 ? (
@@ -683,6 +699,10 @@ function ListarEstudiantes() {
           onEliminar={manejarEliminacionExitosa}
         />
       )}
+      <ImportarEstudiantes 
+        isOpen={mostrarModalImportar}
+        onClose={cerrarModalImportar}
+      />
     </Layout>
   );
 }

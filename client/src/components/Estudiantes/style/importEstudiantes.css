@@ -1,0 +1,650 @@
+/* ===============================================
+   IMPORTAR ESTUDIANTES - CSS COMPLETAMENTE AISLADO
+   Prefijo: imp-est- para evitar conflictos
+   =============================================== */
+
+/* ===============================================
+   VARIABLES CSS AISLADAS
+   =============================================== */
+.imp-est-overlay {
+  --imp-est-primary: #3498db;
+  --imp-est-success: #27ae60;
+  --imp-est-danger: #e74c3c;
+  --imp-est-warning: #f39c12;
+  --imp-est-dark: #2c3e50;
+  --imp-est-light: #ecf0f1;
+  --imp-est-white: #ffffff;
+  --imp-est-gray: #95a5a6;
+  --imp-est-text: #2c3e50;
+  --imp-est-text-muted: #6c757d;
+  --imp-est-border: #ddd;
+  --imp-est-border-light: #eee;
+  --imp-est-bg-light: #f8f9fa;
+  --imp-est-bg-info: #e8f4fd;
+  --imp-est-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --imp-est-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --imp-est-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --imp-est-radius: 8px;
+  --imp-est-radius-lg: 12px;
+  --imp-est-transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* ===============================================
+   OVERLAY Y MODAL BASE
+   =============================================== */
+.imp-est-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 1rem;
+  box-sizing: border-box;
+  animation: imp-est-fade-in 0.3s ease-out;
+}
+
+.imp-est-modal {
+  background-color: var(--imp-est-white);
+  border-radius: var(--imp-est-radius-lg);
+  box-shadow: var(--imp-est-shadow-lg);
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh; /* Reducido para minimizar scroll */
+  position: relative;
+  animation: imp-est-slide-in 0.3s ease-out;
+  
+  /* SCROLL INVISIBLE - Funciona en todos los navegadores */
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+/* Ocultar scrollbar en WebKit (Chrome, Safari, Edge) */
+.imp-est-modal::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* ===============================================
+   HEADER DEL MODAL
+   =============================================== */
+.imp-est-header {
+  background: linear-gradient(135deg, var(--imp-est-dark) 0%, #34495e 100%);
+  color: var(--imp-est-white);
+  padding: 1.5rem 2rem;
+  border-radius: var(--imp-est-radius-lg) var(--imp-est-radius-lg) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0; /* No se comprime */
+}
+
+.imp-est-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--imp-est-white);
+}
+
+.imp-est-btn-close {
+  background: none;
+  border: none;
+  color: var(--imp-est-white);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--imp-est-radius);
+  transition: var(--imp-est-transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.imp-est-btn-close:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+}
+
+.imp-est-btn-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ===============================================
+   CONTENIDO DEL MODAL
+   =============================================== */
+.imp-est-content {
+  padding: 0 2rem 0;
+  flex: 1;
+  min-height: 0; /* Permite que el contenido se comprima */
+}
+
+/* ===============================================
+   SECCIONES
+   =============================================== */
+.imp-est-filters-section,
+.imp-est-file-section {
+  margin-bottom: 2rem;
+}
+
+.imp-est-section-title {
+  margin: 0 0 1.5rem 0;
+  color: var(--imp-est-dark);
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding-bottom: 0.75rem;
+  position: relative;
+}
+
+.imp-est-filters-section .imp-est-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--imp-est-primary), #5dade2);
+  border-radius: 2px;
+}
+
+.imp-est-file-section .imp-est-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--imp-est-success), #58d68d);
+  border-radius: 2px;
+}
+
+/* ===============================================
+   FILTROS
+   =============================================== */
+.imp-est-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  align-items: end;
+}
+
+.imp-est-filter-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.imp-est-label {
+  font-weight: 600;
+  color: var(--imp-est-text);
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.imp-est-required {
+  color: var(--imp-est-danger);
+  margin-left: 4px;
+  font-weight: 700;
+}
+
+.imp-est-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--imp-est-border);
+  border-radius: var(--imp-est-radius);
+  background-color: var(--imp-est-white);
+  font-size: 0.95rem;
+  color: var(--imp-est-text);
+  transition: var(--imp-est-transition);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.imp-est-select:focus {
+  border-color: var(--imp-est-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+  transform: translateY(-1px);
+}
+
+.imp-est-select:disabled {
+  background-color: var(--imp-est-bg-light);
+  color: var(--imp-est-gray);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.imp-est-help-text {
+  font-size: 0.8rem;
+  color: var(--imp-est-text-muted);
+  margin-top: 0.6rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Filtro especial para paralelo */
+.imp-est-paralelo-filter {
+  border-left: 4px solid var(--imp-est-primary);
+  padding-left: 1rem;
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+  border-radius: 0 var(--imp-est-radius) var(--imp-est-radius) 0;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* ===============================================
+   ZONA DE ARCHIVO
+   =============================================== */
+.imp-est-upload-zone {
+  border: 3px dashed var(--imp-est-border);
+  border-radius: var(--imp-est-radius-lg);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+  transition: var(--imp-est-transition);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.imp-est-upload-zone::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(52, 152, 219, 0.1), transparent);
+  transition: left 0.6s;
+}
+
+.imp-est-upload-zone:hover {
+  border-color: var(--imp-est-primary);
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--imp-est-shadow-md);
+}
+
+.imp-est-upload-zone:hover::before {
+  left: 100%;
+}
+
+.imp-est-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.imp-est-upload-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--imp-est-gray);
+  transition: var(--imp-est-transition);
+}
+
+.imp-est-upload-zone:hover .imp-est-upload-icon {
+  color: var(--imp-est-primary);
+  transform: scale(1.1);
+}
+
+.imp-est-upload-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.imp-est-upload-text {
+  margin-bottom: 0.5rem;
+}
+
+.imp-est-file-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.imp-est-file-name {
+  font-weight: 600;
+  color: var(--imp-est-success);
+  font-size: 1.1rem;
+  word-break: break-word;
+  max-width: 300px;
+}
+
+.imp-est-file-size {
+  color: var(--imp-est-text-muted);
+  font-size: 0.9rem;
+  background-color: var(--imp-est-bg-light);
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+}
+
+.imp-est-file-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.imp-est-main-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--imp-est-text);
+}
+
+.imp-est-sub-text {
+  font-size: 0.9rem;
+  color: var(--imp-est-text-muted);
+}
+
+.imp-est-file-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.imp-est-btn-select-file {
+  background: linear-gradient(135deg, var(--imp-est-primary) 0%, #5dade2 100%);
+  color: var(--imp-est-white);
+  border: none;
+  border-radius: var(--imp-est-radius);
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--imp-est-transition);
+  font-size: 0.95rem;
+  box-shadow: var(--imp-est-shadow-sm);
+}
+
+.imp-est-btn-select-file:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.imp-est-btn-select-file:active {
+  transform: translateY(0);
+}
+
+/* ===============================================
+   AYUDA DE ARCHIVO
+   =============================================== */
+.imp-est-file-help {
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  background: linear-gradient(135deg, var(--imp-est-bg-info) 0%, #d6eaf8 100%);
+  border-radius: var(--imp-est-radius);
+  border-left: 4px solid var(--imp-est-primary);
+}
+
+.imp-est-help-item {
+  margin: 0.6rem 0;
+  font-size: 0.85rem;
+  color: var(--imp-est-text);
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+}
+
+.imp-est-help-item::before {
+  content: '•';
+  color: var(--imp-est-primary);
+  font-weight: bold;
+  margin-right: 0.5rem;
+  margin-top: 0.1rem;
+}
+
+.imp-est-help-item:first-child {
+  margin-top: 0;
+}
+
+.imp-est-help-item:last-child {
+  margin-bottom: 0;
+}
+
+/* ===============================================
+   FOOTER DEL MODAL
+   =============================================== */
+.imp-est-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--imp-est-border-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: linear-gradient(135deg, var(--imp-est-bg-light) 0%, #f1f3f4 100%);
+  border-radius: 0 0 var(--imp-est-radius-lg) var(--imp-est-radius-lg);
+  flex-shrink: 0; /* No se comprime */
+}
+
+.imp-est-btn-clear,
+.imp-est-btn-cancel,
+.imp-est-btn-import {
+  border: none;
+  border-radius: var(--imp-est-radius);
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--imp-est-transition);
+  font-size: 0.9rem;
+  box-shadow: var(--imp-est-shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.imp-est-btn-clear {
+  background: linear-gradient(135deg, var(--imp-est-gray) 0%, #a6acaf 100%);
+  color: var(--imp-est-white);
+}
+
+.imp-est-btn-clear:hover {
+  background: linear-gradient(135deg, #7f8c8d 0%, #95a5a6 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--imp-est-shadow-md);
+}
+
+.imp-est-btn-cancel {
+  background: linear-gradient(135deg, var(--imp-est-danger) 0%, #ec7063 100%);
+  color: var(--imp-est-white);
+}
+
+.imp-est-btn-cancel:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--imp-est-shadow-md);
+}
+
+.imp-est-btn-import {
+  background: linear-gradient(135deg, var(--imp-est-success) 0%, #58d68d 100%);
+  color: var(--imp-est-white);
+}
+
+.imp-est-btn-import:hover:not(:disabled) {
+  background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+}
+
+.imp-est-btn-import:disabled {
+  background: linear-gradient(135deg, var(--imp-est-gray) 0%, #a6acaf 100%);
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: var(--imp-est-shadow-sm);
+}
+
+/* ===============================================
+   ANIMACIONES
+   =============================================== */
+@keyframes imp-est-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes imp-est-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===============================================
+   RESPONSIVE DESIGN
+   =============================================== */
+@media (max-width: 768px) {
+  .imp-est-overlay {
+    padding: 0.5rem;
+  }
+  
+  .imp-est-modal {
+    max-height: 92vh;
+    margin: 0;
+  }
+  
+  .imp-est-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .imp-est-title {
+    font-size: 1.3rem;
+  }
+  
+  .imp-est-content {
+    padding: 1.5rem;
+  }
+  
+  .imp-est-filters-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .imp-est-upload-zone {
+    padding: 2rem 1.5rem;
+  }
+  
+  .imp-est-upload-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .imp-est-footer {
+    padding: 1rem 1.5rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .imp-est-footer button {
+    width: 100%;
+    order: 1;
+  }
+  
+  .imp-est-btn-import {
+    order: 0;
+  }
+  
+  .imp-est-btn-cancel {
+    order: 2;
+  }
+  
+  .imp-est-btn-clear {
+    order: 3;
+  }
+}
+
+@media (max-width: 480px) {
+  .imp-est-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .imp-est-title {
+    font-size: 1.2rem;
+  }
+  
+  .imp-est-content {
+    padding: 1rem;
+  }
+  
+  .imp-est-section-title {
+    font-size: 1.1rem;
+  }
+  
+  .imp-est-upload-zone {
+    padding: 1.5rem 1rem;
+  }
+  
+  .imp-est-main-text {
+    font-size: 1rem;
+  }
+  
+  .imp-est-sub-text {
+    font-size: 0.85rem;
+  }
+  
+  .imp-est-footer {
+    padding: 0.75rem 1rem;
+  }
+  
+  .imp-est-footer button {
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* ===============================================
+   ESTADOS HOVER ADICIONALES
+   =============================================== */
+.imp-est-filter-item:hover .imp-est-select:not(:disabled) {
+  border-color: var(--imp-est-primary);
+}
+
+.imp-est-paralelo-filter:hover {
+  background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%);
+}
+
+/* Efectos de ondas en botones */
+.imp-est-btn-clear::before,
+.imp-est-btn-cancel::before,
+.imp-est-btn-import::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.imp-est-btn-clear:active::before,
+.imp-est-btn-cancel:active::before,
+.imp-est-btn-import:not(:disabled):active::before {
+  width: 300px;
+  height: 300px;
+}

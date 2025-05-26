@@ -27,7 +27,6 @@ import CrearDocenteAdmin from './components/Docentes/pages/crearDocenteSup';
 import ListarDocentesAdmin from './components/Docentes/pages/listarDocenteSup';
 import SupervisorEstadisticas from './components/Supervisor/pages/supEstadisticas';
 import EditarDocente from './components/Docentes/pages/editarDocenteSup';
-
 function App() {
   return (
     <Router>
