@@ -38,7 +38,11 @@ import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
 import MATERIAS_POR_SEMESTRE_BASICAS from '../../../util/materias/materias_basic';
 import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
 import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
-
+import MATERIAS_POR_SEMESTRE_TEC_SUP_DGCA from '../../../util/materias/materias_tec_diseño';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_INF from '../../../util/materias/materias_tec_inf';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_SE from '../../../util/materias/materias_tec_etn';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_ER from '../../../util/materias/materias_energ';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_CC from '../../../util/materias/materias_tec_cons_civ';
 const SupervisorInformes = () => {
   // Estados para configuración del supervisor
   const [supervisor, setSupervisor] = useState(null);
@@ -81,7 +85,12 @@ const SupervisorInformes = () => {
     'Ingeniería Agroindustrial': MATERIAS_POR_SEMESTRE_AGRO,
     'Ciencias Básicas': MATERIAS_POR_SEMESTRE_BASICAS,
     'Ingeniería Comercial': MATERIAS_POR_SEMESTRE_COM,
-    'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL
+    'Ingeniería Civil': MATERIAS_POR_SEMESTRE_CIVIL,
+    'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual': MATERIAS_POR_SEMESTRE_TEC_SUP_DGCA,
+    'Tec. Sup. en Informática': MATERIAS_POR_SEMESTRE_TEC_SUP_INF,
+    'Tec. Sup. en Sistemas Electrónicos': MATERIAS_POR_SEMESTRE_TEC_SUP_SE,
+    'Técnico Superior en Energías Renovables': MATERIAS_POR_SEMESTRE_TEC_SUP_ER,
+    'Tec. Sup. Contrucción Civil': MATERIAS_POR_SEMESTRE_TEC_SUP_CC
   }), []);
 
   // Paralelos disponibles para Ciencias Básicas

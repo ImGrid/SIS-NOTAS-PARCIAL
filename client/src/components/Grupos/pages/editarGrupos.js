@@ -22,6 +22,11 @@ import MATERIAS_POR_SEMESTRE_AGRO from '../../../util/materias/materias_agro';
 import MATERIAS_POR_SEMESTRE_BASICAS from '../../../util/materias/materias_basic';
 import MATERIAS_POR_SEMESTRE_COM from '../../../util/materias/materias_com';
 import MATERIAS_POR_SEMESTRE_CIVIL from '../../../util/materias/materias_cvil';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_DGCA from '../../../util/materias/materias_tec_diseño';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_INF from '../../../util/materias/materias_tec_inf';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_SE from '../../../util/materias/materias_tec_etn';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_ER from '../../../util/materias/materias_energ';
+import MATERIAS_POR_SEMESTRE_TEC_SUP_CC from '../../../util/materias/materias_tec_cons_civ';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -94,7 +99,12 @@ function EditarGrupos() {
     { value: 'Ingeniería Agroindustrial', label: 'Ingeniería Agroindustrial' },
     { value: 'Ciencias Básicas', label: 'Ciencias Básicas' },
     { value: 'Ingeniería Comercial', label: 'Ingeniería Comercial' },
-    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' }
+    { value: 'Ingeniería Civil', label: 'Ingeniería Civil' },
+    { value: 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual', label: 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual' },
+    { value: 'Tec. Sup. en Informática', label: 'Tec. Sup. en Informática' },
+    { value: 'Tec. Sup. en Sistemas Electrónicos', label: 'Tec. Sup. en Sistemas Electrónicos' },
+    { value: 'Técnico Superior en Energías Renovables', label: 'Técnico Superior en Energías Renovables' },
+    { value: 'Tec. Sup. Contrucción Civil', label: 'Tec. Sup. Contrucción Civil' }
   ];
 
   // Cargar las carreras asignadas al docente cuando el componente se monta
@@ -177,6 +187,16 @@ function EditarGrupos() {
         return MATERIAS_POR_SEMESTRE_COM;
       case 'Ingeniería Civil':
         return MATERIAS_POR_SEMESTRE_CIVIL;
+      case 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual':
+        return MATERIAS_POR_SEMESTRE_TEC_SUP_DGCA;
+      case 'Tec. Sup. en Informática':
+        return MATERIAS_POR_SEMESTRE_TEC_SUP_INF;
+      case 'Tec. Sup. en Sistemas Electrónicos':
+        return MATERIAS_POR_SEMESTRE_TEC_SUP_SE;
+      case 'Técnico Superior en Energías Renovables':
+        return MATERIAS_POR_SEMESTRE_TEC_SUP_ER;
+      case 'Tec. Sup. Contrucción Civil':
+        return MATERIAS_POR_SEMESTRE_TEC_SUP_CC;
       default:
         return {};
     }

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LayoutSup from '../../Supervisor/pages/LayoutSup';
 import '../style/crearDocenteSup.css';
-import api from '../../../service/api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { createDocente, gestionarCarrerasDocente } from '../../../service/docenteService';
@@ -18,10 +17,9 @@ const CARRERAS = [
   { value: 'Ingeniería Civil', label: 'Ingeniería Civil' },
   { value: 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual', label: 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual' },
   { value: 'Tec. Sup. en Informática', label: 'Tec. Sup. en Informática' },
-  { value: 'Tec. Sup. en Análisis de Sistemas', label: 'Tec. Sup. en Análisis de Sistemas' },
-  { value: 'Tec. Sup. en Programación de Sistemas', label: 'Tec. Sup. en Programación de Sistemas' },
   { value: 'Tec. Sup. en Sistemas Electrónicos', label: 'Tec. Sup. en Sistemas Electrónicos' },
-  { value: 'Técnico Superior en Energías Renovables', label: 'Técnico Superior en Energías Renovables' }
+  { value: 'Técnico Superior en Energías Renovables', label: 'Técnico Superior en Energías Renovables' },
+  { value: 'Tec. Sup. Contrucción Civil', label: 'Tec. Sup. Contrucción Civil' }
 ];
 
 function CrearDocenteAdmin() {

@@ -392,10 +392,9 @@ export const generarTemplateExcel = () => {
     ['CIV004-5', 'Patricia Isabel', 'Herrera Castro', 'Ingeniería Civil', '8', 'A'],
     ['DGR005-6', 'Miguel Angel', 'Sandoval Roque', 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual', '3', 'A'],
     ['INF006-7', 'Claudia Paola', 'Mamani Quispe', 'Tec. Sup. en Informática', '4', 'A'],
-    ['ASI007-8', 'Fernando José', 'Vargas Zenteno', 'Tec. Sup. en Análisis de Sistemas', '5', 'A'],
-    ['PSI008-9', 'Gabriela Antonia', 'Burgos Delgado', 'Tec. Sup. en Programación de Sistemas', '3', 'A'],
     ['SEL009-X', 'Daniel Rodrigo', 'Cortez Montaño', 'Tec. Sup. en Sistemas Electrónicos', '4', 'A'],
-    ['ENR010-1', 'Valeria Nicole', 'Jiménez Pardo', 'Técnico Superior en Energías Renovables', '6', 'A']
+    ['ENR010-1', 'Valeria Nicole', 'Jiménez Pardo', 'Técnico Superior en Energías Renovables', '6', 'A'],
+    ['TCC009-X', 'Daniel Rodrigo', 'Cortez Montaño', 'Tec. Sup. Contrucción Civil', '5', 'A'],
   ];
 
   const worksheet = XLSX.utils.aoa_to_sheet(datosEjemplo);

@@ -1,0 +1,32 @@
+const MATERIAS_POR_SEMESTRE_TEC_SUP_ER = {
+    "1": [
+      "NINGUNA"
+    ],
+    "2": [
+      "NINGUNA"
+    ],
+    "3": [
+      "ACUMULADORES ELÉCTRICOS",
+      "INSTALACIONES ELÉCTRICAS",
+      "METEOROLOGÍA Y ENERGÍAS RENOVABLES",
+      "METODOLOGÍA DE LA INVESTIGACIÓN",
+      "TERMODINÁMICA"
+    ],
+    "4": [
+      "NINGUNA"
+    ],
+    "5": [
+      "GESTIÓN DE LA ENERGÍA",
+      "SISTEMA DE ENERGÍA SOLAR FOTOVOLTAICA II",
+      "SISTEMAS DE ENERGÍA BIOMÁSICA",
+      "SISTEMAS DE ENERGÍA EÓLICA II",
+      "SISTEMAS DE ENERGÍA GEOTÉRMICA",
+      "TRABAJO DE GRADO TÉCNICO I"
+    ],
+    "6": [
+      "MARCO JURÍDICO E INSTITUCIONAL",
+      "TRABAJO DE GRADO TÉCNICO II"
+    ]
+  };
+  
+  export default MATERIAS_POR_SEMESTRE_TEC_SUP_ER;

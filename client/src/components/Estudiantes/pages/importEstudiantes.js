@@ -1,29 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import '../style/importEstudiantes.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getSemestresDisponibles } from '../../../service/estudianteService';
-
-// Importar iconos de react-feather
-import { 
-  X, 
-  Upload, 
-  Download, 
-  FileText, 
-  AlertTriangle, 
-  CheckCircle, 
-  AlertCircle,
-  Search,
-  BarChart2,
-  RefreshCw,
-  Check,
-  Clipboard,
-  Filter,
-  Folder,
-  File
-} from 'react-feather';
-
-// Importar utilidades de importación
 import { 
   importarEstudiantesDesdeExcel,
   generarReporteImportacion,
@@ -37,6 +15,108 @@ import {
   descargarTemplate,
   FORMATO_EXCEL
 } from '../../../util/import/excelProcessor';
+import '../style/importEstudiantes.css';
+
+// Iconos SVG personalizados
+const Icons = {
+  X: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  ),
+  Upload: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7,10 12,5 17,10"></polyline>
+      <line x1="12" y1="5" x2="12" y2="15"></line>
+    </svg>
+  ),
+  Download: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7,10 12,15 17,10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+  ),
+  FileText: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14,2 14,8 20,8"></polyline>
+      <line x1="16" y1="13" x2="8" y2="13"></line>
+      <line x1="16" y1="17" x2="8" y2="17"></line>
+      <polyline points="10,9 9,9 8,9"></polyline>
+    </svg>
+  ),
+  AlertTriangle: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  ),
+  CheckCircle: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22,4 12,14.01 9,11.01"></polyline>
+    </svg>
+  ),
+  AlertCircle: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+  ),
+  Search: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <path d="m21 21-4.35-4.35"></path>
+    </svg>
+  ),
+  BarChart: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="20" x2="12" y2="10"></line>
+      <line x1="18" y1="20" x2="18" y2="4"></line>
+      <line x1="6" y1="20" x2="6" y2="16"></line>
+    </svg>
+  ),
+  RefreshCw: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+      <path d="M21 3v5h-5"></path>
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+      <path d="M3 21v-5h5"></path>
+    </svg>
+  ),
+  Check: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20,6 9,17 4,12"></polyline>
+    </svg>
+  ),
+  Clipboard: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+    </svg>
+  ),
+  Filter: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46 22,3"></polygon>
+    </svg>
+  ),
+  Folder: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+    </svg>
+  ),
+  File: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14,2 14,8 20,8"></polyline>
+    </svg>
+  )
+};
 
 // Estados del proceso de importación
 const ESTADOS_IMPORTACION = {
@@ -46,16 +126,16 @@ const ESTADOS_IMPORTACION = {
   ERROR: 'error'
 };
 
-// Fases del proceso con iconos de react-feather
+// Fases del proceso con iconos SVG
 const FASES_PROCESO = {
-  preparacion: { nombre: 'Preparación', Icono: Clipboard },
-  validacion: { nombre: 'Validación', Icono: Search },
-  procesamiento: { nombre: 'Procesando Excel', Icono: BarChart2 },
-  filtrado: { nombre: 'Aplicando Filtros', Icono: Filter },
-  duplicados: { nombre: 'Verificando Duplicados', Icono: RefreshCw },
-  importacion: { nombre: 'Importando', Icono: Upload },
-  completado: { nombre: 'Completado', Icono: CheckCircle },
-  error: { nombre: 'Error', Icono: AlertCircle }
+  preparacion: { nombre: 'Preparación', Icono: Icons.Clipboard },
+  validacion: { nombre: 'Validación', Icono: Icons.Search },
+  procesamiento: { nombre: 'Procesando Excel', Icono: Icons.BarChart },
+  filtrado: { nombre: 'Aplicando Filtros', Icono: Icons.Filter },
+  duplicados: { nombre: 'Verificando Duplicados', Icono: Icons.RefreshCw },
+  importacion: { nombre: 'Importando', Icono: Icons.Upload },
+  completado: { nombre: 'Completado', Icono: Icons.CheckCircle },
+  error: { nombre: 'Error', Icono: Icons.AlertCircle }
 };
 
 function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
@@ -115,7 +195,6 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
       setErrorPermisos('');
     }
   }, [isOpen]);
-
   // Calcular elementos dinámicos para paralelos
   const elementosCalculados = useMemo(() => {
     // Determinar si mostrar filtro de paralelo
@@ -226,7 +305,6 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
     }
   }), []);
 
-  // ✅ FUNCIÓN CORREGIDA: Solo analiza sin importar
   const analizarArchivo = async () => {
     if (!validarFormulario(false)) return;
 
@@ -246,7 +324,6 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
       if (semestreSeleccionado) filtros.semestre = semestreSeleccionado;
       if (paraleloSeleccionado) filtros.paralelo = paraleloSeleccionado;
 
-      // ✅ CORREGIDO: Agregar parámetro soloAnalisis = true
       const resultado = await importarEstudiantesDesdeExcel(
         archivoSeleccionado,
         filtros,
@@ -254,7 +331,6 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
         true // ← NUEVO: soloAnalisis = true
       );
 
-      // ✅ CORREGIDO: Manejar resultado de solo análisis
       if (resultado.soloAnalisis) {
         if (resultado.exito && resultado.resumen.listos > 0) {
           setResumenPreImportacion(resultado.resumen);
@@ -296,7 +372,6 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
       if (semestreSeleccionado) filtros.semestre = semestreSeleccionado;
       if (paraleloSeleccionado) filtros.paralelo = paraleloSeleccionado;
 
-      // ✅ CORRECTO: Ejecutar importación completa (soloAnalisis = false por defecto)
       const resultado = await importarEstudiantesDesdeExcel(
         archivoSeleccionado,
         filtros,
@@ -444,7 +519,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
       <div className="imp-est-progress-container">
         <div className="imp-est-progress-header">
           <span className="imp-est-progress-phase">
-            <IconoFase size={16} className="imp-est-progress-icon" />
+            <IconoFase className="imp-est-progress-icon" />
             {faseActual.nombre}
           </span>
           <span className="imp-est-progress-percentage">
@@ -478,14 +553,14 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
           <div className="imp-est-confirmation-content">
             <div className="imp-est-summary-stats">
               <div className="imp-est-stat-item success">
-                <CheckCircle size={20} className="imp-est-stat-icon" />
+                <Icons.CheckCircle className="imp-est-stat-icon" />
                 <span className="imp-est-stat-number">{resumenPreImportacion.listos}</span>
                 <span className="imp-est-stat-label">Listos para importar</span>
               </div>
               
               {resumenPreImportacion.duplicados > 0 && (
                 <div className="imp-est-stat-item warning">
-                  <AlertTriangle size={20} className="imp-est-stat-icon" />
+                  <Icons.AlertTriangle className="imp-est-stat-icon" />
                   <span className="imp-est-stat-number">{resumenPreImportacion.duplicados}</span>
                   <span className="imp-est-stat-label">Duplicados (se ignorarán)</span>
                 </div>
@@ -493,7 +568,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
               
               {resumenPreImportacion.errores > 0 && (
                 <div className="imp-est-stat-item error">
-                  <AlertCircle size={20} className="imp-est-stat-icon" />
+                  <Icons.AlertCircle className="imp-est-stat-icon" />
                   <span className="imp-est-stat-number">{resumenPreImportacion.errores}</span>
                   <span className="imp-est-stat-label">Con errores</span>
                 </div>
@@ -516,7 +591,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
               className="imp-est-btn-confirm"
               onClick={() => ejecutarImportacion(true)}
             >
-              <Upload size={16} className="imp-est-btn-icon" />
+              <Icons.Upload className="imp-est-btn-icon" />
               Confirmar Importación
             </button>
           </div>
@@ -539,14 +614,14 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
         
         <div className="imp-est-results-summary">
           <div className="imp-est-result-stat success">
-            <CheckCircle size={24} className="imp-est-result-icon" />
+            <Icons.CheckCircle className="imp-est-result-icon" />
             <span className="imp-est-result-number">{importados}</span>
             <span className="imp-est-result-label">Importados exitosamente</span>
           </div>
           
           {resumen.duplicados > 0 && (
             <div className="imp-est-result-stat warning">
-              <AlertTriangle size={24} className="imp-est-result-icon" />
+              <Icons.AlertTriangle className="imp-est-result-icon" />
               <span className="imp-est-result-number">{resumen.duplicados}</span>
               <span className="imp-est-result-label">Duplicados ignorados</span>
             </div>
@@ -554,7 +629,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
           
           {(resumen.errores + fallidos) > 0 && (
             <div className="imp-est-result-stat error">
-              <AlertCircle size={24} className="imp-est-result-icon" />
+              <Icons.AlertCircle className="imp-est-result-icon" />
               <span className="imp-est-result-number">{resumen.errores + fallidos}</span>
               <span className="imp-est-result-label">Con errores</span>
             </div>
@@ -569,7 +644,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                 className="imp-est-btn-download"
                 onClick={() => handleDescargarReporte('completo')}
               >
-                <FileText size={16} className="imp-est-btn-icon" />
+                <Icons.FileText className="imp-est-btn-icon" />
                 Reporte Completo
               </button>
               {importados > 0 && (
@@ -577,7 +652,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                   className="imp-est-btn-download"
                   onClick={() => handleDescargarReporte('exitosos')}
                 >
-                  <CheckCircle size={16} className="imp-est-btn-icon" />
+                  <Icons.CheckCircle className="imp-est-btn-icon" />
                   Solo Exitosos
                 </button>
               )}
@@ -586,7 +661,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                   className="imp-est-btn-download"
                   onClick={() => handleDescargarReporte('duplicados')}
                 >
-                  <AlertTriangle size={16} className="imp-est-btn-icon" />
+                  <Icons.AlertTriangle className="imp-est-btn-icon" />
                   Solo Duplicados
                 </button>
               )}
@@ -608,13 +683,13 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
             <div className="imp-est-header">
               <h2 className="imp-est-title">Importar Estudiantes</h2>
               <button className="imp-est-btn-close" onClick={handleClose}>
-                <X size={20} />
+                <Icons.X />
               </button>
             </div>
 
             <div className="imp-est-content">
               <div className="imp-est-error-message">
-                <AlertCircle size={48} className="imp-est-error-icon" />
+                <Icons.AlertCircle className="imp-est-error-icon" />
                 <p>{errorPermisos}</p>
                 <button className="imp-est-btn-cancel" onClick={handleClose}>
                   Cerrar
@@ -635,7 +710,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
           <div className="imp-est-header">
             <h2 className="imp-est-title">Importar Estudiantes</h2>
             <button className="imp-est-btn-close" onClick={handleClose}>
-              <X size={20} />
+              <Icons.X />
             </button>
           </div>
 
@@ -653,7 +728,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                 <div className="imp-est-info-section">
                   <div className="imp-est-info-box">
                     <h4>
-                      <Clipboard size={20} className="imp-est-info-icon" />
+                      <Icons.Clipboard className="imp-est-info-icon" />
                       Formato Requerido del Excel
                     </h4>
                     <div className="imp-est-format-info">
@@ -679,7 +754,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                       onClick={handleDescargarTemplate}
                       disabled={estadoImportacion === ESTADOS_IMPORTACION.PROCESANDO}
                     >
-                      <Download size={16} className="imp-est-btn-icon" />
+                      <Icons.Download className="imp-est-btn-icon" />
                       Descargar Template de Ejemplo
                     </button>
                   </div>
@@ -688,8 +763,8 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                 {/* Filtros */}
                 <div className="imp-est-filters-section">
                   <h3 className="imp-est-section-title">
-                    <Filter size={20} className="imp-est-section-icon" />
-                    Filtros de Importación (Opcional)
+                    <Icons.Filter className="imp-est-section-icon" />
+                    Filtros de Importación
                   </h3>
                   
                   <div className="imp-est-filters-grid">
@@ -765,7 +840,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                 {/* Selector de archivo */}
                 <div className="imp-est-file-section">
                   <h3 className="imp-est-section-title">
-                    <File size={20} className="imp-est-section-icon" />
+                    <Icons.File className="imp-est-section-icon" />
                     Seleccionar Archivo Excel
                   </h3>
                   
@@ -777,9 +852,9 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                     <div className="imp-est-upload-content">
                       <div className="imp-est-upload-icon">
                         {validacionArchivo?.valido ? (
-                          <CheckCircle size={48} className="imp-est-icon-valid" />
+                          <Icons.CheckCircle className="imp-est-icon-valid" />
                         ) : (
-                          <Upload size={48} className="imp-est-icon-default" />
+                          <Icons.Upload className="imp-est-icon-default" />
                         )}
                       </div>
                       
@@ -794,11 +869,11 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                               <div className="imp-est-validation-status">
                                 {validacionArchivo.valido ? (
                                   <span className="imp-est-valid">
-                                    <Check size={16} /> Archivo válido
+                                    <Icons.Check /> Archivo válido
                                   </span>
                                 ) : (
                                   <span className="imp-est-invalid">
-                                    <AlertCircle size={16} /> {validacionArchivo.errores.join(', ')}
+                                    <Icons.AlertCircle /> {validacionArchivo.errores.join(', ')}
                                   </span>
                                 )}
                               </div>
@@ -827,7 +902,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                         onClick={() => document.getElementById('imp-est-archivo-input').click()}
                         disabled={estadoImportacion === ESTADOS_IMPORTACION.PROCESANDO}
                       >
-                        <Folder size={16} className="imp-est-btn-icon" />
+                        <Icons.Folder className="imp-est-btn-icon" />
                         Seleccionar Archivo
                       </button>
                     </div>
@@ -835,13 +910,13 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                   
                   <div className="imp-est-file-help">
                     <p className="imp-est-help-item">
-                      <Folder size={16} /> Formatos soportados: {FORMATO_EXCEL.EXTENSIONES_VALIDAS.join(', ')}
+                      <Icons.Folder /> Formatos soportados: {FORMATO_EXCEL.EXTENSIONES_VALIDAS.join(', ')}
                     </p>
                     <p className="imp-est-help-item">
-                      <BarChart2 size={16} /> Tamaño máximo: {FORMATO_EXCEL.TAMANO_MAXIMO / (1024 * 1024)}MB
+                      <Icons.BarChart /> Tamaño máximo: {FORMATO_EXCEL.TAMANO_MAXIMO / (1024 * 1024)}MB
                     </p>
                     <p className="imp-est-help-item">
-                      <FileText size={16} /> Máximo {FORMATO_EXCEL.MAX_FILAS} estudiantes por archivo
+                      <Icons.FileText /> Máximo {FORMATO_EXCEL.MAX_FILAS} estudiantes por archivo
                     </p>
                   </div>
                 </div>
@@ -876,7 +951,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                     !validacionArchivo?.valido
                   }
                 >
-                  <Search size={16} className="imp-est-btn-icon" />
+                  <Icons.Search className="imp-est-btn-icon" />
                   Analizar Archivo
                 </button>
                 <button 
@@ -891,12 +966,12 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                 >
                   {estadoImportacion === ESTADOS_IMPORTACION.PROCESANDO ? (
                     <>
-                      <RefreshCw size={16} className="imp-est-btn-icon imp-est-loading" />
+                      <Icons.RefreshCw className="imp-est-btn-icon imp-est-loading" />
                       Procesando...
                     </>
                   ) : (
                     <>
-                      <Upload size={16} className="imp-est-btn-icon" />
+                      <Icons.Upload className="imp-est-btn-icon" />
                       Importar Directamente
                     </>
                   )}

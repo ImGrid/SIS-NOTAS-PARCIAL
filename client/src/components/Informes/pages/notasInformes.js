@@ -19,7 +19,6 @@ import { getCalificacionPorId } from '../../../service/calificacionService';
 import { carreraNecesitaParalelo } from '../../../service/grupoService';
 
 // Importar utilidades
-import { organizarDatosPorMateria, normalizarTexto, obtenerDatosFiltrados } from '../../../util/dataUtils/organizadorDatos';
 import { formatearNota, formatearFecha, obtenerFechaActual, calcularPorcentajeAprobacion } from '../../../util/helpers/formatHelper';
 import { generarInformeNotasPDF } from '../../../util/pdf/informesNotasPdf';
 

@@ -3,7 +3,6 @@ import { toast } from 'react-toastify';
 import { 
   deleteDocente, 
   verificarDependenciasDocente,
-  obtenerResumenDependenciasDocente 
 } from '../../../service/docenteService';
 import '../style/eliminarDocenteSup.css';
 
