@@ -115,6 +115,19 @@ const Icons = {
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
       <polyline points="14,2 14,8 20,8"></polyline>
     </svg>
+  ),
+  User: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+  ),
+  Info: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="16" x2="12" y2="12"></line>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
   )
 };
 
@@ -195,6 +208,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
       setErrorPermisos('');
     }
   }, [isOpen]);
+
   // Calcular elementos dinámicos para paralelos
   const elementosCalculados = useMemo(() => {
     // Determinar si mostrar filtro de paralelo
@@ -328,7 +342,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
         archivoSeleccionado,
         filtros,
         callbacksImportacion,
-        true // ← NUEVO: soloAnalisis = true
+        true // soloAnalisis = true
       );
 
       if (resultado.soloAnalisis) {
@@ -339,7 +353,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
           
           toast.success(`Análisis completado: ${resultado.resumen.listos} estudiantes listos para importar`);
         } else {
-          setEstadoImportacion(ESTADOS_IMPORTACION.INICIAL); // ← Cambiar a INICIAL, no COMPLETADO
+          setEstadoImportacion(ESTADOS_IMPORTACION.INICIAL);
           
           if (resultado.resumen.duplicados > 0 || resultado.resumen.errores > 0) {
             toast.warning(`Análisis completado: ${resultado.resumen.duplicados} duplicados, ${resultado.resumen.errores} errores`);
@@ -724,7 +738,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
             {/* Formulario principal (solo visible si no hay resultados) */}
             {estadoImportacion !== ESTADOS_IMPORTACION.COMPLETADO && (
               <>
-                {/* Información sobre el formato */}
+                {/* ACTUALIZADO: Información sobre el formato */}
                 <div className="imp-est-info-section">
                   <div className="imp-est-info-box">
                     <h4>
@@ -736,8 +750,7 @@ function ImportarEstudiantes({ isOpen, onClose, onImportacionExitosa }) {
                         <strong>Columnas obligatorias:</strong>
                         <ul>
                           <li><code>Codigo</code> - Código único del estudiante</li>
-                          <li><code>Nombre</code> - Nombre(s) del estudiante</li>
-                          <li><code>Apellido</code> - Apellido(s) del estudiante</li>
+                          <li><code>Nombre Completo</code> - Nombre y apellido completo del estudiante</li>
                           <li><code>Carrera</code> - Nombre de la carrera</li>
                           <li><code>Semestre</code> - Número de semestre (1-10)</li>
                         </ul>

@@ -1,6 +1,7 @@
 /**
  * Validaciones específicas para importación de estudiantes
  * Maneja validaciones de negocio, permisos y reglas específicas por carrera
+ * ACTUALIZADO: Soporte para nombre completo (nombre + apellido unificado)
  */
 import { 
   validarDatosEstudiante,
@@ -28,6 +29,9 @@ const REGLAS_VALIDACION = {
   ],
   PARALELOS_CIENCIAS_BASICAS: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
   CODIGO_REGEX: /^[A-Z0-9\-]{3,20}$/,
+  // ACTUALIZADO: Regex para nombre completo (debe tener al menos 2 caracteres, acepta espacios múltiples)
+  NOMBRE_COMPLETO_REGEX: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,100}$/,
+  // LEGACY: Para retrocompatibilidad
   NOMBRE_REGEX: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,50}$/
 };
 
@@ -75,6 +79,114 @@ export const validarPermisosDocente = () => {
   resultado.valido = true;
   resultado.carreras = carrerasAsignadas;
   return resultado;
+};
+
+/**
+ * NUEVO: Función para dividir nombre completo en nombre y apellido
+ * @param {string} nombreCompleto - Nombre completo a dividir
+ * @returns {Object} Objeto con nombre y apellido separados
+ */
+export const dividirNombreCompleto = (nombreCompleto) => {
+  if (!nombreCompleto || typeof nombreCompleto !== 'string') {
+    return { nombre: '', apellido: '' };
+  }
+  
+  // Limpiar espacios múltiples y trim
+  const palabras = nombreCompleto.trim()
+    .replace(/\s+/g, ' ')  // Reemplazar múltiples espacios por uno solo
+    .split(' ')
+    .filter(palabra => palabra.length > 0);
+  
+  if (palabras.length === 0) {
+    return { nombre: '', apellido: '' };
+  }
+  
+  if (palabras.length === 1) {
+    // Solo una palabra, usar como nombre (apellido vacío)
+    return { nombre: palabras[0], apellido: '' };
+  }
+  
+  if (palabras.length === 2) {
+    // Dos palabras: primera = nombre, segunda = apellido
+    return { nombre: palabras[0], apellido: palabras[1] };
+  }
+  
+  // Tres o más palabras: primeras dos = nombre, resto = apellido
+  const nombre = palabras.slice(0, 2).join(' ');
+  const apellido = palabras.slice(2).join(' ');
+  
+  return { nombre, apellido };
+};
+
+/**
+ * NUEVO: Valida nombre completo y lo divide en nombre + apellido
+ * @param {string} nombreCompleto - Nombre completo a validar
+ * @returns {Object} Resultado de validación
+ */
+export const validarNombreCompleto = (nombreCompleto) => {
+  const resultado = {
+    valido: false,
+    nombre: '',
+    apellido: '',
+    nombreCompleto: '',
+    errores: []
+  };
+  
+  if (!nombreCompleto || typeof nombreCompleto !== 'string') {
+    resultado.errores.push('Nombre completo es obligatorio');
+    return resultado;
+  }
+  
+  const nombreLimpio = nombreCompleto.trim();
+  
+  if (!nombreLimpio) {
+    resultado.errores.push('Nombre completo no puede estar vacío');
+    return resultado;
+  }
+  
+  // Validar formato usando regex
+  if (!REGLAS_VALIDACION.NOMBRE_COMPLETO_REGEX.test(nombreLimpio)) {
+    resultado.errores.push('Nombre completo debe tener entre 2-100 caracteres, solo letras y espacios');
+    return resultado;
+  }
+  
+  // Dividir en nombre y apellido
+  const { nombre, apellido } = dividirNombreCompleto(nombreLimpio);
+  
+  if (!nombre) {
+    resultado.errores.push('No se pudo extraer nombre del nombre completo');
+    return resultado;
+  }
+  
+  // Formatear correctamente (Primera letra mayúscula)
+  const nombreFormateado = formatearTexto(nombre);
+  const apellidoFormateado = apellido ? formatearTexto(apellido) : '';
+  const nombreCompletoFormateado = apellidoFormateado 
+    ? `${nombreFormateado} ${apellidoFormateado}`
+    : nombreFormateado;
+  
+  resultado.valido = true;
+  resultado.nombre = nombreFormateado;
+  resultado.apellido = apellidoFormateado;
+  resultado.nombreCompleto = nombreCompletoFormateado;
+  
+  return resultado;
+};
+
+/**
+ * Formatea texto para nombres (Primera letra mayúscula)
+ * @param {string} texto - Texto a formatear
+ * @returns {string} Texto formateado
+ */
+const formatearTexto = (texto) => {
+  if (!texto) return '';
+  
+  return texto
+    .toLowerCase()
+    .split(' ')
+    .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
+    .join(' ')
+    .trim();
 };
 
 /**
@@ -232,7 +344,7 @@ export const validarCodigo = (codigo) => {
 };
 
 /**
- * Valida nombres y apellidos
+ * LEGACY: Valida nombres y apellidos (mantenido para retrocompatibilidad)
  * @param {string} texto - Nombre o apellido a validar
  * @param {string} tipo - 'nombre' o 'apellido'
  * @returns {Object} Resultado de validación
@@ -257,11 +369,7 @@ export const validarNombre = (texto, tipo = 'nombre') => {
   }
   
   // Formatear correctamente (Primera letra mayúscula)
-  const textoFormateado = textoLimpio
-    .toLowerCase()
-    .split(' ')
-    .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
-    .join(' ');
+  const textoFormateado = formatearTexto(textoLimpio);
   
   resultado.valido = true;
   resultado.textoNormalizado = textoFormateado;
@@ -269,7 +377,7 @@ export const validarNombre = (texto, tipo = 'nombre') => {
 };
 
 /**
- * Valida completamente un estudiante desde el Excel
+ * ACTUALIZADO: Valida completamente un estudiante desde el Excel
  * @param {Object} estudiante - Datos del estudiante extraídos del Excel
  * @param {Array} carrerasPermitidas - Carreras que puede manejar el docente
  * @returns {Object} Resultado de validación completa
@@ -282,10 +390,50 @@ export const validarEstudianteCompleto = (estudiante, carrerasPermitidas) => {
     advertencias: []
   };
   
-  // Validar cada campo individualmente
+  // ACTUALIZADO: Detectar si viene con nombre completo o separado
+  const tieneNombreCompleto = estudiante.nombre_completo && typeof estudiante.nombre_completo === 'string';
+  const tieneNombreSeparado = estudiante.nombre && estudiante.apellido;
+  
+  let validacionNombre;
+  let nombre = '';
+  let apellido = '';
+  
+  if (tieneNombreCompleto) {
+    // Formato nuevo: nombre completo
+    validacionNombre = validarNombreCompleto(estudiante.nombre_completo);
+    if (validacionNombre.valido) {
+      nombre = validacionNombre.nombre;
+      apellido = validacionNombre.apellido;
+    }
+  } else if (tieneNombreSeparado) {
+    // Formato legacy: nombre + apellido separados
+    const validacionNombreLegacy = validarNombre(estudiante.nombre, 'nombre');
+    const validacionApellidoLegacy = validarNombre(estudiante.apellido, 'apellido');
+    
+    if (validacionNombreLegacy.valido && validacionApellidoLegacy.valido) {
+      nombre = validacionNombreLegacy.textoNormalizado;
+      apellido = validacionApellidoLegacy.textoNormalizado;
+      validacionNombre = { valido: true, errores: [] };
+      
+      resultado.advertencias.push('Detectado formato anterior (nombre + apellido separados). Se recomienda usar nombre completo en futuras importaciones.');
+    } else {
+      validacionNombre = {
+        valido: false,
+        errores: [
+          ...validacionNombreLegacy.errores,
+          ...validacionApellidoLegacy.errores
+        ]
+      };
+    }
+  } else {
+    validacionNombre = {
+      valido: false,
+      errores: ['Se requiere nombre completo o nombre + apellido separados']
+    };
+  }
+  
+  // Validar otros campos
   const validacionCodigo = validarCodigo(estudiante.codigo);
-  const validacionNombre = validarNombre(estudiante.nombre, 'nombre');
-  const validacionApellido = validarNombre(estudiante.apellido, 'apellido');
   const validacionCarrera = validarCarrera(estudiante.carrera, carrerasPermitidas);
   
   // Continuar solo si la carrera es válida (necesaria para validar semestre y paralelo)
@@ -301,7 +449,6 @@ export const validarEstudianteCompleto = (estudiante, carrerasPermitidas) => {
   const todasLasValidaciones = [
     validacionCodigo,
     validacionNombre, 
-    validacionApellido,
     validacionCarrera,
     validacionSemestre,
     validacionParalelo
@@ -321,8 +468,8 @@ export const validarEstudianteCompleto = (estudiante, carrerasPermitidas) => {
   // Crear estudiante validado y normalizado
   const estudianteValidado = {
     codigo: validacionCodigo.codigoNormalizado,
-    nombre: validacionNombre.textoNormalizado,
-    apellido: validacionApellido.textoNormalizado,
+    nombre: nombre,
+    apellido: apellido,
     carrera: validacionCarrera.carreraNormalizada,
     semestre: validacionSemestre.semestreNormalizado,
     paralelo: validacionParalelo.paraleloNormalizado,
@@ -338,7 +485,7 @@ export const validarEstudianteCompleto = (estudiante, carrerasPermitidas) => {
     return resultado;
   }
   
-  // Agregar advertencias si aplica
+  // Agregar advertencias adicionales si aplica
   if (estudianteValidado.carrera !== 'Ciencias Básicas' && estudiante.paralelo && estudiante.paralelo !== 'A') {
     resultado.advertencias.push(`Paralelo "${estudiante.paralelo}" ignorado (se asignó "A" automáticamente para carreras regulares)`);
   }
@@ -539,6 +686,8 @@ const validacionImportUtils = {
   validarParalelo,
   validarCodigo,
   validarNombre,
+  validarNombreCompleto, // NUEVO
+  dividirNombreCompleto, // NUEVO
   validarEstudianteCompleto,
   verificarDuplicado,
   procesarLoteEstudiantes,

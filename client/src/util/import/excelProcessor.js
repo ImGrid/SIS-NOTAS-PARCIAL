@@ -1,19 +1,20 @@
 /**
  * Procesador de archivos Excel para importación de estudiantes
  * Maneja la lectura, validación y extracción de datos desde archivos Excel
+ * ACTUALIZADO: Soporte para nombre completo (nombre + apellido unificado)
  */
 import * as XLSX from 'xlsx';
 
 // Configuración del formato esperado del Excel
 const FORMATO_EXCEL = {
-  COLUMNAS_REQUERIDAS: ['codigo', 'nombre', 'apellido', 'carrera', 'semestre'],
+  COLUMNAS_REQUERIDAS: ['codigo', 'nombre_completo', 'carrera', 'semestre'],
   COLUMNAS_OPCIONALES: ['paralelo'],
   EXTENSIONES_VALIDAS: ['.xlsx', '.xls'],
   TAMANO_MAXIMO: 5 * 1024 * 1024, // 5MB
   MAX_FILAS: 1000 // Máximo 1000 estudiantes por importación
 };
 
-// Mapeo de nombres de columnas que el usuario podría usar
+// ACTUALIZADO: Mapeo de nombres de columnas que el usuario podría usar
 const MAPEO_COLUMNAS = {
   // Código
   'codigo': 'codigo',
@@ -23,19 +24,27 @@ const MAPEO_COLUMNAS = {
   'codigo_estudiante': 'codigo',
   'cod': 'codigo',
   
-  // Nombre
-  'nombre': 'nombre',
-  'nombres': 'nombre',
-  'first_name': 'nombre',
-  'name': 'nombre',
-  'primer_nombre': 'nombre',
+  // NUEVO: Nombre completo (prioridad)
+  'nombre_completo': 'nombre_completo',
+  'nombre completo': 'nombre_completo',
+  'full_name': 'nombre_completo',
+  'fullname': 'nombre_completo',
+  'student_name': 'nombre_completo',
+  'name': 'nombre_completo',
+  'estudiante': 'nombre_completo',
+  'names': 'nombre_completo',
   
-  // Apellido
-  'apellido': 'apellido',
-  'apellidos': 'apellido',
-  'last_name': 'apellido',
-  'surname': 'apellido',
-  'primer_apellido': 'apellido',
+  // LEGACY: Soporte para formato anterior (retrocompatibilidad)
+  'nombre': 'nombre_legacy',
+  'nombres': 'nombre_legacy',
+  'first_name': 'nombre_legacy',
+  'primer_nombre': 'nombre_legacy',
+  
+  'apellido': 'apellido_legacy',
+  'apellidos': 'apellido_legacy',
+  'last_name': 'apellido_legacy',
+  'surname': 'apellido_legacy',
+  'primer_apellido': 'apellido_legacy',
   
   // Carrera
   'carrera': 'carrera',
@@ -101,7 +110,40 @@ export const validarArchivo = (archivo) => {
 };
 
 /**
- * Normaliza los nombres de las columnas según el mapeo definido
+ * NUEVO: Función para dividir nombre completo en nombre y apellido
+ * @param {string} nombreCompleto - Nombre completo a dividir
+ * @returns {Object} Objeto con nombre y apellido separados
+ */
+const dividirNombreCompleto = (nombreCompleto) => {
+  if (!nombreCompleto || typeof nombreCompleto !== 'string') {
+    return { nombre: '', apellido: '' };
+  }
+  
+  const palabras = nombreCompleto.trim().split(/\s+/).filter(p => p.length > 0);
+  
+  if (palabras.length === 0) {
+    return { nombre: '', apellido: '' };
+  }
+  
+  if (palabras.length === 1) {
+    // Solo una palabra, usar como nombre completo
+    return { nombre: palabras[0], apellido: '' };
+  }
+  
+  if (palabras.length === 2) {
+    // Dos palabras: primera = nombre, segunda = apellido
+    return { nombre: palabras[0], apellido: palabras[1] };
+  }
+  
+  // Tres o más palabras: primeras dos = nombre, resto = apellido
+  const nombre = palabras.slice(0, 2).join(' ');
+  const apellido = palabras.slice(2).join(' ');
+  
+  return { nombre, apellido };
+};
+
+/**
+ * ACTUALIZADO: Normaliza los nombres de las columnas según el mapeo definido
  * @param {Array} headers - Headers originales del Excel
  * @returns {Object} Headers normalizados y mapeo
  */
@@ -110,6 +152,7 @@ const normalizarHeaders = (headers) => {
   const mapeoUtilizado = {};
   const columnasFaltantes = [];
   const columnasIgnoradas = [];
+  const advertencias = [];
 
   // Limpiar y normalizar headers
   const headersLimpios = headers.map(header => {
@@ -127,22 +170,51 @@ const normalizarHeaders = (headers) => {
       mapeoUtilizado[headerOriginal] = columnaEstandar;
     } else if (header && header.trim() !== '') {
       columnasIgnoradas.push(headerOriginal);
-      console.log(` Header ignorado: "${headerOriginal}" (normalizado: "${header}")`)
+      console.log(`Header ignorado: "${headerOriginal}" (normalizado: "${header}")`);
     }
   });
 
-  // Verificar columnas requeridas
-  FORMATO_EXCEL.COLUMNAS_REQUERIDAS.forEach(columna => {
-    if (headersNormalizados[columna] === undefined) {
-      columnasFaltantes.push(columna);
-      console.log(`Columna faltante: "${columna}"`);
-    }
-  });
+  // NUEVO: Detectar formato del archivo (nuevo vs legacy)
+  const tieneNombreCompleto = headersNormalizados['nombre_completo'] !== undefined;
+  const tieneNombreLegacy = headersNormalizados['nombre_legacy'] !== undefined;
+  const tieneApellidoLegacy = headersNormalizados['apellido_legacy'] !== undefined;
+  
+  const formatoDetectado = tieneNombreCompleto ? 'nuevo' : 
+    (tieneNombreLegacy && tieneApellidoLegacy) ? 'legacy' : 'desconocido';
+
+  // Validar columnas requeridas según formato detectado
+  if (formatoDetectado === 'nuevo') {
+    // Formato nuevo: verificar que tenga nombre_completo
+    FORMATO_EXCEL.COLUMNAS_REQUERIDAS.forEach(columna => {
+      if (headersNormalizados[columna] === undefined) {
+        columnasFaltantes.push(columna);
+        console.log(`Columna faltante: "${columna}"`);
+      }
+    });
+  } else if (formatoDetectado === 'legacy') {
+    // Formato legacy: verificar nombre_legacy + apellido_legacy + otras
+    const columnasLegacyRequeridas = ['codigo', 'nombre_legacy', 'apellido_legacy', 'carrera', 'semestre'];
+    columnasLegacyRequeridas.forEach(columna => {
+      if (headersNormalizados[columna] === undefined) {
+        const nombreMostrar = columna.replace('_legacy', '');
+        columnasFaltantes.push(nombreMostrar);
+        console.log(`Columna faltante: "${nombreMostrar}"`);
+      }
+    });
+    
+    advertencias.push('Detectado formato anterior (nombre + apellido separados). Se recomienda usar el nuevo formato con nombre completo.');
+  } else {
+    // No se puede determinar el formato
+    columnasFaltantes.push('nombre_completo o (nombre + apellido)');
+  }
+
   return {
     headersNormalizados,
     mapeoUtilizado,
     columnasFaltantes,
-    columnasIgnoradas
+    columnasIgnoradas,
+    formatoDetectado,
+    advertencias
   };
 };
 
@@ -200,11 +272,16 @@ export const procesarArchivoExcel = async (archivo) => {
             reject(new Error('No se encontraron encabezados en la primera fila'));
             return;
           }
+
           // Validar y normalizar headers
           const resultadoHeaders = normalizarHeaders(headers);
           
           if (resultadoHeaders.columnasFaltantes.length > 0) {
-            reject(new Error(`Columnas requeridas faltantes: ${resultadoHeaders.columnasFaltantes.join(', ')}. Formato esperado: ${FORMATO_EXCEL.COLUMNAS_REQUERIDAS.join(', ')}`));
+            const formatoEsperado = resultadoHeaders.formatoDetectado === 'legacy' 
+              ? 'codigo, nombre, apellido, carrera, semestre'
+              : 'codigo, nombre_completo, carrera, semestre';
+            
+            reject(new Error(`Columnas requeridas faltantes: ${resultadoHeaders.columnasFaltantes.join(', ')}. Formato esperado: ${formatoEsperado}`));
             return;
           }
 
@@ -236,7 +313,13 @@ export const procesarArchivoExcel = async (archivo) => {
                 return;
               }
 
-              const estudiante = extraerDatosEstudiante(fila, resultadoHeaders.headersNormalizados, numeroFila);
+              const estudiante = extraerDatosEstudiante(
+                fila, 
+                resultadoHeaders.headersNormalizados, 
+                resultadoHeaders.formatoDetectado,
+                numeroFila
+              );
+              
               if (estudiante) {
                 estudiantesProcesados.push(estudiante);
               }
@@ -256,7 +339,9 @@ export const procesarArchivoExcel = async (archivo) => {
               totalFilas: filasData.length,
               filasVacias: filasData.length - estudiantesProcesados.length - erroresPorFila.length,
               mapeoColumnas: resultadoHeaders.mapeoUtilizado,
-              columnasIgnoradas: resultadoHeaders.columnasIgnoradas
+              columnasIgnoradas: resultadoHeaders.columnasIgnoradas,
+              formatoDetectado: resultadoHeaders.formatoDetectado,
+              advertencias: resultadoHeaders.advertencias
             },
             erroresPorFila
           });
@@ -279,13 +364,14 @@ export const procesarArchivoExcel = async (archivo) => {
 };
 
 /**
- * Extrae los datos de un estudiante desde una fila del Excel
+ * ACTUALIZADO: Extrae los datos de un estudiante desde una fila del Excel
  * @param {Array} fila - Fila de datos del Excel
  * @param {Object} headers - Mapeo de headers normalizados
+ * @param {string} formato - Formato detectado ('nuevo' o 'legacy')
  * @param {number} numeroFila - Número de fila para mensajes de error
  * @returns {Object} Datos del estudiante extraídos
  */
-const extraerDatosEstudiante = (fila, headers, numeroFila) => {
+const extraerDatosEstudiante = (fila, headers, formato, numeroFila) => {
   const errores = [];
 
   // Función auxiliar para obtener valor de celda limpio
@@ -299,18 +385,41 @@ const extraerDatosEstudiante = (fila, headers, numeroFila) => {
     return valor.toString().trim();
   };
 
-  // Extraer datos básicos
+  // Extraer datos básicos comunes
   const codigo = obtenerValor('codigo').toUpperCase();
-  const nombre = obtenerValor('nombre');
-  const apellido = obtenerValor('apellido');
   const carrera = obtenerValor('carrera');
   const semestreStr = obtenerValor('semestre');
   const paralelo = obtenerValor('paralelo').toUpperCase();
 
-  // Validar campos obligatorios
+  // NUEVO: Extraer nombre según formato detectado
+  let nombre = '';
+  let apellido = '';
+
+  if (formato === 'nuevo') {
+    // Formato nuevo: nombre_completo
+    const nombreCompleto = obtenerValor('nombre_completo');
+    if (!nombreCompleto) {
+      errores.push('Nombre completo es obligatorio');
+    } else {
+      const { nombre: nombreDiv, apellido: apellidoDiv } = dividirNombreCompleto(nombreCompleto);
+      nombre = nombreDiv;
+      apellido = apellidoDiv;
+      
+      if (!nombre) {
+        errores.push('No se pudo extraer nombre del nombre completo');
+      }
+    }
+  } else if (formato === 'legacy') {
+    // Formato legacy: nombre + apellido separados
+    nombre = obtenerValor('nombre_legacy');
+    apellido = obtenerValor('apellido_legacy');
+    
+    if (!nombre) errores.push('Nombre es obligatorio');
+    if (!apellido) errores.push('Apellido es obligatorio');
+  }
+
+  // Validar campos obligatorios comunes
   if (!codigo) errores.push('Código es obligatorio');
-  if (!nombre) errores.push('Nombre es obligatorio');
-  if (!apellido) errores.push('Apellido es obligatorio');
   if (!carrera) errores.push('Carrera es obligatoria');
   if (!semestreStr) errores.push('Semestre es obligatorio');
 
@@ -329,7 +438,7 @@ const extraerDatosEstudiante = (fila, headers, numeroFila) => {
     }
   }
 
-  // ✅ CORRECCIÓN: Validar código permitiendo guiones
+  // Validar código permitiendo guiones
   if (codigo && !/^[A-Z0-9\-]+$/.test(codigo)) {
     errores.push('Código debe contener solo letras, números y guiones (sin espacios ni otros caracteres especiales)');
   }
@@ -348,7 +457,7 @@ const extraerDatosEstudiante = (fila, headers, numeroFila) => {
   return {
     codigo,
     nombre: formatearTexto(nombre),
-    apellido: formatearTexto(apellido),
+    apellido: formatearTexto(apellido || ''), // Apellido puede estar vacío si solo hay una palabra
     carrera: formatearTexto(carrera),
     semestre,
     paralelo: paralelo || '', // Puede estar vacío, se asignará después según la carrera
@@ -375,35 +484,34 @@ const formatearTexto = (texto) => {
 };
 
 /**
- * Genera un template de Excel para que los usuarios sepan el formato correcto
+ * ACTUALIZADO: Genera un template de Excel para que los usuarios sepan el formato correcto
  * @returns {Blob} Archivo Excel de ejemplo
  */
 export const generarTemplateExcel = () => {
   const datosEjemplo = [
-    // Headers
-    ['Codigo', 'Nombre', 'Apellido', 'Carrera', 'Semestre', 'Paralelo'],
-    // Ejemplos con todas las carreras disponibles
-    ['C12719-1', 'Juan Carlos', 'Pérez García', 'Ingeniería de Sistemas', '5', 'A'],
-    ['ISE001-2', 'María Elena', 'Rodríguez López', 'Ingeniería de Sistemas Electronicos', '6', 'A'],
-    ['AGR002-3', 'Ana Sofia', 'Morales Vargas', 'Ingeniería Agroindustrial', '4', 'A'],
-    ['CB001-A', 'Luis Fernando', 'González Torrez', 'Ciencias Básicas', '1', 'B'],
-    ['CB002-B', 'Carmen Rosa', 'Flores Mendoza', 'Ciencias Básicas', '2', 'C'],
-    ['COM003-4', 'Roberto Carlos', 'Vásquez Silva', 'Ingeniería Comercial', '7', 'A'],
-    ['CIV004-5', 'Patricia Isabel', 'Herrera Castro', 'Ingeniería Civil', '8', 'A'],
-    ['DGR005-6', 'Miguel Angel', 'Sandoval Roque', 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual', '3', 'A'],
-    ['INF006-7', 'Claudia Paola', 'Mamani Quispe', 'Tec. Sup. en Informática', '4', 'A'],
-    ['SEL009-X', 'Daniel Rodrigo', 'Cortez Montaño', 'Tec. Sup. en Sistemas Electrónicos', '4', 'A'],
-    ['ENR010-1', 'Valeria Nicole', 'Jiménez Pardo', 'Técnico Superior en Energías Renovables', '6', 'A'],
-    ['TCC009-X', 'Daniel Rodrigo', 'Cortez Montaño', 'Tec. Sup. Contrucción Civil', '5', 'A'],
+    // ACTUALIZADO: Headers con nombre completo
+    ['Codigo', 'Nombre Completo', 'Carrera', 'Semestre', 'Paralelo'],
+    // ACTUALIZADO: Ejemplos con nombres completos
+    ['C12719-1', 'Juan Carlos Pérez García', 'Ingeniería de Sistemas', '5', 'A'],
+    ['ISE001-2', 'María Elena Rodríguez López', 'Ingeniería de Sistemas Electronicos', '6', 'A'],
+    ['AGR002-3', 'Ana Sofia Morales Vargas', 'Ingeniería Agroindustrial', '4', 'A'],
+    ['CB001-A', 'Luis Fernando González Torres', 'Ciencias Básicas', '1', 'B'],
+    ['CB002-B', 'Carmen Rosa Flores Mendoza', 'Ciencias Básicas', '2', 'C'],
+    ['COM003-4', 'Roberto Carlos Vásquez Silva', 'Ingeniería Comercial', '7', 'A'],
+    ['CIV004-5', 'Patricia Isabel Herrera Castro', 'Ingeniería Civil', '8', 'A'],
+    ['DGR005-6', 'Miguel Angel Sandoval Roque', 'Tec. Sup. en Diseño Gráfico y Comunicación Audiovisual', '3', 'A'],
+    ['INF006-7', 'Claudia Paola Mamani Quispe', 'Tec. Sup. en Informática', '4', 'A'],
+    ['SEL009-X', 'Daniel Rodrigo Cortez Montaño', 'Tec. Sup. en Sistemas Electrónicos', '4', 'A'],
+    ['ENR010-1', 'Valeria Nicole Jiménez Pardo', 'Técnico Superior en Energías Renovables', '6', 'A'],
+    ['TCC009-X', 'José María de la Cruz Santos', 'Tec. Sup. Contrucción Civil', '5', 'A'],
   ];
 
   const worksheet = XLSX.utils.aoa_to_sheet(datosEjemplo);
   
-  // Ajustar ancho de columnas
+  // ACTUALIZADO: Ajustar ancho de columnas para nueva estructura
   const wscols = [
     { wch: 12 }, // Codigo
-    { wch: 20 }, // Nombre
-    { wch: 20 }, // Apellido
+    { wch: 35 }, // Nombre Completo (más ancho)
     { wch: 25 }, // Carrera
     { wch: 10 }, // Semestre
     { wch: 10 }  // Paralelo

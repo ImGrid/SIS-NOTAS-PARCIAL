@@ -1,4 +1,4 @@
-// src/components/Rubricas/pages/notasInformes.js (Integración Final con Paralelos - CORREGIDO)
+// src/components/Rubricas/pages/notasInformes.js (Con Filtro de Paralelo)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../Docentes/sidebar';
@@ -38,11 +38,13 @@ function NotasInformes() {
   const [materiasUnicas, setMateriasUnicas] = useState([]);
   const [carrerasUnicas, setCarrerasUnicas] = useState([]);
   const [semestresPorCarrera, setSemestresPorCarrera] = useState({});
+  const [paralelosDisponibles, setParalelosDisponibles] = useState([]); // NUEVO: Paralelos disponibles
   
   // Estados para los filtros seleccionados
   const [materiaSeleccionada, setMateriaSeleccionada] = useState('TODAS');
   const [carreraSeleccionada, setCarreraSeleccionada] = useState('TODAS');
   const [semestreSeleccionado, setSemestreSeleccionado] = useState('TODOS');
+  const [paraleloSeleccionado, setParaleloSeleccionado] = useState('TODOS'); // NUEVO: Filtro de paralelo
   
   // Estado para el campo de búsqueda de estudiantes
   const [busquedaEstudiante, setBusquedaEstudiante] = useState('');
@@ -78,6 +80,31 @@ function NotasInformes() {
     }
   };
 
+  // NUEVA FUNCIÓN: Obtener paralelos únicos de los grupos de Ciencias Básicas
+  const obtenerParalelosDisponibles = (gruposFiltrados) => {
+    const paralelosSet = new Set();
+    
+    // Solo obtener paralelos de grupos de Ciencias Básicas
+    gruposFiltrados
+      .filter(grupo => carreraNecesitaParalelo(grupo.carrera))
+      .forEach(grupo => {
+        if (grupo.paralelo) {
+          paralelosSet.add(grupo.paralelo);
+        }
+      });
+    
+    // Convertir Set a array y ordenar
+    const paralelosArray = Array.from(paralelosSet).sort();
+    
+    // Agregar la opción "TODOS" al inicio
+    return ['TODOS', ...paralelosArray];
+  };
+
+  // NUEVA FUNCIÓN: Verificar si se debe mostrar el filtro de paralelo
+  const deberMostrarFiltroParalelo = () => {
+    return docenteTieneCienciasBasicas && paralelosDisponibles.length > 1; // Más de "TODOS"
+  };
+
   // Función para cargar todos los datos necesarios
   useEffect(() => {
     const cargarDatos = async () => {
@@ -108,6 +135,10 @@ function NotasInformes() {
         );
         
         setGrupos(gruposFiltrados);
+
+        // NUEVO: Obtener paralelos disponibles de los grupos
+        const paralelosEncontrados = obtenerParalelosDisponibles(gruposFiltrados);
+        setParalelosDisponibles(paralelosEncontrados);
         
         // 2. Obtener información del docente
         const usuarioString = sessionStorage.getItem('usuario');
@@ -123,16 +154,18 @@ function NotasInformes() {
           }
         }
 
-        // 3. Extraer materias, carreras y semestres únicos de los grupos
+        // 3. Extraer materias, carreras, semestres únicos y PARALELOS ESPECÍFICOS de los grupos
         const materiasSet = new Set();
         const carrerasSet = new Set();
         const semestresPorCarreraTemp = {};
         const materiasPorCarreraYSemestre = {};
+        const paralelosPorCarreraYSemestreTemp = {}; // NUEVO: Para rastrear paralelos específicos
 
         for (const grupo of gruposFiltrados) {
           const materia = grupo.materia;
           const carrera = grupo.carrera;
           const semestre = grupo.semestre;
+          const paralelo = grupo.paralelo || 'A'; // NUEVO: obtener paralelo del grupo
           
           // Normalizar la materia para evitar problemas con mayúsculas/minúsculas
           const materiaKey = materia.trim();
@@ -150,6 +183,15 @@ function NotasInformes() {
             }
             semestresPorCarreraTemp[carrera].add(semestre);
             
+            // NUEVO: Almacenar paralelos específicos por carrera y semestre
+            if (!paralelosPorCarreraYSemestreTemp[carrera]) {
+              paralelosPorCarreraYSemestreTemp[carrera] = {};
+            }
+            if (!paralelosPorCarreraYSemestreTemp[carrera][semestre]) {
+              paralelosPorCarreraYSemestreTemp[carrera][semestre] = new Set();
+            }
+            paralelosPorCarreraYSemestreTemp[carrera][semestre].add(paralelo);
+            
             // Almacenar materias por carrera y semestre
             if (!materiasPorCarreraYSemestre[carrera]) {
               materiasPorCarreraYSemestre[carrera] = {};
@@ -161,7 +203,7 @@ function NotasInformes() {
           }
         }
         
-        // Convertir los Sets a arrays
+        // Convertir los Sets a arrays y crear estructura de paralelos
         setMateriasUnicas(['TODAS', ...Array.from(materiasSet)]);
         setCarrerasUnicas(['TODAS', ...Array.from(carrerasSet)]);
         
@@ -170,6 +212,15 @@ function NotasInformes() {
           semestresPorCarreraObj[carrera] = Array.from(semestresPorCarreraTemp[carrera]).sort((a, b) => a - b);
         });
         setSemestresPorCarrera(semestresPorCarreraObj);
+
+        // NUEVO: Convertir paralelos a estructura de objeto
+        const paralelosPorCarreraYSemestreObj = {};
+        Object.keys(paralelosPorCarreraYSemestreTemp).forEach(carrera => {
+          paralelosPorCarreraYSemestreObj[carrera] = {};
+          Object.keys(paralelosPorCarreraYSemestreTemp[carrera]).forEach(semestre => {
+            paralelosPorCarreraYSemestreObj[carrera][semestre] = Array.from(paralelosPorCarreraYSemestreTemp[carrera][semestre]).sort();
+          });
+        });
 
         // 4. Obtener TODOS los estudiantes y filtrar por carrera
         const todosLosEstudiantesTemp = await getEstudiantes();
@@ -230,7 +281,7 @@ function NotasInformes() {
         setRubricasPorInforme(rubricasPorInformeTemp);
         setCalificacionesPorInforme(calificacionesPorInformeTemp);
 
-        // 8. VOLVER A LA LÓGICA ORIGINAL: Usar filtrarDatos que procesa TODOS los estudiantes
+        // 8. Usar filtrarDatos que procesa TODOS los estudiantes
         const datosPorMateriaTemp = prepararDatosEstadisticas(
           gruposFiltrados,
           estudiantesFiltrados,
@@ -238,7 +289,8 @@ function NotasInformes() {
           informesPorGrupoTemp,
           rubricasPorInformeTemp,
           calificacionesPorInformeTemp,
-          semestresPorCarreraObj
+          semestresPorCarreraObj,
+          paralelosPorCarreraYSemestreObj // NUEVO: pasar estructura de paralelos
         );
         
         setDatosPorMateria(datosPorMateriaTemp);
@@ -254,7 +306,7 @@ function NotasInformes() {
     cargarDatos();
   }, []);
 
-  // VOLVER A LA LÓGICA ORIGINAL: Función para preparar datos que usa filtrarDatos
+  // Función para preparar datos que usa filtrarDatos
   const prepararDatosEstadisticas = (
     grupos, 
     todosLosEstudiantes, 
@@ -274,11 +326,12 @@ function NotasInformes() {
       'TODAS', // carrera por defecto
       'TODOS',  // semestre por defecto
       'TODAS',  // materia por defecto
+      'TODOS',  // NUEVO: paralelo por defecto
       semestresPorCarrera
     );
   };
 
-  // FUNCIÓN ORIGINAL RESTAURADA: Filtrar datos que procesa TODOS los estudiantes
+  // FUNCIÓN ACTUALIZADA: Filtrar datos incluyendo filtro de paralelo
   const filtrarDatos = (
     grupos,
     todosLosEstudiantes,
@@ -289,7 +342,9 @@ function NotasInformes() {
     carrera,
     semestre,
     materia,
-    semestresPorCarrera
+    paralelo,
+    semestresPorCarrera,
+    paralelosPorCarreraYSemestre // NUEVO: estructura de paralelos específicos
   ) => {
     const datosEstadisticas = [];
 
@@ -298,31 +353,59 @@ function NotasInformes() {
       return [];
     }
 
-    // LÓGICA ORIGINAL: Recorrer TODOS los estudiantes
+    // Recorrer TODOS los estudiantes
     for (const estudiante of todosLosEstudiantes) {
       const estudianteCarrera = estudiante.carrera;
       const estudianteSemestre = estudiante.semestre;
+      const estudianteParalelo = estudiante.paralelo || 'A';
       
-      // LÓGICA ORIGINAL: Verificar si el estudiante pertenece a carreras/semestres del docente
+      // LÓGICA CORREGIDA: Verificar si el estudiante pertenece a grupos específicos del docente
       let perteneceAGruposDocente = false;
       
       if (semestre === 'TODOS' && materia === 'TODAS') {
         if (carrera === 'TODAS') {
-          perteneceAGruposDocente = 
-            semestresPorCarrera && 
-            semestresPorCarrera[estudianteCarrera] && 
-            Array.isArray(semestresPorCarrera[estudianteCarrera]) &&
-            semestresPorCarrera[estudianteCarrera].includes(estudianteSemestre);
+          // Para todas las carreras, verificar si hay grupos para esta carrera/semestre
+          if (semestresPorCarrera && 
+              semestresPorCarrera[estudianteCarrera] && 
+              Array.isArray(semestresPorCarrera[estudianteCarrera]) &&
+              semestresPorCarrera[estudianteCarrera].includes(estudianteSemestre)) {
+            
+            // NUEVO: Para Ciencias Básicas, verificar también el paralelo específico
+            if (carreraNecesitaParalelo(estudianteCarrera)) {
+              perteneceAGruposDocente = 
+                paralelosPorCarreraYSemestre &&
+                paralelosPorCarreraYSemestre[estudianteCarrera] &&
+                paralelosPorCarreraYSemestre[estudianteCarrera][estudianteSemestre] &&
+                paralelosPorCarreraYSemestre[estudianteCarrera][estudianteSemestre].includes(estudianteParalelo);
+            } else {
+              // Para otras carreras, no verificar paralelo
+              perteneceAGruposDocente = true;
+            }
+          }
         } 
         else if (estudianteCarrera === carrera) {
-          perteneceAGruposDocente = 
-            semestresPorCarrera && 
-            semestresPorCarrera[carrera] && 
-            Array.isArray(semestresPorCarrera[carrera]) &&
-            semestresPorCarrera[carrera].includes(estudianteSemestre);
+          // Para carrera específica, verificar semestre
+          if (semestresPorCarrera && 
+              semestresPorCarrera[carrera] && 
+              Array.isArray(semestresPorCarrera[carrera]) &&
+              semestresPorCarrera[carrera].includes(estudianteSemestre)) {
+            
+            // NUEVO: Para Ciencias Básicas, verificar también el paralelo específico
+            if (carreraNecesitaParalelo(carrera)) {
+              perteneceAGruposDocente = 
+                paralelosPorCarreraYSemestre &&
+                paralelosPorCarreraYSemestre[carrera] &&
+                paralelosPorCarreraYSemestre[carrera][estudianteSemestre] &&
+                paralelosPorCarreraYSemestre[carrera][estudianteSemestre].includes(estudianteParalelo);
+            } else {
+              // Para otras carreras, no verificar paralelo
+              perteneceAGruposDocente = true;
+            }
+          }
         }
       }
       else {
+        // Cuando hay filtros específicos aplicados, permitir todos los estudiantes de grupos
         perteneceAGruposDocente = true;
       }
       
@@ -330,22 +413,26 @@ function NotasInformes() {
         continue;
       }
       
-      // Aplicar filtros de carrera y semestre si están seleccionados
+      // Aplicar filtros de carrera, semestre y paralelo
       if ((carrera !== 'TODAS' && estudianteCarrera !== carrera) ||
-          (semestre !== 'TODOS' && estudianteSemestre.toString() !== semestre)) {
+          (semestre !== 'TODOS' && estudianteSemestre.toString() !== semestre) ||
+          (paralelo !== 'TODOS' && estudianteParalelo !== paralelo)) {
         continue;
       }
       
-      // LÓGICA ORIGINAL: Variables para almacenar las relaciones encontradas
+      // Variables para almacenar las relaciones encontradas
       let grupoDelEstudiante = null;
       let informeDelEstudiante = null;
       let rubricaDelEstudiante = null;
       let calificacionDelEstudiante = null;
       let cumpleFiltroMateria = (materia === 'TODAS');
       
-      // LÓGICA ORIGINAL: Buscar si el estudiante pertenece a algún grupo
+      // Buscar si el estudiante pertenece a algún grupo
       for (const grupo of grupos) {
-        if (grupo.carrera === estudianteCarrera && grupo.semestre === estudianteSemestre) {
+        if (grupo.carrera === estudianteCarrera && 
+            grupo.semestre === estudianteSemestre &&
+            (grupo.paralelo || 'A') === estudianteParalelo) {
+          
           const estudiantesDelGrupo = estudiantesPorGrupo[grupo.id] || [];
           
           if (estudiantesDelGrupo.some(est => est.id === estudiante.id)) {
@@ -385,12 +472,12 @@ function NotasInformes() {
         }
       }
       
-      // LÓGICA ORIGINAL: Si hay filtro de materia pero el estudiante no cumple, omitirlo
+      // Si hay filtro de materia pero el estudiante no cumple, omitirlo
       if (materia !== 'TODAS' && !cumpleFiltroMateria) {
         continue;
       }
       
-      // LÓGICA ORIGINAL: SIEMPRE agregar el estudiante (con o sin grupo)
+      // SIEMPRE agregar el estudiante (con o sin grupo)
       if (!rubricaDelEstudiante) {
         datosEstadisticas.push({
           estudiante,
@@ -398,8 +485,8 @@ function NotasInformes() {
             nombre_proyecto: 'Sin asignar',
             carrera: estudianteCarrera,
             semestre: estudianteSemestre,
-            paralelo: estudiante.paralelo || 'A', // Incluir paralelo del estudiante
-            materia: materia !== 'TODAS' ? materia : 'No asignada'
+            paralelo: estudianteParalelo,
+            materia: materia !== 'TODAS' ? materia : ''
           },
           informe: informeDelEstudiante,
           rubrica: rubricaDelEstudiante,
@@ -425,9 +512,9 @@ function NotasInformes() {
     return datosEstadisticas;
   };
 
-  // Función modificada para obtener datos filtrados con soporte para paralelos
+  // FUNCIÓN ACTUALIZADA: Obtener datos filtrados incluyendo paralelo
   const obtenerDatosFiltradosActuales = () => {
-    // Usar la función original filtrarDatos
+    // Usar la función filtrarDatos actualizada
     let datosFiltrados = filtrarDatos(
       grupos,
       todosLosEstudiantes,
@@ -438,6 +525,7 @@ function NotasInformes() {
       carreraSeleccionada,
       semestreSeleccionado,
       materiaSeleccionada,
+      paraleloSeleccionado, // NUEVO: incluir filtro de paralelo
       semestresPorCarrera
     );
     
@@ -514,12 +602,13 @@ function NotasInformes() {
     return datosOrganizados;
   };
 
-  // Función para limpiar la búsqueda
+  // FUNCIÓN ACTUALIZADA: Limpiar la búsqueda incluyendo paralelo
   const limpiarBusqueda = () => {
     setBusquedaEstudiante('');
     setCarreraSeleccionada('TODAS');
     setSemestreSeleccionado('TODOS');
     setMateriaSeleccionada('TODAS');
+    setParaleloSeleccionado('TODOS'); // NUEVO: limpiar filtro de paralelo
   };
 
   // Función para generar PDF utilizando el módulo externo
@@ -536,6 +625,7 @@ function NotasInformes() {
           carrera: carreraSeleccionada,
           semestre: semestreSeleccionado,
           materia: materiaSeleccionada,
+          paralelo: paraleloSeleccionado, // NUEVO: incluir en filtros del PDF
           busqueda: busquedaEstudiante
         },
         docente: docenteActual,
@@ -708,6 +798,7 @@ function NotasInformes() {
                   onChange={(e) => {
                     setCarreraSeleccionada(e.target.value);
                     setSemestreSeleccionado('TODOS');
+                    setParaleloSeleccionado('TODOS'); // NUEVO: resetear paralelo cuando cambia carrera
                   }}
                 >
                   <option value="TODAS">Todas mis carreras</option>
@@ -739,6 +830,26 @@ function NotasInformes() {
                 </select>
               </div>
 
+              {/* NUEVO: Filtro de paralelo - Solo para Ciencias Básicas */}
+              {deberMostrarFiltroParalelo() && (
+                <div className="filtro">
+                  <label className="filtro-label">Paralelo</label>
+                  <select 
+                    id="paralelo-select" 
+                    value={paraleloSeleccionado}
+                    onChange={(e) => setParaleloSeleccionado(e.target.value)}
+                  >
+                    <option value="TODOS">Todos los paralelos</option>
+                    {paralelosDisponibles
+                      .filter(p => p !== 'TODOS')
+                      .map(paralelo => (
+                        <option key={paralelo} value={paralelo}>{`Paralelo ${paralelo}`}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              )}
+
               {/* Filtro de materia */}
               <div className="filtro">
                 <label className="filtro-label">Asignatura</label>
@@ -759,7 +870,11 @@ function NotasInformes() {
                 onClick={limpiarBusqueda} 
                 className="btn-limpiar-busqueda"
                 title="Limpiar búsqueda"
-                disabled={!busquedaEstudiante && carreraSeleccionada === 'TODAS' && semestreSeleccionado === 'TODOS' && materiaSeleccionada === 'TODAS'}
+                disabled={!busquedaEstudiante && 
+                         carreraSeleccionada === 'TODAS' && 
+                         semestreSeleccionado === 'TODOS' && 
+                         materiaSeleccionada === 'TODAS' &&
+                         paraleloSeleccionado === 'TODOS'} // NUEVO: incluir paralelo en validación
               >
                 X
               </button>
@@ -767,9 +882,8 @@ function NotasInformes() {
             
             {/* Contenedor para PDF */}
             <div id="contenido-para-pdf" className="contenido-pdf-wrapper">
-              {/* Encabezado para el PDF - incluir aquí el logo en el diseño */}
+              {/* Encabezado para el PDF */}
               <div className="pdf-header">
-                {/* No incluir el logo en la vista normal - solo se agregará en el PDF */}
                 <h1>INFORME DE NOTAS FINALES</h1>
                 <h2>Gestion {new Date().getMonth() < 6 ? 'I' : 'II'}/{new Date().getFullYear()}</h2>
                 <div className="pdf-info">
@@ -783,10 +897,13 @@ function NotasInformes() {
                   {carreraSeleccionada !== 'TODAS' && <div>Carrera: {carreraSeleccionada}</div>}
                   {semestreSeleccionado !== 'TODOS' && <div>Semestre: {semestreSeleccionado}° Semestre</div>}
                   {materiaSeleccionada !== 'TODAS' && <div>Asignatura: {materiaSeleccionada}</div>}
+                  {/* NUEVO: Mostrar filtro de paralelo en PDF */}
+                  {paraleloSeleccionado !== 'TODOS' && <div>Paralelo: {paraleloSeleccionado}</div>}
                   {busquedaEstudiante && <div>Filtro estudiante: {busquedaEstudiante}</div>}
                 </div>
               </div>
             
+              {/* Resto del contenido del componente permanece igual */}
               {/* Recorrer cada carrera y semestre para crear secciones separadas */}
               {Object.keys(obtenerDatosFiltradosActuales()).sort().map(carrera => (
                 Object.keys(obtenerDatosFiltradosActuales()[carrera]).sort((a, b) => parseInt(a) - parseInt(b)).map((semestre, semestreIndex) => {
@@ -812,7 +929,7 @@ function NotasInformes() {
 
                       return (
                         <div key={`${carrera}-${semestre}-${paralelo}`} className={`seccion-carrera-semestre ${semestreIndex > 0 || paraleloIndex > 0 ? 'nueva-seccion-pdf' : 'primera-seccion-pdf'}`}>
-                          {/* TÍTULO MODIFICADO: Incluir paralelo para Ciencias Básicas */}
+                          {/* Título con paralelo para Ciencias Básicas */}
                           <h3 className="evitar-salto-pagina">{carrera} - {semestre}° Semestre - Paralelo {paralelo}</h3>
                           
                           {/* Información de la asignatura */}
@@ -896,7 +1013,7 @@ function NotasInformes() {
 
                     return (
                       <div key={`${carrera}-${semestre}`} className={`seccion-carrera-semestre ${semestreIndex > 0 ? 'nueva-seccion-pdf' : 'primera-seccion-pdf'}`}>
-                        {/* TÍTULO NORMAL: Sin paralelo para otras carreras */}
+                        {/* Título normal sin paralelo para otras carreras */}
                         <h3 className="evitar-salto-pagina">{carrera} - {semestre}° Semestre</h3>
                         
                         {/* Información de la asignatura */}
