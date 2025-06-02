@@ -91,9 +91,8 @@ export const dividirNombreCompleto = (nombreCompleto) => {
     return { nombre: '', apellido: '' };
   }
   
-  // Limpiar espacios múltiples y trim
   const palabras = nombreCompleto.trim()
-    .replace(/\s+/g, ' ')  // Reemplazar múltiples espacios por uno solo
+    .replace(/\s+/g, ' ')
     .split(' ')
     .filter(palabra => palabra.length > 0);
   
@@ -102,20 +101,18 @@ export const dividirNombreCompleto = (nombreCompleto) => {
   }
   
   if (palabras.length === 1) {
-    // Solo una palabra, usar como nombre (apellido vacío)
     return { nombre: palabras[0], apellido: '' };
   }
   
   if (palabras.length === 2) {
-    // Dos palabras: primera = nombre, segunda = apellido
-    return { nombre: palabras[0], apellido: palabras[1] };
+    return { apellido: palabras[0], nombre: palabras[1] };
   }
   
-  // Tres o más palabras: primeras dos = nombre, resto = apellido
-  const nombre = palabras.slice(0, 2).join(' ');
-  const apellido = palabras.slice(2).join(' ');
+  const mitad = Math.ceil(palabras.length / 2);
+  const apellido = palabras.slice(0, mitad).join(' ');
+  const nombre = palabras.slice(mitad).join(' ');
   
-  return { nombre, apellido };
+  return { apellido, nombre };
 };
 
 /**

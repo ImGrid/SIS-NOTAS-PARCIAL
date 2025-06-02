@@ -126,20 +126,18 @@ const dividirNombreCompleto = (nombreCompleto) => {
   }
   
   if (palabras.length === 1) {
-    // Solo una palabra, usar como nombre completo
     return { nombre: palabras[0], apellido: '' };
   }
   
   if (palabras.length === 2) {
-    // Dos palabras: primera = nombre, segunda = apellido
-    return { nombre: palabras[0], apellido: palabras[1] };
+    return { apellido: palabras[0], nombre: palabras[1] };
   }
   
-  // Tres o más palabras: primeras dos = nombre, resto = apellido
-  const nombre = palabras.slice(0, 2).join(' ');
-  const apellido = palabras.slice(2).join(' ');
+  const mitad = Math.ceil(palabras.length / 2);
+  const apellido = palabras.slice(0, mitad).join(' ');
+  const nombre = palabras.slice(mitad).join(' ');
   
-  return { nombre, apellido };
+  return { apellido, nombre };
 };
 
 /**
@@ -492,10 +490,10 @@ export const generarTemplateExcel = () => {
     // ACTUALIZADO: Headers con nombre completo
     ['Codigo', 'Nombre Completo', 'Carrera', 'Semestre', 'Paralelo'],
     // ACTUALIZADO: Ejemplos con nombres completos
-    ['C12719-1', 'Juan Carlos Pérez García', 'Ingeniería de Sistemas', '5', 'A'],
-    ['ISE001-2', 'María Elena Rodríguez López', 'Ingeniería de Sistemas Electronicos', '6', 'A'],
-    ['AGR002-3', 'Ana Sofia Morales Vargas', 'Ingeniería Agroindustrial', '4', 'A'],
-    ['CB001-A', 'Luis Fernando González Torres', 'Ciencias Básicas', '1', 'B'],
+    ['C12719-1', 'Pérez García Juan Carlos', 'Ingeniería de Sistemas', '5', 'A'],
+    ['ISE001-2', 'Rodríguez López María Elena', 'Ingeniería de Sistemas Electronicos', '6', 'A'],
+    ['AGR002-3', 'Morales Vargas Ana Sofia', 'Ingeniería Agroindustrial', '4', 'A'],
+    ['CB001-A', 'González Torres Luis Fernando', 'Ciencias Básicas', '1', 'B'],
     ['CB002-B', 'Carmen Rosa Flores Mendoza', 'Ciencias Básicas', '2', 'C'],
     ['COM003-4', 'Roberto Carlos Vásquez Silva', 'Ingeniería Comercial', '7', 'A'],
     ['CIV004-5', 'Patricia Isabel Herrera Castro', 'Ingeniería Civil', '8', 'A'],
